@@ -102,32 +102,6 @@ export default defineComponent({
     const destination = ref('')
     const dates       = ref('')
     const travelType  = ref('')
-
-    /*
-      HOW TO USE YOUR OWN LOCAL PHOTOS:
-      ─────────────────────────────────
-      1. Create this folder structure inside your project:
-           public/
-           └── hero/
-               ├── hero1.jpg   (main slide — e.g. Angkor Wat)
-               ├── hero2.jpg   (second slide — e.g. beach)
-               └── hero3.jpg   (third slide — e.g. jungle/mountain)
-
-      2. Then change the image paths below to:
-           image: '/hero/hero1.jpg'
-           image: '/hero/hero2.jpg'
-           image: '/hero/hero3.jpg'
-
-      For province photos you can do the same:
-           public/
-           └── provinces/
-               ├── siem-reap.jpg
-               ├── phnom-penh.jpg
-               └── koh-kong.jpg
-      Then use: image: '/provinces/siem-reap.jpg'
-
-      Files in /public are served directly — no import needed!
-    */
     const slides = [
       {
         image:    '/hero/hero1.jpg',
