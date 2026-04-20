@@ -1,7 +1,5 @@
 <template>
-  <NavBar />
   <router-view />
-  <Footer />
 </template>
 
 <script lang="ts">
