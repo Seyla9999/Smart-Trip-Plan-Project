@@ -1,50 +1,34 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { authApi } from '../api/auth.ts'
-
-interface User {
-  id: number
-  email: string
-  username: string
-}
+import { authApi } from '../api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
-  const token = ref<string | null>(localStorage.getItem('access_token'))
+  const user = ref(null)
+  const token = ref(localStorage.getItem('access_token'))
 
-  function setToken(newToken: string) {
-    token.value = newToken
-    localStorage.setItem('access_token', newToken)
+  async function signIn(credentials: any) {
+    const { data } = await authApi.signIn(credentials)
+    token.value = data.access_token
+    user.value = data.user
+    localStorage.setItem('access_token', data.access_token)
   }
 
-  function clearAuth() {
+  async function signUp(payload: any) {
+    const { data } = await authApi.signUp(payload)
+    // Backend should send verification email here
+    return data
+  }
+
+  function handleGoogleLogin() {
+    // Redirects to the NestJS Google OAuth route
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
+  }
+
+  function signOut() {
     user.value = null
     token.value = null
     localStorage.removeItem('access_token')
   }
 
-  async function signIn(credentials: { email: string; password: string }) {
-    const data = await authApi.signIn(credentials)
-    setToken(data.access_token)
-    user.value = data.user
-  }
-
-  async function signUp(payload: { email: string; username: string; password: string }) {
-    const data = await authApi.signUp(payload)
-    setToken(data.access_token)
-    user.value = data.user
-  }
-
-  async function fetchProfile() {
-    if (!token.value) return
-    user.value = await authApi.getProfile()
-  }
-
-  function signOut() {
-    clearAuth()
-  }
-
-  const isAuthenticated = () => !!token.value
-
-  return { user, token, signIn, signUp, signOut, fetchProfile, isAuthenticated }
+  return { user, token, signIn, signUp, signOut, handleGoogleLogin }
 })

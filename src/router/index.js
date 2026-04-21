@@ -1,30 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
-import AuthLayout from '../layouts/AuthLayout.vue' 
 import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
 
 const routes = [
-  {
-    path: '/',
-    redirect: '/login'
-  },
-  {
-    path: '/',
-    component: AuthLayout,
-    children: [
-      {
-        path: 'login',
-        name: 'Login',
-        component: LoginView
-      },
-      {
-        path: 'register',
-        name: 'Register',
-        component: RegisterView
-      }
-    ]
-  }
+  { path: '/', redirect: '/login' },
+  { path: '/login', component: LoginView },
+  { path: '/register', component: RegisterView }
 ]
 
 const router = createRouter({

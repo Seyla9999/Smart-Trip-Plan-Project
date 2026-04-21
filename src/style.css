@@ -1,3 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss"; /* Standard for v4 */
+
+/* Optional: Add the fonts you included in index.html */
+body {
+  font-family: 'DM Sans', sans-serif;
+}
+
+h1, .brand-name {
+  font-family: 'Cinzel', serif;
+}
