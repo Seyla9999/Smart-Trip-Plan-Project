@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import ProvinceDetailView from '../views/ProvinceDetailView.vue'
 import AttractionDetail from '../components/AttractionDetail.vue'
 
 const router = createRouter({
@@ -11,13 +12,17 @@ const router = createRouter({
       component: HomeView
     },
     {
+      path: '/province/:slug',
+      name: 'province-detail',
+      component: ProvinceDetailView
+    },
+    {
       path: '/attraction/:id',
       name: 'AttractionDetail',
       component: AttractionDetail,
       props: true 
     }
   ],
-
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
       return savedPosition
