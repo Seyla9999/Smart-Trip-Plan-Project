@@ -2,7 +2,7 @@
   <div class="container">
     
     <div v-if="imagePosition === 'left'" class="right">
-      <img src="@/assets/phnom-penh.png" />
+      <img src="@/assets/phnom-penh.jpg" />
     </div>
 
     <div class="left">
@@ -10,7 +10,7 @@
     </div>
 
     <div v-if="imagePosition === 'right'" class="right">
-      <img src="@/assets/phnom-penh.png" />
+      <img src="@/assets/phnom-penh.jpg" />
     </div>
 
   </div>
@@ -29,6 +29,7 @@ defineProps({
 .container {
   display: flex;
   height: 100vh;
+  background-color: rgb(222, 237, 241);
 }
 
 .left {
@@ -44,6 +45,12 @@ defineProps({
   justify-content: center;
   align-items: center;
   animation: slideInRight 0.7s ease;
+}
+
+img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 @keyframes slideInLeft {

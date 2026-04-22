@@ -1,11 +1,30 @@
 import axios from 'axios'
 
-const API = 'http://localhost:3000'
+const API = axios.create({
+  baseURL: 'http://localhost:3000',
+})
 
-export const login = (email: string, password: string) => {
-  return axios.post(`${API}/auth/login`, { email, password })
+// REGISTER
+export const register = (data: {
+  email: string
+  password: string
+  full_name: string
+}) => {
+  return API.post('/auth/register', data)
 }
 
-export const register = (data: any) => {
-  return axios.post(`${API}/auth/register`, data)
+// LOGIN
+export const login = (data: {
+  email: string
+  password: string
+}) => {
+  return API.post('/auth/login', data)
+}
+
+// VERIFY
+export const verify = (data: {
+  email: string
+  code: string
+}) => {
+  return API.post('/auth/verify', data)
 }
