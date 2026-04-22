@@ -51,7 +51,7 @@
           </div>
           <div class="photo-grid">
             <div v-for="(photo, i) in attraction.photos" :key="i" class="photo-item">
-              <img :src="photo" :alt="`Photo ${i + 1}`" />
+              <img :src="photo" :alt="`Photo ${Number(i) + 1}`" />
             </div>
           </div>
         </section>

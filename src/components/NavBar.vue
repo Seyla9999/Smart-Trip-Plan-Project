@@ -8,12 +8,12 @@
       </a>
 
       <ul class="nav-links">
-        <li><a href="/" class="nav-link" :class="{ active: route === '/' }">Home</a></li>
-        <li><a href="/about" class="nav-link" :class="{ active: route === '/about' }">About</a></li>
-        <li><a href="/discover" class="nav-link" :class="{ active: route === '/discover' }">Discover</a></li>
-        <li><a href="/plan-trip" class="nav-link" :class="{ active: route === '/plan-trip' }">Plan Trip</a></li>
-        <li><a href="/map" class="nav-link" :class="{ active: route === '/map' }">Map</a></li>
-        <li><a href="/community" class="nav-link" :class="{ active: route === '/community' }">Community</a></li>
+        <li><a href="/" class="nav-link" :class="{ active: currentPath === '/' }">Home</a></li>
+        <li><a href="/about" class="nav-link" :class="{ active: currentPath === '/about' }">About</a></li>
+        <li><a href="/discover" class="nav-link" :class="{ active: currentPath === '/discover' }">Discover</a></li>
+        <li><a href="/plan-trip" class="nav-link" :class="{ active: currentPath === '/plan-trip' }">Plan Trip</a></li>
+        <li><a href="/map" class="nav-link" :class="{ active: currentPath === '/map' }">Map</a></li>
+        <li><a href="/community" class="nav-link" :class="{ active: currentPath === '/community' }">Community</a></li>
       </ul>
 
       <div class="nav-actions">
@@ -47,14 +47,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { computed, defineComponent, ref } from 'vue'
+import { useRoute } from 'vue-router'
 
 export default defineComponent({
   name: 'NavBar',
   setup() {
     const mobileOpen = ref<boolean>(false)
-    const route = ref<string>(window.location.pathname)
-    return { mobileOpen, route }
+    const route = useRoute()
+    const currentPath = computed<string>(() => route.path)
+    return { mobileOpen, currentPath }
   }
 })
 </script>
