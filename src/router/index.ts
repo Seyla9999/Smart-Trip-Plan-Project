@@ -1,31 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Admin_Dashboard from '../views/Admin_Dashboard.vue'
+
+import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/auth/LoginView.vue'
+import RegisterView from '../views/auth/RegisterView.vue'
+import VerifyView from '../views/auth/VerifyView.vue'
 import AdminView from '../views/AdminView.vue'
+import Admin_Dashboard from '../views/Admin_Dashboard.vue'
 import UserView from '../views/UserView.vue'
 import User_Discover from '../views/User_Discover.vue'
-
-const routes = [
-{
-    path: '/admin',
-    component: AdminView,
-    children: [
-        { path: '', name: 'admin-dashboard', component: Admin_Dashboard }
-    ]
-},
-{
-    path: '/user',
-    component: UserView,
-    children: [
-        { path: 'discover', name: 'user-discover', component: User_Discover }
-    ]
-}
-]
-
-export default createRouter({
-    history: createWebHistory(),
-    routes
-})
-import HomeView from '../views/HomeView.vue'
 import CommunityView from '../views/CommunityView.vue'
 import ProvinceDetailView from '../views/ProvinceDetailView.vue'
 import AttractionDetail from '../components/AttractionDetail.vue'
@@ -36,32 +18,78 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView
+      component: HomeView,
     },
     {
-      path: '/province/:slug',
-      name: 'province-detail',
-      component: ProvinceDetailView
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
+    },
+    {
+      path: '/verify',
+      name: 'verify',
+      component: VerifyView,
+    },
+    {
+      path: '/admin',
+      component: AdminView,
+      children: [
+        { path: '', name: 'admin-dashboard', component: Admin_Dashboard },
+      ],
+    },
+    {
+      path: '/discover',
+      component: UserView,
+      children: [
+        { path: '', name: 'discover', component: User_Discover },
+      ],
+    },
+    {
+      path: '/user',
+      redirect: '/discover',
+    },
+    {
+      path: '/user/discover',
+      redirect: '/discover',
     },
     {
       path: '/community',
       name: 'community',
-      component: CommunityView
+      component: CommunityView,
+    },
+    {
+      path: '/province/:slug',
+      name: 'province-detail',
+      component: ProvinceDetailView,
+    },
+    {
+      path: '/province/:slug/:placeSlug',
+      name: 'place-detail',
+      component: AttractionDetail,
+      props: true,
     },
     {
       path: '/attraction/:id',
       name: 'AttractionDetail',
-      component: AttractionDetail,
-      props: true 
-    }
+      redirect: (to) => `/province/koh-kong/${to.params.id}`,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
+    },
   ],
   scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {
       return savedPosition
-    } else {
-      return { top: 0 }
     }
-  }
+
+    return { top: 0 }
+  },
 })
 
 export default router

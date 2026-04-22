@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useRoute, RouterLink } from "vue-router";
+import { useRoute, useRouter, RouterLink } from "vue-router";
 
 import ProvinceTopSearch from "@/components/province-detail/ProvinceTopSearch.vue";
 import ProvinceInfoBar from "@/components/province-detail/ProvinceInfoBar.vue";
@@ -28,6 +28,7 @@ type Place = {
 };
 
 const route = useRoute();
+const router = useRouter();
 
 const slug = computed(() => (route.params.slug as string) || "koh-kong");
 
@@ -518,6 +519,20 @@ function toggleDiscovery(name: string) {
 function setTravelType(value: TravelType) {
   selectedTravelType.value = value;
 }
+
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+function openPlaceDetail(place: Place) {
+  router.push(`/province/${slug.value}/${toSlug(place.name)}`);
+}
 </script>
 
 <template>
@@ -612,7 +627,11 @@ function setTravelType(value: TravelType) {
               </div>
             </div>
 
-            <FeaturedPlaceCard v-if="featuredPlace" :place="featuredPlace" />
+            <FeaturedPlaceCard
+              v-if="featuredPlace"
+              :place="featuredPlace"
+              @select="openPlaceDetail"
+            />
 
             <div
               class="cards-grid"
@@ -622,6 +641,7 @@ function setTravelType(value: TravelType) {
                 v-for="place in paginatedPlaces"
                 :key="place.id"
                 :place="place"
+                @select="openPlaceDetail"
               />
             </div>
 

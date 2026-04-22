@@ -1,16 +1,18 @@
 <template>
   <div class="max-h-full max-w-full">
+    <NavBar v-if="showGlobalLayout" />
     <router-view />
+    <Footer v-if="showGlobalLayout" />
   </div>
 </template>
 
-
-<!-- <script lang="ts">
-import { defineComponent } from 'vue'
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import NavBar from './components/NavBar.vue'
 import Footer from './components/Footer.vue'
 
-export default defineComponent({
-  components: { NavBar, Footer }
-})
-</script> -->
+const route = useRoute()
+const authPaths = ['/login', '/register', '/verify']
+const showGlobalLayout = computed(() => !authPaths.includes(route.path))
+</script>

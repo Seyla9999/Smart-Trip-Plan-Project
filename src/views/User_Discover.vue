@@ -83,6 +83,7 @@
           v-for="province in filteredProvinces" 
           :key="province.id"
           class="group cursor-pointer"
+          @click="openProvince(province.name)"
         >
           <div class="relative overflow-hidden rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 bg-white border border-slate-100">
             <div class="relative h-48 overflow-hidden">
@@ -145,6 +146,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const searchQuery = ref<string>('')
 const activeFilter = ref<string>('ALL')
@@ -178,6 +182,20 @@ const filteredProvinces = computed(() => {
 
   return result
 })
+
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
+function openProvince(name: string) {
+  router.push(`/province/${toSlug(name)}`)
+}
 </script>
 
 <style scoped>

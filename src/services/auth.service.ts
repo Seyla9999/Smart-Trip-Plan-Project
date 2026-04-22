@@ -1,8 +1,4 @@
-import axios from 'axios'
-
-const API = axios.create({
-  baseURL: 'http://localhost:3000',
-})
+import API from '@/api/axios'
 
 // REGISTER
 export const register = (data: {
