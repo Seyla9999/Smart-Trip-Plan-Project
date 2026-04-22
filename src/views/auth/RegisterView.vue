@@ -153,24 +153,21 @@ const handleRegister = async () => {
   try {
     loading.value = true
 
-    console.log('Sending request...')
     const res = await register({
       email: email.value,
       full_name: full_name.value,
       password: password.value
     })
 
-    console.log('RESPONSE:', res)
+    localStorage.setItem('verify_email', email.value)
 
     message.value = res.data.message
-
-    router.push({
-      path: '/verify',
-      query: { email: email.value }
-    })
+    setTimeout(() => {
+      router.push('/verify')
+    }, 800)
   } catch (err) {
     console.error('ERROR:', err)
-    message.value = err.response?.data?.message || 'Error'
+    message.value = err.response?.data?.message || 'Something went wrong'
   } finally {
     loading.value = false
   }
@@ -275,5 +272,8 @@ button:disabled {
 .link {
   text-align: center;
   cursor: pointer;
+}
+.message {
+  color: #ff0000;
 }
 </style>

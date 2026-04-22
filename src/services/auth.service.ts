@@ -28,3 +28,6 @@ export const verify = (data: {
 }) => {
   return API.post('/auth/verify', data)
 }
+
+export const resendCode = (data: { email: string }) =>
+  API.post('/auth/resend', data)

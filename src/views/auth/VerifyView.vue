@@ -1,72 +1,129 @@
 <template>
-  <AuthLayout imagePosition="right">
+  <AuthLayout>
     <div class="form">
-      <h1>Verify Account</h1>
+      <h1>Verify Email</h1>
+      <p class="subtitle">Enter the 6-digit code sent to your email</p>
 
-      <input v-model="email" placeholder="Email" />
-      <input v-model="code" placeholder="Enter verification code" />
+      <!-- OTP -->
+      <div class="otp-container">
+        <input
+          v-for="(digit, index) in otp"
+          :key="index"
+          ref="inputs"
+          maxlength="1"
+          v-model="otp[index]"
+          @input="moveNext(index)"
+          @keydown.backspace="moveBack(index)"
+        />
+      </div>
+
+      <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="success" class="success">{{ success }}</p>
 
       <button :disabled="loading" @click="handleVerify">
         {{ loading ? 'Verifying...' : 'Verify' }}
       </button>
 
-      <p v-if="message">{{ message }}</p>
+      <p class="resend">
+        Didn’t receive code?
+        <span @click="handleResend" :class="{ disabled: countdown > 0 }">
+          Resend {{ countdown > 0 ? `(${countdown}s)` : '' }}
+        </span>
+      </p>
     </div>
   </AuthLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import { verify } from '@/services/auth.service'
+import { verify, resendCode } from '@/services/auth.service'
 
-const email = ref('')
-const code = ref('')
-const message = ref('')
+const router = useRouter()
+
+const email = localStorage.getItem('verify_email')
+
+const otp = ref(['', '', '', '', '', ''])
+const inputs = ref([])
+
+const error = ref('')
+const success = ref('')
 const loading = ref(false)
+const countdown = ref(0)
 
-const route = useRouter()
+onMounted(() => {
+  if (!email) {
+    router.push('/register') // fallback
+  }
+})
 
+// 👉 Auto move next
+const moveNext = (i) => {
+  if (otp.value[i] && i < 5) {
+    inputs.value[i + 1].focus()
+  }
+}
+
+// 👉 Backspace
+const moveBack = (i) => {
+  if (!otp.value[i] && i > 0) {
+    inputs.value[i - 1].focus()
+  }
+}
+
+// 👉 Verify
 const handleVerify = async () => {
-  if (!email.value || !code.value) {
-    alert('Please fill all fields')
+  error.value = ''
+  success.value = ''
+
+  const code = otp.value.join('')
+
+  if (code.length !== 6) {
+    error.value = 'Please enter full code'
     return
   }
 
   try {
     loading.value = true
-    email.value = route.query.email || ''
 
     const res = await verify({
-      email: email.value,
-      code: code.value
+      email,
+      code
     })
 
-    message.value = res.data.message
+    success.value = res.data.message
 
-    // 👉 redirect to login after success
+    // clear saved email
+    localStorage.removeItem('verify_email')
+
     setTimeout(() => {
-      route.push('/login')
+      router.push('/login')
     }, 1500)
 
   } catch (err) {
-    message.value = err.response?.data?.message || 'Verification failed'
+    error.value =
+      err.response?.data?.message || 'Verification failed'
   } finally {
     loading.value = false
   }
 }
-</script>
 
-<style scoped>
-.form {
-  width: 400px;
-  padding: 40px;
-  border-radius: 16px;
-  background: white;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+// 👉 Resend
+const handleResend = async () => {
+  if (countdown.value > 0) return
+
+  try {
+    await resendCode({ email })
+
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value === 0) clearInterval(timer)
+    }, 1000)
+
+  } catch (err) {
+    error.value = 'Failed to resend'
+  }
 }
-</style>
+</script>
