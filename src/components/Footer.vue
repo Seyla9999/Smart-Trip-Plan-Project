@@ -86,6 +86,8 @@
   </footer>
 </template>
 
+
+
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
 
@@ -189,4 +191,6 @@ export default defineComponent({
   .col-brand    { grid-column: span 2; }
   .footer-bottom-inner { flex-direction: column; gap: 10px; text-align: center; }
 }
+
+
 </style>
