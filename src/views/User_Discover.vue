@@ -149,7 +149,6 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-
 const searchQuery = ref<string>('')
 const activeFilter = ref<string>('ALL')
 const filters = ['ALL', 'BEACH', 'MOUNTAIN', 'CULTURAL', 'FOOD', 'NATURE', 'CITY', 'OFF THE BEATEN PATH']
@@ -196,6 +195,7 @@ function toSlug(value: string) {
 function openProvince(name: string) {
   router.push(`/province/${toSlug(name)}`)
 }
+
 </script>
 
 <style scoped>

@@ -1,7 +1,10 @@
 <template>
+
+    <NavBar />
     <div class="container max-w-full">
         <router-view />
     </div>
+    <Footer />
 </template>
 
 <script lang="ts">
