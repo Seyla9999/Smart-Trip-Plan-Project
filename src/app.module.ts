@@ -40,6 +40,12 @@ import { WeatherModule } from './modules/home/weather/weather.module';
       },
     }),
     AuthModule,
+    HttpModule,
+    ProvincesModule,
+    AttractionsModule,
+    StoriesModule,
+    SponsorsModule,
+    WeatherModule,
   ],
 })
 export class AppModule {}
