@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { ConfigModule } from '@nestjs/config'
-import { AuthModule } from './modules/auth/auth.module'
-import { MailerModule } from '@nestjs-modules/mailer'
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './modules/auth/auth.module';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
@@ -37,6 +37,5 @@ import { MailerModule } from '@nestjs-modules/mailer'
     AuthModule,
   ],
 })
-
 export class AppModule {}
-console.log('ENV CHECK:', process.env.DB_HOST)
+console.log('ENV CHECK:', process.env.DB_HOST);

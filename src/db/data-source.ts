@@ -5,9 +5,9 @@ config(); // Load .env variables
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  url: process.env.DATABASE_URL, 
-  entities: ['dist/**/*.entity.js'], 
-  migrations: ['dist/migrations/*.js'], 
+  url: process.env.DATABASE_URL,
+  entities: ['dist/**/*.entity.js'],
+  migrations: ['dist/migrations/*.js'],
   synchronize: false,
   logging: true,
 });

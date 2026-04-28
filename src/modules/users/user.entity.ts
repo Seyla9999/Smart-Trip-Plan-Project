@@ -1,46 +1,46 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm'
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
   @Column({ unique: true })
-  email!: string
+  email!: string;
 
   @Column()
-  password_hash!: string
+  password_hash!: string;
 
   @Column()
-  full_name!: string
+  full_name!: string;
 
   @Column({ nullable: true })
-  username!: string
+  username!: string;
 
   @Column({ nullable: true })
-  avatar_url!: string
+  avatar_url!: string;
 
   @Column({ nullable: true })
-  bio!: string
+  bio!: string;
 
   @Column({ default: 'traveler' })
-  role!: string
+  role!: string;
 
   @Column({ nullable: true })
-  last_login!: Date
+  last_login!: Date;
 
   @Column({ default: () => 'CURRENT_TIMESTAMP' })
-  created_at!: Date
+  created_at!: Date;
 
   @Column({ nullable: true })
-  updated_at!: Date
+  updated_at!: Date;
 
   @Column({ nullable: true })
-  deleted_at!: Date
+  deleted_at!: Date;
 
   @Column({ type: 'boolean', default: false })
-  is_verified!: boolean
+  is_verified!: boolean;
 
   @Column({ type: 'varchar', nullable: true })
-  verification_code!: string | null
+  verification_code!: string | null;
 }
