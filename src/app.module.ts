@@ -1,8 +1,15 @@
-import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { ConfigModule } from '@nestjs/config'
-import { AuthModule } from './modules/auth/auth.module'
-import { MailerModule } from '@nestjs-modules/mailer'
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import { ProvincesModule } from './provinces/provinces.module';
+import { AttractionsModule } from './attractions/attractions.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { Attraction } from './attractions/entities/attraction.entity';
+import { Province } from './provinces/entities/province.entity';
+
 
 @Module({
   imports: [
@@ -20,11 +27,13 @@ import { MailerModule } from '@nestjs-modules/mailer'
 
       autoLoadEntities: true,
       synchronize: false,
+      entities: [Attraction, Province],
 
       ssl: {
         rejectUnauthorized: false,
       },
     }),
+
     MailerModule.forRoot({
       transport: {
         service: 'gmail',
@@ -34,9 +43,14 @@ import { MailerModule } from '@nestjs-modules/mailer'
         },
       },
     }),
-    AuthModule,
-  ],
-})
 
+    AuthModule,
+    ProvincesModule,
+    AttractionsModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
 export class AppModule {}
-console.log('ENV CHECK:', process.env.DB_HOST)
+
+console.log('ENV CHECK:', process.env.DB_HOST);
