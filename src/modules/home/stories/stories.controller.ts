@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/stories/stories.controller.ts
-// ============================================================
 import { Controller, Get, Query } from '@nestjs/common';
 import { StoriesService } from './stories.service';
 

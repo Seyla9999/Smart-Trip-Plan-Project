@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/stories/stories.module.ts
-// ============================================================
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { StoriesController } from './stories.controller';

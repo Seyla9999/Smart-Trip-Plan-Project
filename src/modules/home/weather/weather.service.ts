@@ -1,7 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/weather/weather.service.ts
-// Uses Open-Meteo API — FREE, no API key needed!
-// ============================================================
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

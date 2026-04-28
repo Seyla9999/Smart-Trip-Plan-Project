@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/sponsors/sponsors.service.ts
-// ============================================================
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

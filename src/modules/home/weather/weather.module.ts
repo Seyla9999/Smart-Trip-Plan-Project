@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/weather/weather.module.ts
-// ============================================================
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';

@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/weather/weather.controller.ts
-// ============================================================
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { WeatherService } from './weather.service';
 

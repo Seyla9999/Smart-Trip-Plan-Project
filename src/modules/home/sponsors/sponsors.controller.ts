@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/sponsors/sponsors.controller.ts
-// ============================================================
 import { Controller, Get } from '@nestjs/common';
 import { SponsorsService } from './sponsors.service';
 
@@ -14,7 +11,3 @@ export class SponsorsController {
     return this.service.findAllActive();
   }
 }
-
-// ============================================================
-// SAVE AS: src/modules/home/sponsors/sponsors.module.ts
-// ============================================================

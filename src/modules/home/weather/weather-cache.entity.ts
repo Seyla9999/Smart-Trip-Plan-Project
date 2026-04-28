@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/weather/weather-cache.entity.ts
-// ============================================================
 import {
   Entity,
   PrimaryGeneratedColumn,

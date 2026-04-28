@@ -1,6 +1,3 @@
-// ============================================================
-// SAVE AS: src/modules/home/sponsors/sponsor.entity.ts
-// ============================================================
 import {
   Entity,
   PrimaryGeneratedColumn,
