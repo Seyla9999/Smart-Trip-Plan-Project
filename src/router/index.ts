@@ -11,6 +11,9 @@ import User_Discover from '../views/User_Discover.vue'
 import CommunityView from '../views/CommunityView.vue'
 import ProvinceDetailView from '../views/ProvinceDetailView.vue'
 import AttractionDetail from '../components/AttractionDetail.vue'
+import TripPlannerView from '../views/TripPlannerView.vue'
+import TripFormView from '../views/TripFormView.vue'
+import TripResultsView from '../views/TripResultsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -63,6 +66,18 @@ const router = createRouter({
       component: CommunityView,
     },
     {
+      path: '/trip',
+      component: TripPlannerView,
+      children: [
+        { path: '', name: 'trip', component: TripFormView },
+        { path: 'results', name: 'trip-results', component: TripResultsView },
+      ],
+    },
+    {
+      path: '/plan-trip',
+      redirect: '/trip',
+    },
+    {
       path: '/province/:slug',
       name: 'province-detail',
       component: ProvinceDetailView,
@@ -92,11 +107,12 @@ const router = createRouter({
   },
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('auth_token')
-  const publicRoutes = ['home', 'login', 'register', 'verify', 'discover']
+  const publicRoutes = ['home', 'login', 'register', 'verify', 'discover', 'trip', 'trip-results']
+  const routeName = typeof to.name === 'string' ? to.name : ''
   
-  if (!token && !publicRoutes.includes(to.name)) {
+  if (!token && !publicRoutes.includes(routeName)) {
     next('/login')
   } else {
     next()
