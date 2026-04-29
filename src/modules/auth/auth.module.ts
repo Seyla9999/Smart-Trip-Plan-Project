@@ -9,7 +9,6 @@ import { User } from '../users/user.entity'
 import { JwtStrategy } from './strategies/jwt.strategy'
 
 @Module({
-<<<<<<< HEAD
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
@@ -21,10 +20,8 @@ import { JwtStrategy } from './strategies/jwt.strategy'
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
   exports: [JwtModule, PassportModule],
-=======
-  imports: [TypeOrmModule.forFeature([User])],
-  controllers: [AuthController],  
+
   providers: [AuthService],
->>>>>>> 62905b1 (Authentication, Email Verrification)
+
 })
 export class AuthModule {}

@@ -37,7 +37,7 @@ export class AuthService {
       where: { email: dto.email },
     })
     if (existingUser) {
-      throw new BadRequestException('Email already exists')
+      throw new BadRequestException('Email already exists');
     }
 
     this.pendingUsers.set(dto.email, {
@@ -45,11 +45,16 @@ export class AuthService {
       full_name: dto.full_name,
       password_hash: hashed,
       verification_code: code,
+      is_verified: false,
     });
-    this.sendVerificationEmail(dto.email, code)
+
+    await this.userRepo.save(user);
+
+    await this.sendVerificationEmail(user.email, code);
+
     return {
-      message: 'Code sent. Please verify your email to complete registration.',
-    }
+      message: 'Registered successfully. Please verify your email.',
+    };
   }
 
   async sendVerificationEmail(email: string, code: string) {
@@ -87,30 +92,30 @@ export class AuthService {
 
     await this.sendVerificationEmail(email, code)
     return {
-        message: 'Verification code resent successfully',
-    }
+      message: 'Verification code resent successfully',
+    };
   }
 
   async login(dto: LoginDto) {
     console.log('LOGIN DTO:', dto)
 
     const user = await this.userRepo.findOne({
-        where: { email: dto.email },
-    })
-    console.log('USER:', user)
-    
+      where: { email: dto.email },
+    });
+    console.log('USER:', user);
+
     if (!user) {
-        throw new Error('User not found')
+      throw new Error('User not found');
     }
 
-    const isMatch = await bcrypt.compare(dto.password, user.password_hash)
+    const isMatch = await bcrypt.compare(dto.password, user.password_hash);
 
     if (!isMatch) {
-        throw new Error('Invalid password')
+      throw new Error('Invalid password');
     }
 
     if (!user.is_verified) {
-        throw new Error('Please verify your email first')
+      throw new Error('Please verify your email first');
     }
 
     // Generate JWT token
