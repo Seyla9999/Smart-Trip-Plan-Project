@@ -2,6 +2,7 @@
   <div class="max-h-full max-w-full">
     <NavBar v-if="showGlobalLayout" />
     <router-view />
+     <!-- <common-button-light class="property-hover" property1="hover"></common-button-light> -->
     <Footer v-if="showGlobalLayout" />
   </div>
 </template>

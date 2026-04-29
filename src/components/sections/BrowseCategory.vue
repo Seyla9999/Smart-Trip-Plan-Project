@@ -49,7 +49,7 @@
           <div class="rc-prov">📍 {{ item.province }}</div>
           <div class="rc-foot">
             <span class="rc-rating">{{ item.rating }} <span class="rc-cnt">({{ item.reviews }})</span></span>
-            <button class="trip-btn" @click.stop="$router.push('/plan-trip')">+ Trip</button>
+            <button class="trip-btn" @click.stop="$router.push('/trip')">+ Trip</button>
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@
         <li><a href="/" class="nav-link" :class="{ active: currentPath === '/' }">Home</a></li>
         <li><a href="/about" class="nav-link" :class="{ active: currentPath === '/about' }">About</a></li>
         <li><a href="/discover" class="nav-link" :class="{ active: currentPath === '/discover' }">Discover</a></li>
-        <li><a href="/plan-trip" class="nav-link" :class="{ active: currentPath === '/plan-trip' }">Plan Trip</a></li>
+        <li><a href="/trip" class="nav-link" :class="{ active: currentPath === '/trip' }">Plan Trip</a></li>
         <li><a href="/map" class="nav-link" :class="{ active: currentPath === '/map' }">Map</a></li>
         <li><a href="/community" class="nav-link" :class="{ active: currentPath === '/community' }">Community</a></li>
       </ul>
@@ -42,7 +42,7 @@
       <a href="/" class="mobile-link" @click="mobileOpen = false">Home</a>
       <a href="/about" class="mobile-link" @click="mobileOpen = false">About</a>
       <a href="/discover" class="mobile-link" @click="mobileOpen = false">Discover</a>
-      <a href="/plan-trip" class="mobile-link" @click="mobileOpen = false">Plan Trip</a>
+      <a href="/trip" class="mobile-link" @click="mobileOpen = false">Plan Trip</a>
       <a href="/map" class="mobile-link" @click="mobileOpen = false">Map</a>
       <a href="/community" class="mobile-link" @click="mobileOpen = false">Community</a>
       <div class="mobile-auth">
