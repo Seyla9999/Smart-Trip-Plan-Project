@@ -13,10 +13,9 @@ export class StoriesService {
 
   async findAll(q: { limit?: number; page?: number }) {
     const limit = Number(q.limit) || 10;
-    const page = Number(q.page) || 1;
-    const skip = (page - 1) * limit;
+    const page  = Number(q.page)  || 1;
+    const skip  = (page - 1) * limit;
 
-    // Join with users and attachments to get full story card data
     const data = await this.dataSource.query(
       `
       SELECT
@@ -37,14 +36,14 @@ export class StoriesService {
       FROM stories s
       JOIN users u ON u.id = s.user_id
       LEFT JOIN attachments att
-        ON att.entity_id = s.id::text
+        ON att.entity_id::uuid = s.id
         AND att.entity_type = 'story'
       WHERE s.deleted_at IS NULL
         AND s.status = 'published'
       GROUP BY s.id, u.id
       ORDER BY s.created_at DESC
       LIMIT $1 OFFSET $2
-    `,
+      `,
       [limit, skip],
     );
 
