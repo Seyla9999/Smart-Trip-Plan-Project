@@ -28,3 +28,9 @@ export class AuthController {
     return this.authService.resend(body.email);
   }
 }
+
+//   @Post('demo-token')
+//   demoToken() {
+//     return this.authService.generateDemoToken()
+//   }
+}
