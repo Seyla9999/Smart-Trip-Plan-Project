@@ -9,7 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { Attraction } from './attractions/entities/attraction.entity';
 import { Province } from './provinces/entities/province.entity';
-
+import { PointsOfInterestModule } from './points-of-interest/points-of-interest.module';
 
 @Module({
   imports: [
@@ -47,6 +47,7 @@ import { Province } from './provinces/entities/province.entity';
     AuthModule,
     ProvincesModule,
     AttractionsModule,
+    PointsOfInterestModule,
   ],
   controllers: [AppController],
   providers: [AppService],

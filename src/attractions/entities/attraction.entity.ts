@@ -7,8 +7,10 @@ import {
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
+  Timestamp,
 } from 'typeorm';
 import { Province } from '../../provinces/entities/province.entity';
+import { NumericType } from 'typeorm/browser';
 
 @Entity('attractions')
 export class Attraction {
@@ -37,6 +39,9 @@ export class Attraction {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'geometry', spatialFeatureType: 'Point', srid: 4326, nullable: true })
+  location: object;
+
   @Column({ name: 'is_hidden_gem', type: 'boolean', default: false })
   isHiddenGem: boolean;
 
@@ -47,16 +52,16 @@ export class Attraction {
     scale: 2,
     default: 0,
   })
-  averageRating: number;
+  averageRating: Number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
-  createdAt: Date;
+  createdAt: Timestamp;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
-  updatedAt: Date;
+  updatedAt: Timestamp;
 
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true })
-  deletedAt: Date;
+  deletedAt: Timestamp;
 
   get name(): string {
     return this.nameEn;
