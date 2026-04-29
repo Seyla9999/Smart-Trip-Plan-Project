@@ -8,13 +8,11 @@
       <a href="/discover?filter=hidden-gems" class="see-all">See All →</a>
     </div>
 
-    <!-- SKELETON while loading -->
     <div v-if="loading" class="gems-grid">
       <div class="sk-tall"><div class="sk-box" style="height:100%;min-height:370px" /></div>
       <div v-for="i in 4" :key="i" class="sk-small"><div class="sk-box" style="height:175px" /></div>
     </div>
 
-    <!-- REAL DATA from API (is_hidden_gem = true) -->
     <div v-else-if="gems.length > 0" class="gems-grid">
       <div class="gem tall" @click="$router.push(`/attractions/${gems[0].id}`)">
         <div
@@ -59,7 +57,6 @@
       </div>
     </div>
 
-    <!-- FALLBACK if API fails -->
     <div v-else class="gems-grid">
       <div class="gem tall">
         <div class="gem-img" style="background-image:url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=70');background-color:#6B4C3B">
@@ -130,4 +127,4 @@ export default defineComponent({
 .sk-box   { background: linear-gradient(90deg, #E8E5E0 25%, #F0EDE8 50%, #E8E5E0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 12px; }
 @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
 @media (max-width: 768px) { .section { padding: 36px 20px; } .gems-grid { grid-template-columns: 1fr 1fr; } .gem.tall { grid-row: span 1; } }
-</style> 
+</style>
