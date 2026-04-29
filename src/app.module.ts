@@ -3,11 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { ConfigModule } from '@nestjs/config'
 import { AuthModule } from './modules/auth/auth.module'
 import { MailerModule } from '@nestjs-modules/mailer'
-
+import { ProvincesModule } from './provinces/provinces.module';
+import { WeatherModule } from './weather/weather.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      
     }),
 
     TypeOrmModule.forRoot({
@@ -35,6 +37,8 @@ import { MailerModule } from '@nestjs-modules/mailer'
       },
     }),
     AuthModule,
+    WeatherModule,
+    ProvincesModule,
   ],
 })
 
