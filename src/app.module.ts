@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config' // Added ConfigService
 import { AuthModule } from './modules/auth/auth.module'
 import { MailerModule } from '@nestjs-modules/mailer'
 
@@ -17,23 +17,33 @@ import { MailerModule } from '@nestjs-modules/mailer'
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-
       autoLoadEntities: true,
       synchronize: false,
-
       ssl: {
         rejectUnauthorized: false,
       },
     }),
-    MailerModule.forRoot({
-      transport: {
-        service: 'gmail',
-        auth: {
-          user: process.env.MAIL_USER,
-          pass: process.env.MAIL_PASS,
+
+    MailerModule.forRootAsync({
+      imports: [ConfigModule], 
+      inject: [ConfigService], 
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get('SMTP_HOST'), 
+          port: config.get('SMTP_PORT'), 
+          secure: true, 
+          auth: {
+            user: config.get('SMTP_USER'), 
+            pass: config.get('SMTP_PASS'), 
+          },
         },
-      },
+        defaults: {
+          from: config.get('SMTP_FROM'),
+        },
+      }),
     }),
+    
+
     AuthModule,
   ],
 })
