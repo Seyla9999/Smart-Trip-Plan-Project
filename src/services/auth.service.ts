@@ -10,11 +10,18 @@ export const register = (data: {
 }
 
 // LOGIN
-export const login = (data: {
+export const login = async (data: {
   email: string
   password: string
 }) => {
-  return API.post('/auth/login', data)
+  const response = await API.post('/auth/login', data)
+  
+  // Store token in localStorage
+  if (response.data.token) {
+    localStorage.setItem('auth_token', response.data.token)
+  }
+  
+  return response
 }
 
 // VERIFY
@@ -27,3 +34,9 @@ export const verify = (data: {
 
 export const resendCode = (data: { email: string }) =>
   API.post('/auth/resend', data)
+
+// LOGOUT
+export const logout = () => {
+  localStorage.removeItem('auth_token')
+  window.location.href = '/login'
+}
