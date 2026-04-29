@@ -1,4 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm'
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne } from 'typeorm'
+import { Bookmark } from '../bookmarks/bookmark.entity'
+import { UserPreferences } from './user-preferences.entity'
 
 @Entity('users')
 export class User {
@@ -43,4 +45,10 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true })
   verification_code!: string | null
+
+  @OneToMany(() => Bookmark, (bookmark) => bookmark.user)
+  bookmarks!: Bookmark[]
+
+  @OneToOne(() => UserPreferences, (prefs) => prefs.user, { nullable: true })
+  preferences?: UserPreferences
 }

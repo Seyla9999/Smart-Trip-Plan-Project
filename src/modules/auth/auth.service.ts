@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
+import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { MailerService } from '@nestjs-modules/mailer'
 
@@ -15,13 +16,12 @@ export class AuthService {
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private mailerService: MailerService,
+    private jwtService: JwtService,
   ) {}
 
   async register(dto: RegisterDto) {
-    // hash password
     const hashed = await bcrypt.hash(dto.password, 10)
 
-    // generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
 
     const existingUser = await this.userRepo.findOne({
@@ -103,8 +103,12 @@ export class AuthService {
         throw new Error('Please verify your email first')
     }
 
+    // Generate JWT token
+    const token = this.jwtService.sign({ sub: user.id, email: user.email })
+
     return {
         message: 'Login success',
+        token,
         user: {
         id: user.id,
         email: user.email,
@@ -134,5 +138,23 @@ export class AuthService {
     return {
         message: 'Email verified successfully',
     }
+    }
+
+    generateDemoToken() {
+  const demoPayload = { 
+    sub: 'demo-user-id', 
+    email: 'demo@test.com' 
+  }
+  const token = this.jwtService.sign(demoPayload)
+  
+  return {
+    token,
+    user: {
+      id: 'demo-user-id',
+      email: 'demo@test.com',
+      full_name: 'Demo User',
+    },
+    message: 'Demo token generated for testing'
+  }
     }
 }
