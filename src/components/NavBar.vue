@@ -17,8 +17,16 @@
       </ul>
 
       <div class="nav-actions">
-        <a href="/login" class="btn-login">Login</a>
-        <a href="/register" class="btn-signup">Sign Up Free</a>
+        <template v-if="!user">
+          <a href="/login" class="btn-login">Login</a>
+          <a href="/register" class="btn-signup">Sign Up Free</a>
+        </template>
+        
+        <div v-else class="user-profile">
+          <div class="avatar">{{ user.full_name.charAt(0).toUpperCase() }}</div>
+          <span class="user-name">{{ user.full_name }}</span>
+          <button @click="handleLogout" class="btn-logout">Logout</button>
+        </div>
       </div>
 
       <button class="hamburger" @click="mobileOpen = !mobileOpen" aria-label="Menu">
@@ -38,8 +46,18 @@
       <a href="/map" class="mobile-link" @click="mobileOpen = false">Map</a>
       <a href="/community" class="mobile-link" @click="mobileOpen = false">Community</a>
       <div class="mobile-auth">
-        <a href="/login" class="btn-login-m">Login</a>
-        <a href="/register" class="btn-signup-m">Sign Up Free</a>
+        <template v-if="!user">
+          <a href="/login" class="btn-login-m">Login</a>
+          <a href="/register" class="btn-signup-m">Sign Up Free</a>
+        </template>
+        
+        <div v-else class="mobile-profile-menu">
+          <div class="mobile-profile-info">
+            <div class="avatar">{{ user.full_name.charAt(0).toUpperCase() }}</div>
+            <span class="user-name">{{ user.full_name }}</span>
+          </div>
+          <button @click="handleLogout" class="btn-logout-m">Logout</button>
+        </div>
       </div>
     </div>
 
@@ -47,16 +65,32 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, defineComponent, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 export default defineComponent({
   name: 'NavBar',
   setup() {
     const mobileOpen = ref<boolean>(false)
+    const router = useRouter()
     const route = useRoute()
     const currentPath = computed<string>(() => route.path)
-    return { mobileOpen, currentPath }
+
+    const user = ref<any>(null)
+
+    onMounted(() => {
+      const userData = localStorage.getItem('user_data')
+      if (userData) {
+        user.value = JSON.parse(userData)
+      }
+    })
+    const handleLogout = () => {
+      localStorage.removeItem('user_data')
+      user.value = null
+      router.push('/login')
+    }
+
+    return { mobileOpen, currentPath, user, handleLogout }
   }
 })
 </script>
@@ -234,6 +268,71 @@ export default defineComponent({
   font-size: 14px;
   font-weight: 500;
   text-align: center;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  background: #C8922A;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.user-name {
+  color: white;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.btn-logout {
+  padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: transparent;
+  border-radius: 6px;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background: rgba(255, 60, 60, 0.2);
+  border-color: rgba(255, 60, 60, 0.6);
+  color: white;
+}
+
+/* Mobile Profile Styles */
+.mobile-profile-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.mobile-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-logout-m {
+  padding: 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 60, 60, 0.5);
+  border-radius: 7px;
+  color: #ff6b6b;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 @media (max-width: 1024px) {

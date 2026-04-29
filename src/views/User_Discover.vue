@@ -169,10 +169,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { getAttractions, getCategories } from '@/services/attractions.service'
 import { createBookmark, removeBookmark, getUserBookmarks } from '@/services/bookmarks.service'
 
+
+const router = useRouter()
 const searchQuery = ref<string>('')
 const selectedCategory = ref<string>('')
 const categories = ref<string[]>([''])
@@ -266,6 +270,7 @@ async function toggleBookmark(attraction: any) {
     console.error('Error toggling bookmark:', err)
   }
 }
+
 </script>
 
 <style scoped>

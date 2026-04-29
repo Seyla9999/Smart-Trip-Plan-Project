@@ -105,7 +105,8 @@ const handleLogin = async () => {
       email: email.value,
       password: password.value
     })
-
+    
+    localStorage.setItem('user_data', JSON.stringify(res.data.user));
     success.value = res.data.message
 
     setTimeout(() => {
