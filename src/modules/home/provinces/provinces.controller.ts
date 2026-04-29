@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { ProvincesService } from './provinces.service';
 
 @Controller('provinces')
@@ -6,9 +6,10 @@ export class ProvincesController {
   constructor(private readonly service: ProvincesService) {}
 
   // GET /provinces
+  // GET /provinces?search=Battambang
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query('search') search?: string) {
+    return this.service.findAll(search);
   }
 
   // GET /provinces/1
