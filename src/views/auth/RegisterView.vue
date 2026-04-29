@@ -1,5 +1,5 @@
 <template>
-  <AuthLayout imagePosition="left">
+  <AuthLayout imagePosition="left" class="">
     <div class="form">
       <h1>Create Account</h1>
 
