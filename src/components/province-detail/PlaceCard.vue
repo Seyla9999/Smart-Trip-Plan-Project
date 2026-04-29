@@ -13,13 +13,28 @@ type Place = {
   featured?: boolean;
 };
 
-defineProps<{
+const props = defineProps<{
   place: Place;
 }>();
+
+const emit = defineEmits<{
+  (e: "select", place: Place): void;
+}>();
+
+function handleSelect() {
+  emit("select", props.place);
+}
 </script>
 
 <template>
-  <article class="place-card">
+  <article
+    class="place-card"
+    role="button"
+    tabindex="0"
+    @click="handleSelect"
+    @keydown.enter.prevent="handleSelect"
+    @keydown.space.prevent="handleSelect"
+  >
     <div class="card-image-wrap">
       <img :src="place.image" :alt="place.name" class="card-image" />
       <span class="corner-badge">{{ place.category.toUpperCase() }}</span>
@@ -47,6 +62,14 @@ defineProps<{
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.place-card:hover,
+.place-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.1);
 }
 
 .card-image-wrap {

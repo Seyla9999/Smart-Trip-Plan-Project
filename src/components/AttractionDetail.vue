@@ -4,10 +4,16 @@
     <p>Loading attraction details...</p>
   </div>
   
+  <div v-else-if="error" class="error-state">
+    <h2>⚠️ Error</h2>
+    <p>{{ error }}</p>
+    <router-link to="/" class="back-home">Return to Home</router-link>
+  </div>
+  
   <div v-else-if="attraction" class="attraction-page">
 
     <!-- Hero -->
-    <div class="hero" :style="{ backgroundImage: `url(${attraction.heroImage})` }">
+    <div class="hero" :style="{ backgroundImage: `url(${heroImage})` }">
       <div class="hero-overlay" />
       <div class="hero-content">
         <div class="hero-badges">
@@ -17,17 +23,17 @@
         <div class="hero-meta">
           <span class="meta-location">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            {{ attraction.province }}
+            {{ attraction.province?.nameEn || attraction.province }}
           </span>
           <span class="meta-rating">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFD700" stroke="#FFD700" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            {{ attraction.rating }} <span class="reviews">({{ attraction.reviews }} reviews)</span>
+            {{ attraction.rating }} <span class="reviews">({{ attraction.reviews || 0 }} reviews)</span>
           </span>
         </div>
       </div>
       <div class="breadcrumb">
         <router-link to="/">HOME</router-link>
-        <span> / KOH KONG / {{ attraction.name.toUpperCase() }}</span>
+        <span> / {{ attraction.province?.nameEn?.toUpperCase() || 'PROVINCE' }} / {{ attraction.name?.toUpperCase() }}</span>
       </div>
     </div>
 
@@ -51,7 +57,68 @@
           </div>
           <div class="photo-grid">
             <div v-for="(photo, i) in attraction.photos" :key="i" class="photo-item">
-              <img :src="photo" :alt="`Photo ${i + 1}`" />
+              <img :src="photo" :alt="`Photo ${Number(i) + 1}`" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Nearby Points of Interest Section (from API) -->
+        <section class="section" v-if="hasNearbyPOIs">
+          <h2>Nearby Services & Amenities</h2>
+          <div class="poi-grid">
+            <div v-if="nearbyPOIs.hospitals?.length" class="poi-category">
+              <h3>🏥 Hospitals ({{ nearbyPOIs.hospitals.length }})</h3>
+              <ul>
+                <li v-for="poi in nearbyPOIs.hospitals" :key="poi.id">
+                  <strong>{{ poi.name }}</strong> - {{ poi.distance_meters }}m away
+                  <span v-if="poi.isOpen24h" class="open-24h">(Open 24h)</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div v-if="nearbyPOIs.police?.length" class="poi-category">
+              <h3>👮 Police ({{ nearbyPOIs.police.length }})</h3>
+              <ul>
+                <li v-for="poi in nearbyPOIs.police" :key="poi.id">
+                  <strong>{{ poi.name }}</strong> - {{ poi.distance_meters }}m away
+                </li>
+              </ul>
+            </div>
+            
+            <div v-if="nearbyPOIs.restaurants?.length" class="poi-category">
+              <h3>🍽️ Restaurants ({{ nearbyPOIs.restaurants.length }})</h3>
+              <ul>
+                <li v-for="poi in nearbyPOIs.restaurants" :key="poi.id">
+                  <strong>{{ poi.name }}</strong> - {{ poi.distance_meters }}m away
+                </li>
+              </ul>
+            </div>
+            
+            <div v-if="nearbyPOIs.atms?.length" class="poi-category">
+              <h3>🏧 ATMs ({{ nearbyPOIs.atms.length }})</h3>
+              <ul>
+                <li v-for="poi in nearbyPOIs.atms" :key="poi.id">
+                  <strong>{{ poi.name }}</strong> - {{ poi.distance_meters }}m away
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="nearbyPOIs.cafes?.length" class="poi-category">
+              <h3>☕ Cafes ({{ nearbyPOIs.cafes.length }})</h3>
+              <ul>
+                <li v-for="poi in nearbyPOIs.cafes" :key="poi.id">
+                  <strong>{{ poi.name }}</strong> - {{ poi.distance_meters }}m away
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="nearbyPOIs.pharmacies?.length" class="poi-category">
+              <h3>💊 Pharmacies ({{ nearbyPOIs.pharmacies.length }})</h3>
+              <ul>
+                <li v-for="poi in nearbyPOIs.pharmacies" :key="poi.id">
+                  <strong>{{ poi.name }}</strong> - {{ poi.distance_meters }}m away
+                </li>
+              </ul>
             </div>
           </div>
         </section>
@@ -60,7 +127,7 @@
           <h2>Location on map</h2>
           <div class="map-placeholder">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="#C8922A" stroke="white" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="white" stroke="#C8922A"/></svg>
-            <p class="map-label">{{ attraction.name }}, {{ attraction.province }}</p>
+            <p class="map-label">{{ attraction.name }}, {{ attraction.province?.nameEn || attraction.province }}</p>
             <p class="map-sub">Interactive map will show here</p>
           </div>
         </section>
@@ -72,7 +139,7 @@
               v-for="place in attraction.nearby"
               :key="place.name"
               class="nearby-card"
-              @click="$router.push(`/attraction/${place.slug}`)"
+              @click="$router.push(`/province/${attraction.provinceSlug}/${place.slug}`)"
             >
               <div class="nearby-img">
                 <img :src="place.image" :alt="place.name" />
@@ -100,12 +167,39 @@
           </button>
 
           <div class="info-list">
-            <div class="info-row" v-for="item in infoItems" :key="item.label">
-              <div class="info-icon" :class="item.class">
-              </div>
+            <div class="info-row">
+              <div class="info-icon clock"></div>
               <div>
-                <p class="info-label">{{ item.label }}</p>
-                <p class="info-value">{{ item.value }}</p>
+                <p class="info-label">BEST TIME</p>
+                <p class="info-value">{{ attraction.info?.bestTime || 'Year-round' }}</p>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon duration"></div>
+              <div>
+                <p class="info-label">VISIT DURATION</p>
+                <p class="info-value">{{ attraction.info?.duration || '2-3 hours' }}</p>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon difficulty"></div>
+              <div>
+                <p class="info-label">DIFFICULTY</p>
+                <p class="info-value">{{ attraction.info?.difficulty || 'Moderate' }}</p>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon bestFor"></div>
+              <div>
+                <p class="info-label">BEST FOR</p>
+                <p class="info-value">{{ attraction.info?.bestFor || 'All travelers' }}</p>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon province"></div>
+              <div>
+                <p class="info-label">PROVINCE</p>
+                <p class="info-value">{{ attraction.province?.nameEn || attraction.province }}</p>
               </div>
             </div>
           </div>
@@ -119,20 +213,14 @@
     </div>
 
   </div>
-  
-  <div v-else class="not-found">
-    <h2>Attraction Not Found</h2>
-    <p>Sorry, we couldn't find the attraction you're looking for.</p>
-    <router-link to="/">Return to Home</router-link>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 
-// Import local images
-import heroImage from '@/assets/images/attractions/tatai-waterfall/waterfall.jpg'
+// Local image imports (your existing images)
 import photo1 from '@/assets/images/attractions/tatai-waterfall/boat.jpg'
 import photo2 from '@/assets/images/attractions/tatai-waterfall/nature.jpg'
 import photo3 from '@/assets/images/attractions/tatai-waterfall/resort.jpg'
@@ -140,24 +228,134 @@ import photo4 from '@/assets/images/attractions/tatai-waterfall/river.jpg'
 import photo5 from '@/assets/images/attractions/tatai-waterfall/sunset.jpg'
 import photo6 from '@/assets/images/attractions/tatai-waterfall/waterfall.jpg'
 
-// Import nearby images
-import tataiRiverResortImg from '@/assets/images/nearby/tatai-resort.jpg'
-import peamKrasaopImg from '@/assets/images/nearby/Peam-krasaop.jpg'
-import kohKongBeachImg from '@/assets/images/nearby/kohkong-beach.jpg'
-import cardamomTrekImg from '@/assets/images/nearby/cardamom-trek.jpg'
-import chiPhutVillageImg from '@/assets/images/nearby/chi-phat.png'
+// Local nearby images (if you have local images for nearby places)
+// import tataiResortImg from '@/assets/images/nearby/tatai-resort.jpg'
+// import peamKrasaopImg from '@/assets/images/nearby/peam-krasaop.jpg'
 
 const route = useRoute()
 const router = useRouter()
+
+// State
 const attraction = ref<any>(null)
+const nearbyPOIs = ref<any>(null)
 const loading = ref(true)
+
+type PlaceSummary = {
+  name: string
+  province: string
+  category: string
+  rating: number
+  reviews: number
+  description: string
+  image: string
+  tags: string[]
+}
+
+const toSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+
+const provincePlaceMap: Record<string, PlaceSummary[]> = {
+  'koh-kong': [
+    { name: 'Tatai Waterfall', province: 'Koh Kong', rating: 4.9, reviews: 743, description: 'A two-tiered semi-natural waterfall in the heart of the jungle. Perfect for travelers seeking peace and nature.', image: 'https://www.asiakingtravel.com/cuploads/files/Tatai-waterfall-2.jpg', tags: ['Nature', 'Photography', 'Adventure'] },
+    { name: 'Koh Kong Beach', province: 'Koh Kong', rating: 4.6, reviews: 352, description: 'A relaxing beach with soft sand and calm sea views, great for sunset walks.', image: 'https://merrytravelasia.com/wp-content/uploads/2023/06/Koh-Rong.jpg', tags: ['Beach', 'Relax', 'Sunset'] },
+    { name: 'Mangrove Forest Kayaking', province: 'Koh Kong', rating: 4.8, reviews: 286, description: 'Paddle through beautiful mangrove forests and enjoy peaceful eco-adventure moments.', image: 'https://kura2bus.com/blog/wp-content/uploads/2023/10/DSC_0887.jpg', tags: ['Nature', 'Adventure', 'Kayaking'] },
+    { name: 'Peam Krasaop Wildlife Sanctuary', province: 'Koh Kong', rating: 4.7, reviews: 401, description: 'A protected natural area with boardwalks, birdlife, and lush coastal scenery.', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/%E1%9E%88%E1%9E%9A%E1%9E%96%E1%9E%B8%E1%9E%9B%E1%9E%BE%E1%9E%94%E1%9F%89%E1%9E%98%E1%9E%98%E1%9E%BE%E1%9E%9B%E1%9E%91%E1%9F%85%E1%9E%96%E1%9F%92%E1%9E%9A%E1%9F%83%E1%9E%80%E1%9F%84%E1%9E%84%E1%9E%80%E1%9E%B6%E1%9E%84_-_panoramio.jpg', tags: ['Nature', 'Wildlife', 'Photography'] },
+    { name: 'Dong Tong Market', province: 'Koh Kong', rating: 4.4, reviews: 198, description: 'A local market where you can try fresh seafood and discover daily Khmer life.', image: 'https://travelsetu.com/apps/uploads/new_destinations_photos/destination/2024/06/28/0dc327612f9e0a519a343ecc3329b2b3_1000x1000.jpg', tags: ['Food', 'Market', 'Local Life'] },
+    { name: 'Chi Phat Eco Village', province: 'Koh Kong', rating: 4.9, reviews: 265, description: 'A community-based ecotourism destination surrounded by forests, rivers, and wildlife.', image: 'https://thealtruistictraveller.com/s/51524087023470235/blog/SAM_4897.jpg', tags: ['Nature', 'Eco Tour', 'Adventure'] },
+  ],
+  'siem-reap': [
+    { name: 'Angkor Wat Sunrise', province: 'Siem Reap', rating: 5, reviews: 1250, description: "Experience the breathtaking sunrise over Angkor Wat, Cambodia's most iconic temple.", image: 'https://toursbyjeeps.com/wp-content/uploads/2021/07/Untitled-1-2.jpg', tags: ['Temple', 'Sunrise', 'Photography'] },
+    { name: 'Bayon Temple', province: 'Siem Reap', rating: 4.9, reviews: 980, description: 'Famous for its giant smiling stone faces and rich Khmer architecture.', image: 'https://cambodiatravel.com/images/2020/12/intro-Bayon-Temple-Travel-Guide.jpg', tags: ['Temple', 'History', 'Architecture'] },
+    { name: 'Ta Prohm', province: 'Siem Reap', rating: 4.8, reviews: 875, description: 'A temple beautifully wrapped by jungle roots and ancient stone walls.', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRVuujeN6cK9EnoskxVGvkvPaKFnQo6HnjAQ&s', tags: ['Temple', 'Nature', 'Photography'] },
+    { name: 'Phare Cambodian Circus', province: 'Siem Reap', rating: 4.9, reviews: 620, description: 'A lively performance mixing theatre, music, and Cambodian storytelling.', image: 'https://www.siemreapshuttle.com/wp-content/uploads/2022/08/Phare-Circus-SiemreapShuttle.jpg', tags: ['Show', 'Culture', 'Family'] },
+    { name: 'Pub Street Food Walk', province: 'Siem Reap', rating: 4.5, reviews: 712, description: 'Taste local snacks, desserts, and street food in the center of the city.', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmnSH7ICljEFXf4-k-vYqmnMW3LiyYanjy5g&s', tags: ['Food', 'Nightlife', 'Local Life'] },
+    { name: 'Kulen Mountain Day Trip', province: 'Siem Reap', rating: 4.7, reviews: 430, description: 'Enjoy waterfalls, sacred sites, and mountain views outside the city.', image: 'https://www.siemreap.net/wp-content/uploads/2017/12/phnom-kulen-waterfall.jpg', tags: ['Nature', 'Waterfall', 'Adventure'] },
+  ],
+  'phnom-penh': [
+    { name: 'Royal Palace', province: 'Phnom Penh', rating: 4.8, reviews: 940, description: "Visit the majestic Royal Palace, one of Phnom Penh's most famous landmarks.", image: 'https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg', tags: ['Palace', 'History', 'Photography'] },
+    { name: 'National Museum of Cambodia', province: 'Phnom Penh', rating: 4.7, reviews: 683, description: "Explore Khmer art, sculpture, and ancient history in Cambodia's leading museum.", image: 'https://image-tc.galaxy.tf/wijpeg-87c83dri3kglj836kubeiybcf/the-national-museum-3.jpg', tags: ['Museum', 'History', 'Culture'] },
+    { name: 'Wat Phnom', province: 'Phnom Penh', rating: 4.6, reviews: 510, description: 'A peaceful hilltop temple and one of the most symbolic places in Phnom Penh.', image: 'https://files.intocambodia.org/wp-content/uploads/2024/08/10143531/Wat-Phnom.jpg', tags: ['Temple', 'History', 'Photography'] },
+    { name: 'Central Market', province: 'Phnom Penh', rating: 4.5, reviews: 860, description: 'A popular local market known for food, souvenirs, clothes, and Khmer daily life.', image: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Aerial_view_of_Phnom_Penh%27s_Central_Market_%28September_2021%29.jpg', tags: ['Food', 'Market', 'Shopping'] },
+    { name: 'Sisowath Riverside', province: 'Phnom Penh', rating: 4.6, reviews: 445, description: 'Walk along the riverfront with wide views, cafes, and a lively city atmosphere.', image: 'https://thumbs.dreamstime.com/b/busy-boulevard-sisowath-quay-along-phnom-penh-s-popular-riverside-area-cambodia-december-rd-alongside-tonle-sap-river-272947819.jpg', tags: ['River', 'Walk', 'Sunset'] },
+    { name: 'Tuol Sleng Genocide Museum', province: 'Phnom Penh', rating: 4.7, reviews: 799, description: "An important historical site for learning about Cambodia's recent past.", image: 'https://www.unesco.org/sites/default/files/styles/paragraph_medium_desktop/public/thumbnail_image.jpg.webp?itok=gSv1xJWw', tags: ['Museum', 'History', 'Education'] },
+    { name: 'Independence Monument', province: 'Phnom Penh', rating: 4.4, reviews: 320, description: 'A beautiful city landmark best seen in the evening with lights and open space around it.', image: 'https://www.novotelphnompenhbkk1.com/wp-content/uploads/sites/53/2023/08/Indepedence-monument-2200x1200.jpg', tags: ['Landmark', 'Photography', 'City'] },
+    { name: 'Russian Market', province: 'Phnom Penh', rating: 4.5, reviews: 570, description: 'A lively market famous for local food, clothes, souvenirs, and street shopping.', image: 'https://d122axpxm39woi.cloudfront.net/images/destinations/origin/64be1fb570dee.jpg', tags: ['Market', 'Food', 'Shopping'] },
+    { name: 'Bassac Lane', province: 'Phnom Penh', rating: 4.6, reviews: 265, description: 'A stylish small street filled with cafes, bars, and evening hangout spots.', image: 'https://ctp.r24k.app/wp-content/uploads/2025/03/vvTlcTqutrNFTxTyLETB.jpg', tags: ['Food', 'Nightlife', 'Friends'] },
+  ],
+}
+
+function getPlaceFromRoute() {
+  const provinceSlug = (route.params.slug as string) || 'koh-kong'
+  const placeSlugFromRoute = (route.params.placeSlug as string) || (route.params.id as string)
+
+  if (!placeSlugFromRoute) return null
+
+  const provincePlaces = provincePlaceMap[provinceSlug] || []
+  const byProvince = provincePlaces.find((item) => toSlug(item.name) === placeSlugFromRoute)
+  if (byProvince) {
+    return { place: byProvince, provinceSlug, placeSlug: placeSlugFromRoute }
+  }
+
+  for (const [mapProvinceSlug, mapPlaces] of Object.entries(provincePlaceMap)) {
+    const found = mapPlaces.find((item) => toSlug(item.name) === placeSlugFromRoute)
+    if (found) {
+      return { place: found, provinceSlug: mapProvinceSlug, placeSlug: placeSlugFromRoute }
+    }
+  }
+
+  return null
+}
+
+function buildGenericAttraction(place: PlaceSummary, provinceSlug: string, placeSlug: string) {
+  const nearby = (provincePlaceMap[provinceSlug] || [])
+    .filter((item) => toSlug(item.name) !== placeSlug)
+    .slice(0, 5)
+    .map((item) => ({
+      name: item.name,
+      slug: toSlug(item.name),
+      location: place.province.toUpperCase(),
+      image: item.image,
+    }))
+
+  return {
+    id: placeSlug,
+    name: place.name,
+    province: place.province,
+    provinceSlug,
+    rating: place.rating,
+    reviews: place.reviews,
+    heroImage: place.image,
+    badges: ['HIDDEN GEM', (place.category || 'Attraction').toUpperCase(), 'TOP RATED'],
+    tags: place.tags,
+    about: [
+      place.description,
+      `Discover more of ${place.province} by exploring nearby attractions and building your itinerary based on travel type and season.`
+    ],
+    photos: [place.image, place.image, place.image, place.image, place.image, place.image],
+    info: {
+      bestTime: 'All year',
+      duration: '2-4 hours',
+      difficulty: 'Easy',
+      bestFor: 'Solo, Friends, Family',
+      province: place.province,
+    },
+    nearby,
+  }
+}
 
 // Store all attraction data with local images
 const attractionsData: Record<string, any> = {
-  'tatai-waterfall': {
+  'koh-kong/tatai-waterfall': {
     id: 'tatai-waterfall',
     name: 'Tatai Waterfall',
-    province: 'Koh Kong Province',
+    province: 'Koh Kong',
+    provinceSlug: 'koh-kong',
     rating: 4.9,
     reviews: 743,
     heroImage: heroImage,
@@ -180,40 +378,109 @@ const attractionsData: Record<string, any> = {
       { name: 'Peam Krasaop', slug: 'peam-krasaop', location: 'KOH KONG', image: peamKrasaopImg },
       { name: 'Koh Kong Beach', slug: 'koh-kong-beach', location: 'KOH KONG', image: kohKongBeachImg },
       { name: 'Cardamom Trek', slug: 'cardamom-trek', location: 'KOH KONG', image: cardamomTrekImg },
-      { name: 'Chi Phut Village', slug: 'chi-phut-village', location: 'KOH KONG', image: chiPhutVillageImg },
+      { name: 'Chi Phut Village', slug: 'chi-phat-eco-village', location: 'KOH KONG', image: chiPhutVillageImg },
     ]
   }
 }
 
-onMounted(() => {
-  const attractionId = route.params.id as string
-  
-  if (attractionId && attractionsData[attractionId]) {
-    attraction.value = attractionsData[attractionId]
-  } else {
-    console.error('Attraction not found:', attractionId)
-    setTimeout(() => {
-      router.push('/')
-    }, 2000)
+function loadAttraction() {
+  loading.value = true
+
+  const provinceSlug = (route.params.slug as string) || 'koh-kong'
+  const placeSlug = (route.params.placeSlug as string) || (route.params.id as string)
+
+  if (!placeSlug) {
+    attraction.value = null
+    loading.value = false
+    return
   }
-  
+
+  const detailedKey = `${provinceSlug}/${placeSlug}`
+  if (attractionsData[detailedKey]) {
+    attraction.value = attractionsData[detailedKey]
+    loading.value = false
+    return
+  }
+
+  const routePlace = getPlaceFromRoute()
+  if (routePlace?.place) {
+    attraction.value = buildGenericAttraction(routePlace.place, routePlace.provinceSlug, routePlace.placeSlug)
+    loading.value = false
+    return
+  }
+
+  attraction.value = null
   loading.value = false
+  setTimeout(() => {
+    router.push(`/province/${provinceSlug}`)
+  }, 1200)
+}
+
+watch(
+  () => [route.params.slug, route.params.placeSlug, route.params.id],
+  () => {
+    loadAttraction()
+  },
+  { immediate: true },
+)
+
+// Computed: check if there are nearby POIs
+const hasNearbyPOIs = computed(() => {
+  return nearbyPOIs.value && (
+    nearbyPOIs.value.hospitals?.length ||
+    nearbyPOIs.value.police?.length ||
+    nearbyPOIs.value.restaurants?.length ||
+    nearbyPOIs.value.atms?.length ||
+    nearbyPOIs.value.cafes?.length ||
+    nearbyPOIs.value.pharmacies?.length
+  )
 })
 
-const infoItems = computed(() => {
-  if (!attraction.value) return []
-  return [
-    { label: 'BEST TIME', value: attraction.value.info.bestTime, class: 'clock' },
-    { label: 'VISIT DURATION', value: attraction.value.info.duration, class: 'duration' },
-    { label: 'DIFFICULTY', value: attraction.value.info.difficulty, class: 'difficulty' },
-    { label: 'BEST FOR', value: attraction.value.info.bestFor, class: 'bestFor' },
-    { label: 'PROVINCE', value: attraction.value.info.province, class: 'province' },
-  ]
+// Fetch attraction data from backend
+const fetchAttraction = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const attractionId = route.params.id as string
+    
+    console.log(`Fetching attraction: ${attractionId}`)
+    
+    const response = await axios.get(`${API_BASE_URL}/attractions/${attractionId}`)
+    
+    if (response.data) {
+      attraction.value = response.data
+      nearbyPOIs.value = response.data.nearbyPOIs || null
+      
+      console.log('Attraction loaded:', attraction.value.name)
+    }
+  } catch (err: any) {
+    console.error('API Error:', err)
+    
+    if (err.response?.status === 404) {
+      error.value = `Attraction "${route.params.id}" not found`
+    } else if (err.code === 'ECONNREFUSED') {
+      error.value = 'Cannot connect to backend server. Make sure it\'s running on port 3000'
+    } else {
+      error.value = err.response?.data?.message || 'Failed to load attraction details'
+    }
+    
+    if (err.response?.status === 404) {
+      setTimeout(() => {
+        router.push('/')
+      }, 3000)
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchAttraction()
 })
 </script>
 
 <style scoped>
-/* Your existing styles remain exactly the same */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 .attraction-page {
@@ -222,6 +489,7 @@ const infoItems = computed(() => {
   background: #fff;
 }
 
+/* Loading State */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -249,7 +517,8 @@ const infoItems = computed(() => {
   font-size: 14px;
 }
 
-.not-found {
+/* Error State */
+.error-state {
   text-align: center;
   padding: 80px 20px;
   min-height: 60vh;
@@ -260,17 +529,17 @@ const infoItems = computed(() => {
   gap: 16px;
 }
 
-.not-found h2 {
+.error-state h2 {
   font-size: 2rem;
-  color: #333;
+  color: #e74c3c;
 }
 
-.not-found p {
+.error-state p {
   color: #666;
   margin-bottom: 20px;
 }
 
-.not-found a {
+.back-home {
   display: inline-block;
   padding: 12px 24px;
   background: #C8922A;
@@ -281,10 +550,11 @@ const infoItems = computed(() => {
   transition: background 0.2s;
 }
 
-.not-found a:hover {
+.back-home:hover {
   background: #b07820;
 }
 
+/* Hero Section */
 .hero {
   position: relative;
   height: 380px;
@@ -336,6 +606,7 @@ const infoItems = computed(() => {
 }
 .reviews { color: rgba(255,255,255,0.65); }
 
+/* Main Content */
 .main-wrapper {
   max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem;
   display: grid; grid-template-columns: 1fr 300px;
@@ -356,11 +627,63 @@ const infoItems = computed(() => {
 .view-all { font-size: 13px; color: #C8922A; text-decoration: none; font-weight: 500; }
 .view-all:hover { text-decoration: underline; }
 
+/* Photo Grid */
 .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .photo-item { border-radius: 8px; overflow: hidden; aspect-ratio: 4/3; }
 .photo-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
 .photo-item:hover img { transform: scale(1.05); }
 
+/* POI Grid */
+.poi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.poi-category {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 4px solid #C8922A;
+}
+
+.poi-category h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.poi-category ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.poi-category li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+}
+
+.poi-category li:last-child {
+  border-bottom: none;
+}
+
+.poi-category strong {
+  color: #C8922A;
+}
+
+.open-24h {
+  display: inline-block;
+  background: #2ecc71;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+/* Map */
 .map-placeholder {
   border: 2px dashed #d0d0d0; border-radius: 12px; padding: 3rem;
   display: flex; flex-direction: column; align-items: center;
@@ -369,14 +692,7 @@ const infoItems = computed(() => {
 .map-label { font-size: 14px; font-weight: 600; color: #333; }
 .map-sub { font-size: 12px; color: #888; }
 
-.nearby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.nearby-card { cursor: pointer; }
-.nearby-img { border-radius: 10px; overflow: hidden; aspect-ratio: 1; margin-bottom: 6px; }
-.nearby-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
-.nearby-card:hover .nearby-img img { transform: scale(1.08); }
-.nearby-name { font-size: 12px; font-weight: 600; color: #222; margin-bottom: 2px; }
-.nearby-location { font-size: 11px; color: #888; }
-
+/* Sidebar */
 .sidebar { position: sticky; top: 76px; }
 .sidebar-card { border: 1px solid #e0e0e0; border-radius: 14px; padding: 1.25rem; background: #fff; }
 .sidebar-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
@@ -403,11 +719,11 @@ const infoItems = computed(() => {
   width: 32px; height: 32px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.clock      { background: #e8f5e9; color: #2E7D32; }
-.duration   { background: #e3f2fd; color: #1565c0; }
-.difficulty { background: #fff3e0; color: #e65100; }
-.bestFor    { background: #fce4ec; color: #c62828; }
-.province   { background: #ede7f6; color: #4527a0; }
+.clock { background: #e8f5e9; }
+.duration { background: #e3f2fd; }
+.difficulty { background: #fff3e0; }
+.bestFor { background: #fce4ec; }
+.province { background: #ede7f6; }
 .info-label { font-size: 10px; letter-spacing: 0.08em; color: #aaa; margin-bottom: 1px; }
 .info-value { font-size: 13px; font-weight: 600; color: #222; }
 
@@ -419,14 +735,15 @@ const infoItems = computed(() => {
 }
 .btn-cta:hover { background: #b07820; }
 
+/* Responsive */
 @media (max-width: 900px) {
   .main-wrapper { grid-template-columns: 1fr; }
   .sidebar { position: static; }
-  .nearby-grid { grid-template-columns: repeat(3, 1fr); }
+  .photo-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 600px) {
   .hero-title { font-size: 1.8rem; }
-  .photo-grid { grid-template-columns: repeat(2, 1fr); }
-  .nearby-grid { grid-template-columns: repeat(2, 1fr); }
+  .photo-grid { grid-template-columns: 1fr; }
+  .poi-grid { grid-template-columns: 1fr; }
 }
 </style>

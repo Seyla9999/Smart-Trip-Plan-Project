@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { useRoute, RouterLink } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter, RouterLink } from "vue-router";
 
 import ProvinceTopSearch from "@/components/province-detail/ProvinceTopSearch.vue";
 import ProvinceInfoBar from "@/components/province-detail/ProvinceInfoBar.vue";
@@ -70,6 +70,7 @@ const FALLBACK_IMAGE =
   "https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg";
 
 const route = useRoute();
+const router = useRouter();
 
 const slug = computed(() => (route.params.slug as string) || "koh-kong");
 
@@ -387,6 +388,20 @@ function toggleDiscovery(name: string) {
 function setTravelType(value: TravelType) {
   selectedTravelType.value = value;
 }
+
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+function openPlaceDetail(place: Place) {
+  router.push(`/province/${slug.value}/${toSlug(place.name)}`);
+}
 </script>
 
 <template>
@@ -485,63 +500,21 @@ function setTravelType(value: TravelType) {
               </div>
             </div>
 
-            <div v-if="weatherSummary" class="weather-card">
-              <div class="weather-left">
-                <img
-                  v-if="weatherSummary.icon"
-                  :src="weatherSummary.icon"
-                  alt="Weather icon"
-                  class="weather-icon"
-                />
-                <div>
-                  <p class="weather-temp">{{ weatherSummary.temp }}°C</p>
-                  <p class="weather-condition">
-                    {{ weatherSummary.condition }}
-                  </p>
-                </div>
-              </div>
-              <div class="weather-right">
-                <p v-if="weatherSummary.updatedAt">
-                  Updated: {{ weatherSummary.updatedAt }}
-                </p>
-                <p v-if="weatherAlerts.length">
-                  Alerts: {{ weatherAlerts.length }}
-                </p>
-              </div>
-            </div>
+            <FeaturedPlaceCard
+              v-if="featuredPlace"
+              :place="featuredPlace"
+              @select="openPlaceDetail"
+            />
 
-            <div v-if="isLoading" class="status-box">
-              Loading province details...
-            </div>
-            <div v-else-if="errorMessage" class="status-box error-box">
-              {{ errorMessage }}
-            </div>
-            <div v-else>
-              <FeaturedPlaceCard v-if="featuredPlace" :place="featuredPlace" />
-
-              <div
-                v-if="paginatedPlaces.length"
-                class="cards-grid"
-                :class="{ 'cards-list': viewMode === 'list' }"
-              >
-                <PlaceCard
-                  v-for="place in paginatedPlaces"
-                  :key="place.id"
-                  :place="place"
-                />
-              </div>
-
-              <div v-else-if="!featuredPlace" class="status-box">
-                No attractions found yet.
-              </div>
-
-              <PlacePagination
-                v-if="paginatedPlaces.length"
-                :current-page="currentPage"
-                :total-pages="totalPages"
-                @go-to-page="goToPage"
-                @prev-page="prevPage"
-                @next-page="nextPage"
+            <div
+              class="cards-grid"
+              :class="{ 'cards-list': viewMode === 'list' }"
+            >
+              <PlaceCard
+                v-for="place in paginatedPlaces"
+                :key="place.id"
+                :place="place"
+                @select="openPlaceDetail"
               />
             </div>
           </section>
