@@ -14,7 +14,7 @@ type ViewMode = "grid" | "list";
 type SortOption = "recommended" | "top-rated" | "most-popular";
 
 type Place = {
-  id: number;
+  id: string | number;
   name: string;
   province: string;
   category: string;
@@ -26,6 +26,48 @@ type Place = {
   tags: string[];
   featured?: boolean;
 };
+
+type ProvinceApi = {
+  id: number;
+  nameEn: string;
+  nameKh: string;
+  description: string | null;
+  mainImageUrl: string | null;
+};
+
+type AttractionApi = {
+  id: string;
+  provinceId: number;
+  nameEn: string;
+  nameKh: string | null;
+  category: string | null;
+  description: string | null;
+  location: string | null;
+  isHiddenGem: boolean;
+  averageRating: number | string;
+};
+
+type WeatherApi = {
+  id: string;
+  provinceId: number;
+  tempCelsius: number | string | null;
+  conditionText: string | null;
+  iconUrl: string | null;
+  lastUpdated: string | null;
+};
+
+type WeatherAlertApi = {
+  id: string;
+  provinceId: number;
+  alertType: string | null;
+  description: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+};
+
+const API_BASE = "http://localhost:3000";
+const FALLBACK_IMAGE =
+  "https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg";
 
 const route = useRoute();
 const router = useRouter();
@@ -92,339 +134,147 @@ watch(
   { immediate: true },
 );
 
-const provincePlaces: Record<string, Place[]> = {
-  "koh-kong": [
-    {
-      id: 1,
-      name: "Tatai Waterfall",
-      province: "Koh Kong",
-      category: "Waterfall",
-      discovery: "Hidden gems",
-      rating: 4.9,
-      reviews: 743,
-      description:
-        "A two-tiered semi-natural waterfall in the heart of the jungle. Perfect for travelers seeking peace and nature.",
-      image:
-        "https://www.asiakingtravel.com/cuploads/files/Tatai-waterfall-2.jpg",
-      tags: ["Nature", "Photography", "Adventure"],
-      featured: true,
-    },
-    {
-      id: 2,
-      name: "Koh Kong Beach",
-      province: "Koh Kong",
-      category: "Beach",
-      discovery: "Most popular",
-      rating: 4.6,
-      reviews: 352,
-      description:
-        "A relaxing beach with soft sand and calm sea views, great for sunset walks.",
-      image:
-        "https://merrytravelasia.com/wp-content/uploads/2023/06/Koh-Rong.jpg",
-      tags: ["Beach", "Relax", "Sunset"],
-    },
-    {
-      id: 3,
-      name: "Mangrove Forest Kayaking",
-      province: "Koh Kong",
-      category: "Nature",
-      discovery: "Hidden gems",
-      rating: 4.8,
-      reviews: 286,
-      description:
-        "Paddle through beautiful mangrove forests and enjoy peaceful eco-adventure moments.",
-      image:
-        "https://kura2bus.com/blog/wp-content/uploads/2023/10/DSC_0887.jpg",
-      tags: ["Nature", "Adventure", "Kayaking"],
-    },
-    {
-      id: 4,
-      name: "Peam Krasaop Wildlife Sanctuary",
-      province: "Koh Kong",
-      category: "Nature",
-      discovery: "Hidden gems",
-      rating: 4.7,
-      reviews: 401,
-      description:
-        "A protected natural area with boardwalks, birdlife, and lush coastal scenery.",
-      image:
-        "https://upload.wikimedia.org/wikipedia/commons/1/1e/%E1%9E%88%E1%9E%9A%E1%9E%96%E1%9E%B8%E1%9E%9B%E1%9E%BE%E1%9E%94%E1%9F%89%E1%9E%98%E1%9E%98%E1%9E%BE%E1%9E%9B%E1%9E%91%E1%9F%85%E1%9E%96%E1%9F%92%E1%9E%9A%E1%9F%83%E1%9E%80%E1%9F%84%E1%9E%84%E1%9E%80%E1%9E%B6%E1%9E%84_-_panoramio.jpg",
-      tags: ["Nature", "Wildlife", "Photography"],
-    },
-    {
-      id: 5,
-      name: "Dong Tong Market",
-      province: "Koh Kong",
-      category: "Food",
-      discovery: "Most popular",
-      rating: 4.4,
-      reviews: 198,
-      description:
-        "A local market where you can try fresh seafood and discover daily Khmer life.",
-      image:
-        "https://travelsetu.com/apps/uploads/new_destinations_photos/destination/2024/06/28/0dc327612f9e0a519a343ecc3329b2b3_1000x1000.jpg",
-      tags: ["Food", "Market", "Local Life"],
-    },
-    {
-      id: 6,
-      name: "Chi Phat Eco Village",
-      province: "Koh Kong",
-      category: "Nature",
-      discovery: "Hidden gems",
-      rating: 4.9,
-      reviews: 265,
-      description:
-        "A community-based ecotourism destination surrounded by forests, rivers, and wildlife.",
-      image:
-        "https://thealtruistictraveller.com/s/51524087023470235/blog/SAM_4897.jpg",
-      tags: ["Nature", "Eco Tour", "Adventure"],
-    },
-  ],
+function toSlug(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
+}
 
-  "siem-reap": [
-    {
-      id: 101,
-      name: "Angkor Wat Sunrise",
-      province: "Siem Reap",
-      category: "Cultural",
-      discovery: "Most popular",
-      rating: 5.0,
-      reviews: 1250,
-      description:
-        "Experience the breathtaking sunrise over Angkor Wat, Cambodia's most iconic temple.",
-      image:
-        "https://toursbyjeeps.com/wp-content/uploads/2021/07/Untitled-1-2.jpg",
-      tags: ["Temple", "Sunrise", "Photography"],
-      featured: true,
-    },
-    {
-      id: 102,
-      name: "Bayon Temple",
-      province: "Siem Reap",
-      category: "Cultural",
-      discovery: "Most popular",
-      rating: 4.9,
-      reviews: 980,
-      description:
-        "Famous for its giant smiling stone faces and rich Khmer architecture.",
-      image:
-        "https://cambodiatravel.com/images/2020/12/intro-Bayon-Temple-Travel-Guide.jpg",
-      tags: ["Temple", "History", "Architecture"],
-    },
-    {
-      id: 103,
-      name: "Ta Prohm",
-      province: "Siem Reap",
-      category: "Cultural",
-      discovery: "Most popular",
-      rating: 4.8,
-      reviews: 875,
-      description:
-        "A temple beautifully wrapped by jungle roots and ancient stone walls.",
-      image:
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRVuujeN6cK9EnoskxVGvkvPaKFnQo6HnjAQ&s",
-      tags: ["Temple", "Nature", "Photography"],
-    },
-    {
-      id: 104,
-      name: "Phare Cambodian Circus",
-      province: "Siem Reap",
-      category: "Cultural",
-      discovery: "Hidden gems",
-      rating: 4.9,
-      reviews: 620,
-      description:
-        "A lively performance mixing theatre, music, and Cambodian storytelling.",
-      image:
-        "https://www.siemreapshuttle.com/wp-content/uploads/2022/08/Phare-Circus-SiemreapShuttle.jpg",
-      tags: ["Show", "Culture", "Family"],
-    },
-    {
-      id: 105,
-      name: "Pub Street Food Walk",
-      province: "Siem Reap",
-      category: "Food",
-      discovery: "Most popular",
-      rating: 4.5,
-      reviews: 712,
-      description:
-        "Taste local snacks, desserts, and street food in the center of the city.",
-      image:
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmnSH7ICljEFXf4-k-vYqmnMW3LiyYanjy5g&s",
-      tags: ["Food", "Nightlife", "Local Life"],
-    },
-    {
-      id: 106,
-      name: "Kulen Mountain Day Trip",
-      province: "Siem Reap",
-      category: "Nature",
-      discovery: "Hidden gems",
-      rating: 4.7,
-      reviews: 430,
-      description:
-        "Enjoy waterfalls, sacred sites, and mountain views outside the city.",
-      image:
-        "https://www.siemreap.net/wp-content/uploads/2017/12/phnom-kulen-waterfall.jpg",
-      tags: ["Nature", "Waterfall", "Adventure"],
-    },
-  ],
-
-  "phnom-penh": [
-    {
-      id: 201,
-      name: "Royal Palace",
-      province: "Phnom Penh",
-      category: "Cultural",
-      discovery: "Most popular",
-      rating: 4.8,
-      reviews: 940,
-      description:
-        "Visit the majestic Royal Palace, one of Phnom Penh's most famous landmarks.",
-      image:
-        "https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg",
-      tags: ["Palace", "History", "Photography"],
-      featured: true,
-    },
-    {
-      id: 202,
-      name: "National Museum of Cambodia",
-      province: "Phnom Penh",
-      category: "Cultural",
-      discovery: "Most popular",
-      rating: 4.7,
-      reviews: 683,
-      description:
-        "Explore Khmer art, sculpture, and ancient history in Cambodia's leading museum.",
-      image:
-        "https://image-tc.galaxy.tf/wijpeg-87c83dri3kglj836kubeiybcf/the-national-museum-3.jpg",
-      tags: ["Museum", "History", "Culture"],
-    },
-    {
-      id: 203,
-      name: "Wat Phnom",
-      province: "Phnom Penh",
-      category: "Cultural",
-      discovery: "Most popular",
-      rating: 4.6,
-      reviews: 510,
-      description:
-        "A peaceful hilltop temple and one of the most symbolic places in Phnom Penh.",
-      image:
-        "https://files.intocambodia.org/wp-content/uploads/2024/08/10143531/Wat-Phnom.jpg",
-      tags: ["Temple", "History", "Photography"],
-    },
-    {
-      id: 204,
-      name: "Central Market",
-      province: "Phnom Penh",
-      category: "Food",
-      discovery: "Most popular",
-      rating: 4.5,
-      reviews: 860,
-      description:
-        "A popular local market known for food, souvenirs, clothes, and Khmer daily life.",
-      image:
-        "https://upload.wikimedia.org/wikipedia/commons/2/26/Aerial_view_of_Phnom_Penh%27s_Central_Market_%28September_2021%29.jpg",
-      tags: ["Food", "Market", "Shopping"],
-    },
-    {
-      id: 205,
-      name: "Sisowath Riverside",
-      province: "Phnom Penh",
-      category: "Nature",
-      discovery: "Most popular",
-      rating: 4.6,
-      reviews: 445,
-      description:
-        "Walk along the riverfront with wide views, cafés, and a lively city atmosphere.",
-      image:
-        "https://thumbs.dreamstime.com/b/busy-boulevard-sisowath-quay-along-phnom-penh-s-popular-riverside-area-cambodia-december-rd-alongside-tonle-sap-river-272947819.jpg",
-      tags: ["River", "Walk", "Sunset"],
-    },
-    {
-      id: 206,
-      name: "Tuol Sleng Genocide Museum",
-      province: "Phnom Penh",
-      category: "Cultural",
-      discovery: "Hidden gems",
-      rating: 4.7,
-      reviews: 799,
-      description:
-        "An important historical site for learning about Cambodia's recent past.",
-      image:
-        "https://www.unesco.org/sites/default/files/styles/paragraph_medium_desktop/public/thumbnail_image.jpg.webp?itok=gSv1xJWw",
-      tags: ["Museum", "History", "Education"],
-    },
-    {
-      id: 207,
-      name: "Independence Monument",
-      province: "Phnom Penh",
-      category: "Cultural",
-      discovery: "Hidden gems",
-      rating: 4.4,
-      reviews: 320,
-      description:
-        "A beautiful city landmark best seen in the evening with lights and open space around it.",
-      image:
-        "https://www.novotelphnompenhbkk1.com/wp-content/uploads/sites/53/2023/08/Indepedence-monument-2200x1200.jpg",
-      tags: ["Landmark", "Photography", "City"],
-    },
-    {
-      id: 208,
-      name: "Russian Market",
-      province: "Phnom Penh",
-      category: "Food",
-      discovery: "Most popular",
-      rating: 4.5,
-      reviews: 570,
-      description:
-        "A lively market famous for local food, clothes, souvenirs, and street shopping.",
-      image:
-        "https://d122axpxm39woi.cloudfront.net/images/destinations/origin/64be1fb570dee.jpg",
-      tags: ["Market", "Food", "Shopping"],
-    },
-    {
-      id: 209,
-      name: "Bassac Lane",
-      province: "Phnom Penh",
-      category: "Food",
-      discovery: "Hidden gems",
-      rating: 4.6,
-      reviews: 265,
-      description:
-        "A stylish small street filled with cafés, bars, and evening hangout spots.",
-      image:
-        "https://ctp.r24k.app/wp-content/uploads/2025/03/vvTlcTqutrNFTxTyLETB.jpg",
-      tags: ["Food", "Nightlife", "Friends"],
-    },
-  ],
-};
-
-const fallbackPlaces = provincePlaces["koh-kong"];
-
-const places = computed(() => {
-  return provincePlaces[slug.value] || fallbackPlaces;
-});
+const backendProvinceId = ref<number | null>(null);
+const backendProvince = ref<ProvinceApi | null>(null);
+const allPlaces = ref<Place[]>([]);
+const weather = ref<WeatherApi | null>(null);
+const weatherAlerts = ref<WeatherAlertApi[]>([]);
+const isLoading = ref(false);
+const errorMessage = ref("");
 
 const categoryFilters = ref([
-  { name: "Nature", count: 8, checked: true },
-  { name: "Waterfall", count: 4, checked: true },
-  { name: "Beach", count: 3, checked: false },
-  { name: "Cultural", count: 6, checked: true },
-  { name: "Food", count: 4, checked: false },
+  { name: "Nature", count: 0, checked: true },
+  { name: "Waterfall", count: 0, checked: true },
+  { name: "Beach", count: 0, checked: false },
+  { name: "Cultural", count: 0, checked: true },
+  { name: "Food", count: 0, checked: false },
 ]);
 
 const discoveryFilters = ref([
-  { name: "Hidden gems", count: 6, checked: true },
-  { name: "Most popular", count: 5, checked: false },
+  { name: "Hidden gems", count: 0, checked: true },
+  { name: "Most popular", count: 0, checked: true },
 ]);
 
+function updateFilterCounts(places: Place[]) {
+  categoryFilters.value = categoryFilters.value.map((item) => ({
+    ...item,
+    count: places.filter((place) => place.category === item.name).length,
+  }));
+
+  discoveryFilters.value = discoveryFilters.value.map((item) => ({
+    ...item,
+    count: places.filter((place) => place.discovery === item.name).length,
+  }));
+}
+
+function mapAttractionToPlace(
+  attraction: AttractionApi,
+  province: ProvinceApi,
+  index: number,
+): Place {
+  const category = attraction.category || "Cultural";
+  const discovery = attraction.isHiddenGem ? "Hidden gems" : "Most popular";
+  const rating = Number(attraction.averageRating || 0);
+
+  return {
+    id: attraction.id,
+    name: attraction.nameEn,
+    province: province.nameEn,
+    category,
+    discovery,
+    rating,
+    reviews: 0,
+    description: attraction.description || "No description available yet.",
+    image: province.mainImageUrl || FALLBACK_IMAGE,
+    tags: [category, discovery],
+    featured: index === 0,
+  };
+}
+
+async function loadProvinceDetail() {
+  isLoading.value = true;
+  errorMessage.value = "";
+  backendProvinceId.value = null;
+  backendProvince.value = null;
+  allPlaces.value = [];
+  weather.value = null;
+  weatherAlerts.value = [];
+
+  try {
+    const provincesResponse = await fetch(`${API_BASE}/provinces`);
+    if (!provincesResponse.ok) {
+      throw new Error("Failed to load provinces.");
+    }
+
+    const provinces: ProvinceApi[] = await provincesResponse.json();
+
+    const matchedProvince = provinces.find(
+      (province) => toSlug(province.nameEn) === slug.value,
+    );
+
+    if (!matchedProvince) {
+      throw new Error("Province not found in backend.");
+    }
+
+    backendProvinceId.value = matchedProvince.id;
+    backendProvince.value = matchedProvince;
+
+    const [attractionsResponse, weatherResponse] = await Promise.all([
+      fetch(`${API_BASE}/provinces/${matchedProvince.id}/attractions`),
+      fetch(`${API_BASE}/provinces/${matchedProvince.id}/weather`),
+    ]);
+
+    if (attractionsResponse.ok) {
+      const attractionsData = await attractionsResponse.json();
+      const attractions: AttractionApi[] = attractionsData.attractions || [];
+
+      allPlaces.value = attractions.map((attraction, index) =>
+        mapAttractionToPlace(attraction, matchedProvince, index),
+      );
+      updateFilterCounts(allPlaces.value);
+    } else {
+      allPlaces.value = [];
+      updateFilterCounts([]);
+    }
+
+    if (weatherResponse.ok) {
+      const weatherData = await weatherResponse.json();
+      weather.value = weatherData.weather || null;
+      weatherAlerts.value = weatherData.alerts || [];
+    }
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : "Failed to load province detail.";
+    allPlaces.value = [];
+    weather.value = null;
+    weatherAlerts.value = [];
+    updateFilterCounts([]);
+  } finally {
+    isLoading.value = false;
+    currentPage.value = 1;
+  }
+}
+
+onMounted(loadProvinceDetail);
+watch(slug, loadProvinceDetail);
+
+const places = computed(() => allPlaces.value);
+
 const featuredPlace = computed(() => {
-  return places.value.find((place) => place.featured) || places.value[0];
+  return (
+    places.value.find((place) => place.featured) || places.value[0] || null
+  );
 });
 
 const normalPlaces = computed(() => {
-  return places.value.filter((place) => !place.featured);
+  if (!featuredPlace.value) return [];
+  return places.value.filter((place) => place.id !== featuredPlace.value?.id);
 });
 
 const activeCategories = computed(() =>
@@ -479,6 +329,25 @@ const paginatedPlaces = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   const end = start + itemsPerPage;
   return sortedPlaces.value.slice(start, end);
+});
+
+const totalResults = computed(() => {
+  return featuredPlace.value
+    ? filteredPlaces.value.length + 1
+    : filteredPlaces.value.length;
+});
+
+const weatherSummary = computed(() => {
+  if (!weather.value) return null;
+
+  return {
+    temp: weather.value.tempCelsius ?? "--",
+    condition: weather.value.conditionText || "No weather data",
+    icon: weather.value.iconUrl || "",
+    updatedAt: weather.value.lastUpdated
+      ? new Date(weather.value.lastUpdated).toLocaleString("en-GB")
+      : "",
+  };
 });
 
 watch([slug, filteredPlaces, sortOption], () => {
@@ -538,14 +407,14 @@ function openPlaceDetail(place: Place) {
 <template>
   <main class="province-detail-page">
     <ProvinceTopSearch
-      :province-name="provinceName"
+      :province-name="backendProvince?.nameEn || provinceName"
       :selected-travel-type="selectedTravelType"
       :from-date="fromDate"
       :to-date="toDate"
     />
 
     <ProvinceInfoBar
-      :province-name="provinceName"
+      :province-name="backendProvince?.nameEn || provinceName"
       :total-places="places.length"
     />
 
@@ -558,7 +427,9 @@ function openPlaceDetail(place: Place) {
             DISCOVER
           </RouterLink>
           <span>›</span>
-          <strong>{{ provinceName.toUpperCase() }}</strong>
+          <strong>{{
+            (backendProvince?.nameEn || provinceName).toUpperCase()
+          }}</strong>
         </div>
 
         <div class="content-layout">
@@ -575,9 +446,11 @@ function openPlaceDetail(place: Place) {
           <section class="places-content">
             <div class="content-top">
               <div>
-                <h1>{{ provinceName }} attractions</h1>
+                <h1>
+                  {{ backendProvince?.nameEn || provinceName }} attractions
+                </h1>
                 <p class="results-text">
-                  {{ places.length }} results · {{ selectedTravelType }} trip ·
+                  {{ totalResults }} results · {{ selectedTravelType }} trip ·
                   {{ displayDateRange }}
                 </p>
 
@@ -644,14 +517,6 @@ function openPlaceDetail(place: Place) {
                 @select="openPlaceDetail"
               />
             </div>
-
-            <PlacePagination
-              :current-page="currentPage"
-              :total-pages="totalPages"
-              @go-to-page="goToPage"
-              @prev-page="prevPage"
-              @next-page="nextPage"
-            />
           </section>
         </div>
       </div>
@@ -766,6 +631,63 @@ function openPlaceDetail(place: Place) {
   border-color: #15543f;
 }
 
+.weather-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e4e7ee;
+  border-radius: 16px;
+}
+
+.weather-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.weather-icon {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.weather-temp {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #15543f;
+}
+
+.weather-condition {
+  margin: 4px 0 0;
+  color: #6e7485;
+}
+
+.weather-right {
+  text-align: right;
+  color: #6e7485;
+  font-size: 14px;
+}
+
+.status-box {
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e4e7ee;
+  border-radius: 16px;
+  color: #5f6678;
+  margin-bottom: 24px;
+}
+
+.error-box {
+  color: #b42318;
+  border-color: #f0c7c3;
+  background: #fff7f6;
+}
+
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -787,6 +709,15 @@ function openPlaceDetail(place: Place) {
 
   .content-top {
     flex-direction: column;
+  }
+
+  .weather-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .weather-right {
+    text-align: left;
   }
 }
 
