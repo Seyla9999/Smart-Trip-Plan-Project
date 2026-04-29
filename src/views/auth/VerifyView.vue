@@ -127,3 +127,51 @@ const handleResend = async () => {
   }
 }
 </script>
+<style scoped>
+.form {
+  width: 420px;
+  padding: 45px;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 20px; /* Ensures it doesn't touch screen edges on mobile */
+}
+
+.otp-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.otp-container input {
+  width: 50px;
+  height: 60px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+
+.otp-container input:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 10px rgba(46,125,50,0.2);
+  outline: none;
+}
+
+/* Responsive Media Query */
+@media (max-width: 480px) {
+  .form {
+    width: 90%;
+    padding: 30px 20px;
+  }
+  .otp-container input {
+    width: 40px;
+    height: 50px;
+  }
+}
+</style>

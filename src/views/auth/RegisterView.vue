@@ -57,7 +57,9 @@
       </div>
       <p v-if="confirmError" class="field-error">{{ confirmError }}</p>
 
-      <p v-if="message" class="message">{{ message }}</p>
+      <p v-if="message" :class="['message', isSuccess ? 'success-text' : 'error-text']">
+        {{ message }}
+      </p>
 
       <button
         :disabled="loading || !formValid"
@@ -90,6 +92,7 @@ const confirmPassword = ref('')
 const message = ref('')
 const loading = ref(false)
 const submitted = ref(false)
+const isSuccess = ref(false)
 
 const showPassword = ref(false)
 const showConfirm = ref(false)
@@ -161,12 +164,14 @@ const handleRegister = async () => {
 
     localStorage.setItem('verify_email', email.value)
 
+    isSuccess.value = true
     message.value = res.data.message
     setTimeout(() => {
       router.push('/verify')
     }, 800)
   } catch (err) {
     console.error('ERROR:', err)
+    isSuccess.value = false
     message.value = err.response?.data?.message || 'Something went wrong'
   } finally {
     loading.value = false
@@ -275,5 +280,15 @@ button:disabled {
 }
 .message {
   color: #ff0000;
+}
+.message.error-text {
+  color: #d32f2f;
+  text-align: center;
+}
+
+.message.success-text {
+  color: #2e7d32; 
+  text-align: center;
+  font-weight: bold;
 }
 </style>
