@@ -56,8 +56,8 @@
             <a href="#" class="view-all">View All Gallery</a>
           </div>
           <div class="photo-grid">
-            <div v-for="(photo, i) in displayPhotos" :key="i" class="photo-item">
-              <img :src="photo" :alt="`Photo ${i + 1}`" />
+            <div v-for="(photo, i) in attraction.photos" :key="i" class="photo-item">
+              <img :src="photo" :alt="`Photo ${Number(i) + 1}`" />
             </div>
           </div>
         </section>
@@ -132,6 +132,24 @@
           </div>
         </section>
 
+        <section class="section">
+          <h2>Nearby attractions</h2>
+          <div class="nearby-grid">
+            <div
+              v-for="place in attraction.nearby"
+              :key="place.name"
+              class="nearby-card"
+              @click="$router.push(`/province/${attraction.provinceSlug}/${place.slug}`)"
+            >
+              <div class="nearby-img">
+                <img :src="place.image" :alt="place.name" />
+              </div>
+              <p class="nearby-name">{{ place.name }}</p>
+              <p class="nearby-location">{{ place.location }}</p>
+            </div>
+          </div>
+        </section>
+
       </div>
 
       <!-- Sidebar -->
@@ -198,7 +216,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 
@@ -221,67 +239,190 @@ const router = useRouter()
 const attraction = ref<any>(null)
 const nearbyPOIs = ref<any>(null)
 const loading = ref(true)
-const error = ref<string | null>(null)
 
-// Local photos array
-const localPhotos = [photo1, photo2, photo3, photo4, photo5, photo6]
+type PlaceSummary = {
+  name: string
+  province: string
+  category: string
+  rating: number
+  reviews: number
+  description: string
+  image: string
+  tags: string[]
+}
 
-// API base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const toSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
 
-// Computed: hero image
-const heroImage = computed(() => localPhotos[0])
+const provincePlaceMap: Record<string, PlaceSummary[]> = {
+  'koh-kong': [
+    { name: 'Tatai Waterfall', province: 'Koh Kong', rating: 4.9, reviews: 743, description: 'A two-tiered semi-natural waterfall in the heart of the jungle. Perfect for travelers seeking peace and nature.', image: 'https://www.asiakingtravel.com/cuploads/files/Tatai-waterfall-2.jpg', tags: ['Nature', 'Photography', 'Adventure'] },
+    { name: 'Koh Kong Beach', province: 'Koh Kong', rating: 4.6, reviews: 352, description: 'A relaxing beach with soft sand and calm sea views, great for sunset walks.', image: 'https://merrytravelasia.com/wp-content/uploads/2023/06/Koh-Rong.jpg', tags: ['Beach', 'Relax', 'Sunset'] },
+    { name: 'Mangrove Forest Kayaking', province: 'Koh Kong', rating: 4.8, reviews: 286, description: 'Paddle through beautiful mangrove forests and enjoy peaceful eco-adventure moments.', image: 'https://kura2bus.com/blog/wp-content/uploads/2023/10/DSC_0887.jpg', tags: ['Nature', 'Adventure', 'Kayaking'] },
+    { name: 'Peam Krasaop Wildlife Sanctuary', province: 'Koh Kong', rating: 4.7, reviews: 401, description: 'A protected natural area with boardwalks, birdlife, and lush coastal scenery.', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/%E1%9E%88%E1%9E%9A%E1%9E%96%E1%9E%B8%E1%9E%9B%E1%9E%BE%E1%9E%94%E1%9F%89%E1%9E%98%E1%9E%98%E1%9E%BE%E1%9E%9B%E1%9E%91%E1%9F%85%E1%9E%96%E1%9F%92%E1%9E%9A%E1%9F%83%E1%9E%80%E1%9F%84%E1%9E%84%E1%9E%80%E1%9E%B6%E1%9E%84_-_panoramio.jpg', tags: ['Nature', 'Wildlife', 'Photography'] },
+    { name: 'Dong Tong Market', province: 'Koh Kong', rating: 4.4, reviews: 198, description: 'A local market where you can try fresh seafood and discover daily Khmer life.', image: 'https://travelsetu.com/apps/uploads/new_destinations_photos/destination/2024/06/28/0dc327612f9e0a519a343ecc3329b2b3_1000x1000.jpg', tags: ['Food', 'Market', 'Local Life'] },
+    { name: 'Chi Phat Eco Village', province: 'Koh Kong', rating: 4.9, reviews: 265, description: 'A community-based ecotourism destination surrounded by forests, rivers, and wildlife.', image: 'https://thealtruistictraveller.com/s/51524087023470235/blog/SAM_4897.jpg', tags: ['Nature', 'Eco Tour', 'Adventure'] },
+  ],
+  'siem-reap': [
+    { name: 'Angkor Wat Sunrise', province: 'Siem Reap', rating: 5, reviews: 1250, description: "Experience the breathtaking sunrise over Angkor Wat, Cambodia's most iconic temple.", image: 'https://toursbyjeeps.com/wp-content/uploads/2021/07/Untitled-1-2.jpg', tags: ['Temple', 'Sunrise', 'Photography'] },
+    { name: 'Bayon Temple', province: 'Siem Reap', rating: 4.9, reviews: 980, description: 'Famous for its giant smiling stone faces and rich Khmer architecture.', image: 'https://cambodiatravel.com/images/2020/12/intro-Bayon-Temple-Travel-Guide.jpg', tags: ['Temple', 'History', 'Architecture'] },
+    { name: 'Ta Prohm', province: 'Siem Reap', rating: 4.8, reviews: 875, description: 'A temple beautifully wrapped by jungle roots and ancient stone walls.', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRVuujeN6cK9EnoskxVGvkvPaKFnQo6HnjAQ&s', tags: ['Temple', 'Nature', 'Photography'] },
+    { name: 'Phare Cambodian Circus', province: 'Siem Reap', rating: 4.9, reviews: 620, description: 'A lively performance mixing theatre, music, and Cambodian storytelling.', image: 'https://www.siemreapshuttle.com/wp-content/uploads/2022/08/Phare-Circus-SiemreapShuttle.jpg', tags: ['Show', 'Culture', 'Family'] },
+    { name: 'Pub Street Food Walk', province: 'Siem Reap', rating: 4.5, reviews: 712, description: 'Taste local snacks, desserts, and street food in the center of the city.', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmnSH7ICljEFXf4-k-vYqmnMW3LiyYanjy5g&s', tags: ['Food', 'Nightlife', 'Local Life'] },
+    { name: 'Kulen Mountain Day Trip', province: 'Siem Reap', rating: 4.7, reviews: 430, description: 'Enjoy waterfalls, sacred sites, and mountain views outside the city.', image: 'https://www.siemreap.net/wp-content/uploads/2017/12/phnom-kulen-waterfall.jpg', tags: ['Nature', 'Waterfall', 'Adventure'] },
+  ],
+  'phnom-penh': [
+    { name: 'Royal Palace', province: 'Phnom Penh', rating: 4.8, reviews: 940, description: "Visit the majestic Royal Palace, one of Phnom Penh's most famous landmarks.", image: 'https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg', tags: ['Palace', 'History', 'Photography'] },
+    { name: 'National Museum of Cambodia', province: 'Phnom Penh', rating: 4.7, reviews: 683, description: "Explore Khmer art, sculpture, and ancient history in Cambodia's leading museum.", image: 'https://image-tc.galaxy.tf/wijpeg-87c83dri3kglj836kubeiybcf/the-national-museum-3.jpg', tags: ['Museum', 'History', 'Culture'] },
+    { name: 'Wat Phnom', province: 'Phnom Penh', rating: 4.6, reviews: 510, description: 'A peaceful hilltop temple and one of the most symbolic places in Phnom Penh.', image: 'https://files.intocambodia.org/wp-content/uploads/2024/08/10143531/Wat-Phnom.jpg', tags: ['Temple', 'History', 'Photography'] },
+    { name: 'Central Market', province: 'Phnom Penh', rating: 4.5, reviews: 860, description: 'A popular local market known for food, souvenirs, clothes, and Khmer daily life.', image: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Aerial_view_of_Phnom_Penh%27s_Central_Market_%28September_2021%29.jpg', tags: ['Food', 'Market', 'Shopping'] },
+    { name: 'Sisowath Riverside', province: 'Phnom Penh', rating: 4.6, reviews: 445, description: 'Walk along the riverfront with wide views, cafes, and a lively city atmosphere.', image: 'https://thumbs.dreamstime.com/b/busy-boulevard-sisowath-quay-along-phnom-penh-s-popular-riverside-area-cambodia-december-rd-alongside-tonle-sap-river-272947819.jpg', tags: ['River', 'Walk', 'Sunset'] },
+    { name: 'Tuol Sleng Genocide Museum', province: 'Phnom Penh', rating: 4.7, reviews: 799, description: "An important historical site for learning about Cambodia's recent past.", image: 'https://www.unesco.org/sites/default/files/styles/paragraph_medium_desktop/public/thumbnail_image.jpg.webp?itok=gSv1xJWw', tags: ['Museum', 'History', 'Education'] },
+    { name: 'Independence Monument', province: 'Phnom Penh', rating: 4.4, reviews: 320, description: 'A beautiful city landmark best seen in the evening with lights and open space around it.', image: 'https://www.novotelphnompenhbkk1.com/wp-content/uploads/sites/53/2023/08/Indepedence-monument-2200x1200.jpg', tags: ['Landmark', 'Photography', 'City'] },
+    { name: 'Russian Market', province: 'Phnom Penh', rating: 4.5, reviews: 570, description: 'A lively market famous for local food, clothes, souvenirs, and street shopping.', image: 'https://d122axpxm39woi.cloudfront.net/images/destinations/origin/64be1fb570dee.jpg', tags: ['Market', 'Food', 'Shopping'] },
+    { name: 'Bassac Lane', province: 'Phnom Penh', rating: 4.6, reviews: 265, description: 'A stylish small street filled with cafes, bars, and evening hangout spots.', image: 'https://ctp.r24k.app/wp-content/uploads/2025/03/vvTlcTqutrNFTxTyLETB.jpg', tags: ['Food', 'Nightlife', 'Friends'] },
+  ],
+}
 
-// Computed: display photos
-const displayPhotos = computed(() => localPhotos)
+function getPlaceFromRoute() {
+  const provinceSlug = (route.params.slug as string) || 'koh-kong'
+  const placeSlugFromRoute = (route.params.placeSlug as string) || (route.params.id as string)
 
-// Fallback nearby places with images (used if backend doesn't have nearby data)
-const fallbackNearbyPlaces = [
-  { 
-    name: 'Tatai River Resort', 
-    slug: 'tatai-river-resort', 
-    location: 'KOH KONG', 
-    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=200&q=80' 
-  },
-  { 
-    name: 'Peam Krasaop', 
-    slug: 'peam-krasaop', 
-    location: 'KOH KONG', 
-    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=200&q=80' 
-  },
-  { 
-    name: 'Koh Kong Beach', 
-    slug: 'koh-kong-beach', 
-    location: 'KOH KONG', 
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=80' 
-  },
-  { 
-    name: 'Cardamom Trek', 
-    slug: 'cardamom-trek', 
-    location: 'KOH KONG', 
-    image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=200&q=80' 
-  },
-  { 
-    name: 'Chi Phut Village', 
-    slug: 'chi-phut-village', 
-    location: 'KOH KONG', 
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&q=80' 
+  if (!placeSlugFromRoute) return null
+
+  const provincePlaces = provincePlaceMap[provinceSlug] || []
+  const byProvince = provincePlaces.find((item) => toSlug(item.name) === placeSlugFromRoute)
+  if (byProvince) {
+    return { place: byProvince, provinceSlug, placeSlug: placeSlugFromRoute }
   }
-]
 
-// Computed: nearby places with images
-const nearbyPlaces = computed(() => {
-  // If backend has nearby data, use it with fallback images
-  if (attraction.value?.nearby && attraction.value.nearby.length > 0) {
-    return attraction.value.nearby.map((place: any) => ({
-      ...place,
-      image: place.image || fallbackNearbyPlaces.find(f => f.name === place.name)?.image || 'https://picsum.photos/200/150?random=1'
+  for (const [mapProvinceSlug, mapPlaces] of Object.entries(provincePlaceMap)) {
+    const found = mapPlaces.find((item) => toSlug(item.name) === placeSlugFromRoute)
+    if (found) {
+      return { place: found, provinceSlug: mapProvinceSlug, placeSlug: placeSlugFromRoute }
+    }
+  }
+
+  return null
+}
+
+function buildGenericAttraction(place: PlaceSummary, provinceSlug: string, placeSlug: string) {
+  const nearby = (provincePlaceMap[provinceSlug] || [])
+    .filter((item) => toSlug(item.name) !== placeSlug)
+    .slice(0, 5)
+    .map((item) => ({
+      name: item.name,
+      slug: toSlug(item.name),
+      location: place.province.toUpperCase(),
+      image: item.image,
     }))
+
+  return {
+    id: placeSlug,
+    name: place.name,
+    province: place.province,
+    provinceSlug,
+    rating: place.rating,
+    reviews: place.reviews,
+    heroImage: place.image,
+    badges: ['HIDDEN GEM', (place.category || 'Attraction').toUpperCase(), 'TOP RATED'],
+    tags: place.tags,
+    about: [
+      place.description,
+      `Discover more of ${place.province} by exploring nearby attractions and building your itinerary based on travel type and season.`
+    ],
+    photos: [place.image, place.image, place.image, place.image, place.image, place.image],
+    info: {
+      bestTime: 'All year',
+      duration: '2-4 hours',
+      difficulty: 'Easy',
+      bestFor: 'Solo, Friends, Family',
+      province: place.province,
+    },
+    nearby,
   }
-  
-  // Use fallback data
-  return fallbackNearbyPlaces
-})
+}
+
+// Store all attraction data with local images
+const attractionsData: Record<string, any> = {
+  'koh-kong/tatai-waterfall': {
+    id: 'tatai-waterfall',
+    name: 'Tatai Waterfall',
+    province: 'Koh Kong',
+    provinceSlug: 'koh-kong',
+    rating: 4.9,
+    reviews: 743,
+    heroImage: heroImage,
+    badges: ['HIDDEN GEM', 'WATERFALL', 'TOP RATED'],
+    tags: ['Waterfall', 'Nature', 'Friends', 'Trekking', 'Swimming', 'Hidden Gem'],
+    about: [
+      'Located in the heart of the Cardamom Mountains, the Tatai Waterfall is a spectacular natural landmark where the fresh water of the Tatai River meets the salty seawater. This multi-tiered cascade is renowned for its wide, curtain-like flow that spans over 30 meters, creating a thunderous yet serene atmosphere that captivates every visitor.',
+      'Accessible only by a scenic boat ride through the lush mangrove forests or a challenging jungle trek, the journey to the falls is an adventure in itself. The best time to visit is during the rainy season (October to November) when the water volume is at its peak, transforming the landscape into a powerful display of nature\'s raw beauty and emerald-green vitality.'
+    ],
+    photos: [photo1, photo2, photo3, photo4, photo5, photo6],
+    info: {
+      bestTime: 'Oct – Nov',
+      duration: '3–5 hours',
+      difficulty: 'Moderate',
+      bestFor: 'Friends, Nature lovers',
+      province: 'Koh Kong'
+    },
+    nearby: [
+      { name: 'Tatai River Resort', slug: 'tatai-river-resort', location: 'KOH KONG', image: tataiRiverResortImg },
+      { name: 'Peam Krasaop', slug: 'peam-krasaop', location: 'KOH KONG', image: peamKrasaopImg },
+      { name: 'Koh Kong Beach', slug: 'koh-kong-beach', location: 'KOH KONG', image: kohKongBeachImg },
+      { name: 'Cardamom Trek', slug: 'cardamom-trek', location: 'KOH KONG', image: cardamomTrekImg },
+      { name: 'Chi Phut Village', slug: 'chi-phat-eco-village', location: 'KOH KONG', image: chiPhutVillageImg },
+    ]
+  }
+}
+
+function loadAttraction() {
+  loading.value = true
+
+  const provinceSlug = (route.params.slug as string) || 'koh-kong'
+  const placeSlug = (route.params.placeSlug as string) || (route.params.id as string)
+
+  if (!placeSlug) {
+    attraction.value = null
+    loading.value = false
+    return
+  }
+
+  const detailedKey = `${provinceSlug}/${placeSlug}`
+  if (attractionsData[detailedKey]) {
+    attraction.value = attractionsData[detailedKey]
+    loading.value = false
+    return
+  }
+
+  const routePlace = getPlaceFromRoute()
+  if (routePlace?.place) {
+    attraction.value = buildGenericAttraction(routePlace.place, routePlace.provinceSlug, routePlace.placeSlug)
+    loading.value = false
+    return
+  }
+
+  attraction.value = null
+  loading.value = false
+  setTimeout(() => {
+    router.push(`/province/${provinceSlug}`)
+  }, 1200)
+}
+
+watch(
+  () => [route.params.slug, route.params.placeSlug, route.params.id],
+  () => {
+    loadAttraction()
+  },
+  { immediate: true },
+)
 
 // Computed: check if there are nearby POIs
 const hasNearbyPOIs = computed(() => {
