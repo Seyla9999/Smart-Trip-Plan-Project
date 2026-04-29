@@ -147,11 +147,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-<<<<<<< HEAD
-=======
-
-const router = useRouter()
->>>>>>> f77cbab (Fixed debug for progress2)
 
 const router = useRouter()
 const searchQuery = ref<string>('')
@@ -200,10 +195,7 @@ function toSlug(value: string) {
 function openProvince(name: string) {
   router.push(`/province/${toSlug(name)}`)
 }
-<<<<<<< HEAD
 
-=======
->>>>>>> f77cbab (Fixed debug for progress2)
 </script>
 
 <style scoped>

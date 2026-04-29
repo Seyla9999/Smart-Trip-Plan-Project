@@ -1,9 +1,4 @@
 <template>
-<<<<<<< HEAD
-
-    <NavBar />
-=======
->>>>>>> f77cbab (Fixed debug for progress2)
     <div class="container max-w-full">
         <router-view />
     </div>
