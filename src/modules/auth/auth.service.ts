@@ -4,7 +4,6 @@ import { Repository } from 'typeorm'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { MailerService } from '@nestjs-modules/mailer'
-
 import { User } from '../users/user.entity'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
@@ -45,12 +44,9 @@ export class AuthService {
       full_name: dto.full_name,
       password_hash: hashed,
       verification_code: code,
-      is_verified: false,
     });
 
-    await this.userRepo.save(user);
-
-    await this.sendVerificationEmail(user.email, code);
+    await this.sendVerificationEmail(dto.email, code);
 
     return {
       message: 'Registered successfully. Please verify your email.',

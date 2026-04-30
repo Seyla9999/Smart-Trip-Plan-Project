@@ -33,4 +33,4 @@ export class AuthController {
 //   demoToken() {
 //     return this.authService.generateDemoToken()
 //   }
-}
+
