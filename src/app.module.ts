@@ -1,8 +1,21 @@
-import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { ConfigModule, ConfigService } from '@nestjs/config' // Added ConfigService
-import { AuthModule } from './modules/auth/auth.module'
-import { MailerModule } from '@nestjs-modules/mailer'
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './modules/auth/auth.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HttpModule } from '@nestjs/axios';
+import { ProvincesModule } from './modules/home/provinces/provinces.module';
+import { AttractionsModule } from './modules/home/attractions/attractions.module';
+import { StoriesModule } from './modules/home/stories/story.module';
+import { SponsorsModule } from './modules/home/sponsors/sponsors.modules';
+import { WeatherModule } from './modules/home/weather/weather.module';
+import { ConfigModule, ConfigService } from '@nestjs/config' 
+import { AppController } from './app.controller'
+import { AppService } from './app.service'
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module'
+import { UserPreferences } from './modules/users/user-preferences.entity'
+import { Bookmark } from './modules/bookmarks/bookmark.entity'
+import { Attraction } from './modules/attractions/attraction.entity'
+import { UsersModule } from './modules/users/users.module'
 
 @Module({
   imports: [
@@ -45,8 +58,18 @@ import { MailerModule } from '@nestjs-modules/mailer'
     
 
     AuthModule,
+    HttpModule,
+    ProvincesModule,
+    AttractionsModule,
+    StoriesModule,
+    SponsorsModule,
+    WeatherModule,
+    UsersModule,
+    BookmarksModule,
+    AttractionsModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
-
 export class AppModule {}
-console.log('ENV CHECK:', process.env.DB_HOST)
+console.log('ENV CHECK:', process.env.DB_HOST);

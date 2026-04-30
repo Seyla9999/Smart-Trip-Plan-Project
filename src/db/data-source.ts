@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 
-config(); // Load .env variables
+config();
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -14,3 +14,4 @@ export const AppDataSource = new DataSource({
   migrations: ['dist/migrations/*.js'], // Where compiled migrations live
   synchronize: false,
 });
+
