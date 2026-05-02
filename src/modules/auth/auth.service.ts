@@ -4,6 +4,7 @@ import { Repository } from 'typeorm'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { MailerService } from '@nestjs-modules/mailer'
+import { Resend } from 'resend'
 
 import { User } from '../users/user.entity'
 import { RegisterDto } from './dto/register.dto'
@@ -14,18 +15,23 @@ interface PendingUser {
   full_name: string;
   password_hash: string;
   verification_code: string;
+  is_verified: boolean;
 }
 
 @Injectable()
 export class AuthService {
 
   private pendingUsers = new Map<string, PendingUser>();
+  private resend: Resend;
+
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private mailerService: MailerService,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    this.resend = new Resend(process.env.SMTP_PASS);
+  }
 
   async register(dto: RegisterDto) {
     
@@ -48,9 +54,14 @@ export class AuthService {
       is_verified: false,
     });
 
-    await this.userRepo.save(user);
-
-    await this.sendVerificationEmail(user.email, code);
+    try {
+      await this.sendVerificationEmail(dto.email, code);
+    } catch (err) {
+      console.error('Failed to send verification email during registration:', err);
+      return {
+        message: 'Registered successfully, but failed to send verification email. Please contact support.',
+      };
+    }
 
     return {
       message: 'Registered successfully. Please verify your email.',
@@ -72,15 +83,20 @@ export class AuthService {
       </div>
     `;
 
-    await this.mailerService.sendMail({
-        to: email, 
-        // from: 'Admin <admin@travelcambodia.site>',
+    try {
+      await this.resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: email,
         subject: 'Verify your TravelCambodia account',
         html: emailHtml,
-    });
+      });
+    } catch (err) {
+      console.error('Mailer error sending verification email to', email, err);
+      throw new BadRequestException('Failed to send verification email');
+    }
   }
 
-  async resend(email: string) {
+  async resendVerificationEmail(email: string) {
     const pendingUser = this.pendingUsers.get(email);
     if (!pendingUser) {
         throw new Error('No pending registration found for this email. Please register again.')
@@ -90,7 +106,15 @@ export class AuthService {
     pendingUser.verification_code = code;
     this.pendingUsers.set(email, pendingUser);
 
-    await this.sendVerificationEmail(email, code)
+    try {
+      await this.sendVerificationEmail(email, code);
+    } catch (err) {
+      console.error('Failed to resend verification email:', err);
+      return {
+        message: 'Failed to resend verification code. Please contact support.',
+      };
+    }
+
     return {
       message: 'Verification code resent successfully',
     };

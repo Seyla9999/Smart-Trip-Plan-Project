@@ -27,7 +27,7 @@ import { UsersModule } from './modules/users/users.module'
       type: 'postgres',
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USER,
+      username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       autoLoadEntities: true,
@@ -43,11 +43,14 @@ import { UsersModule } from './modules/users/users.module'
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get('SMTP_HOST'), 
-          port: config.get('SMTP_PORT'), 
-          secure: true, 
+          port: parseInt(config.get('SMTP_PORT') || '587', 10),
+          secure: (config.get('SMTP_PORT') === '465'),
           auth: {
             user: config.get('SMTP_USER'), 
             pass: config.get('SMTP_PASS'), 
+          },
+          tls: {
+            rejectUnauthorized: false,
           },
         },
         defaults: {

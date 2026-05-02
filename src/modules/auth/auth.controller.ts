@@ -25,7 +25,7 @@ export class AuthController {
 
   @Post('resend')
   resend(@Body() body: { email: string }) {
-    return this.authService.resend(body.email);
+    return this.authService.resendVerificationEmail(body.email);
   }
 }
 
@@ -33,4 +33,4 @@ export class AuthController {
 //   demoToken() {
 //     return this.authService.generateDemoToken()
 //   }
-}
+// }
