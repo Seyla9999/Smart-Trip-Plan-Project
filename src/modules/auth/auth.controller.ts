@@ -27,10 +27,9 @@ export class AuthController {
   resend(@Body() body: { email: string }) {
     return this.authService.resendVerificationEmail(body.email);
   }
-}
 
-//   @Post('demo-token')
-//   demoToken() {
-//     return this.authService.generateDemoToken()
-//   }
-// }
+  // @Post('demo-token')
+  // demoToken() {
+  //   return this.authService.generateDemoToken()
+  // }
+}

@@ -12,6 +12,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module'
+import { AttractionsModule } from './modules/attractions/attractions.module'
+import { TripsModule } from './modules/trips/trips.module'
 import { UserPreferences } from './modules/users/user-preferences.entity'
 import { Bookmark } from './modules/bookmarks/bookmark.entity'
 import { Attraction } from './modules/attractions/attraction.entity'
@@ -70,6 +72,7 @@ import { UsersModule } from './modules/users/users.module'
     UsersModule,
     BookmarksModule,
     AttractionsModule,
+    TripsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
