@@ -4,7 +4,6 @@ import { AuthModule } from './modules/auth/auth.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HttpModule } from '@nestjs/axios';
 import { ProvincesModule } from './modules/home/provinces/provinces.module';
-import { AttractionsModule } from './modules/home/attractions/attractions.module';
 import { StoriesModule } from './modules/home/stories/story.module';
 import { SponsorsModule } from './modules/home/sponsors/sponsors.modules';
 import { WeatherModule } from './modules/home/weather/weather.module';
