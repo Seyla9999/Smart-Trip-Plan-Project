@@ -1,8 +1,14 @@
-import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { ConfigModule, ConfigService } from '@nestjs/config' // Added ConfigService
-import { AuthModule } from './modules/auth/auth.module'
-import { MailerModule } from '@nestjs-modules/mailer'
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './modules/auth/auth.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HttpModule } from '@nestjs/axios';
+import { ProvincesModule } from './modules/home/provinces/provinces.module';
+import { AttractionsModule } from './modules/home/attractions/attractions.module';
+import { StoriesModule } from './modules/home/stories/story.module';
+import { SponsorsModule } from './modules/home/sponsors/sponsors.modules';
+import { WeatherModule } from './modules/home/weather/weather.module';
+import { ConfigModule, ConfigService } from '@nestjs/config' 
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module'
@@ -23,7 +29,7 @@ import { UsersModule } from './modules/users/users.module'
       type: 'postgres',
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USER,
+      username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       autoLoadEntities: true,
@@ -39,11 +45,14 @@ import { UsersModule } from './modules/users/users.module'
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get('SMTP_HOST'), 
-          port: config.get('SMTP_PORT'), 
-          secure: true, 
+          port: parseInt(config.get('SMTP_PORT') || '587', 10),
+          secure: (config.get('SMTP_PORT') === '465'),
           auth: {
             user: config.get('SMTP_USER'), 
             pass: config.get('SMTP_PASS'), 
+          },
+          tls: {
+            rejectUnauthorized: false,
           },
         },
         defaults: {
@@ -54,6 +63,12 @@ import { UsersModule } from './modules/users/users.module'
     
 
     AuthModule,
+    HttpModule,
+    ProvincesModule,
+    AttractionsModule,
+    StoriesModule,
+    SponsorsModule,
+    WeatherModule,
     UsersModule,
     BookmarksModule,
     AttractionsModule,
@@ -62,6 +77,5 @@ import { UsersModule } from './modules/users/users.module'
   controllers: [AppController],
   providers: [AppService],
 })
-
 export class AppModule {}
-console.log('ENV CHECK:', process.env.DB_HOST)
+console.log('ENV CHECK:', process.env.DB_HOST);

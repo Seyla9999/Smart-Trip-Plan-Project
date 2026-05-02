@@ -4,6 +4,7 @@ import { Repository } from 'typeorm'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { MailerService } from '@nestjs-modules/mailer'
+import { Resend } from 'resend'
 
 import { User } from '../users/user.entity'
 import { RegisterDto } from './dto/register.dto'
@@ -14,18 +15,23 @@ interface PendingUser {
   full_name: string;
   password_hash: string;
   verification_code: string;
+  is_verified: boolean;
 }
 
 @Injectable()
 export class AuthService {
 
   private pendingUsers = new Map<string, PendingUser>();
+  private resend: Resend;
+
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private mailerService: MailerService,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    this.resend = new Resend(process.env.SMTP_PASS);
+  }
 
   async register(dto: RegisterDto) {
     
@@ -37,7 +43,7 @@ export class AuthService {
       where: { email: dto.email },
     })
     if (existingUser) {
-      throw new BadRequestException('Email already exists')
+      throw new BadRequestException('Email already exists');
     }
 
     this.pendingUsers.set(dto.email, {
@@ -45,11 +51,21 @@ export class AuthService {
       full_name: dto.full_name,
       password_hash: hashed,
       verification_code: code,
+      is_verified: false,
     });
-    this.sendVerificationEmail(dto.email, code)
-    return {
-      message: 'Code sent. Please verify your email to complete registration.',
+
+    try {
+      await this.sendVerificationEmail(dto.email, code);
+    } catch (err) {
+      console.error('Failed to send verification email during registration:', err);
+      return {
+        message: 'Registered successfully, but failed to send verification email. Please contact support.',
+      };
     }
+
+    return {
+      message: 'Registered successfully. Please verify your email.',
+    };
   }
 
   async sendVerificationEmail(email: string, code: string) {
@@ -67,15 +83,20 @@ export class AuthService {
       </div>
     `;
 
-    await this.mailerService.sendMail({
-        to: email, 
-        // from: 'Admin <admin@travelcambodia.site>',
+    try {
+      await this.resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: email,
         subject: 'Verify your TravelCambodia account',
         html: emailHtml,
-    });
+      });
+    } catch (err) {
+      console.error('Mailer error sending verification email to', email, err);
+      throw new BadRequestException('Failed to send verification email');
+    }
   }
 
-  async resend(email: string) {
+  async resendVerificationEmail(email: string) {
     const pendingUser = this.pendingUsers.get(email);
     if (!pendingUser) {
         throw new Error('No pending registration found for this email. Please register again.')
@@ -85,32 +106,40 @@ export class AuthService {
     pendingUser.verification_code = code;
     this.pendingUsers.set(email, pendingUser);
 
-    await this.sendVerificationEmail(email, code)
-    return {
-        message: 'Verification code resent successfully',
+    try {
+      await this.sendVerificationEmail(email, code);
+    } catch (err) {
+      console.error('Failed to resend verification email:', err);
+      return {
+        message: 'Failed to resend verification code. Please contact support.',
+      };
     }
+
+    return {
+      message: 'Verification code resent successfully',
+    };
   }
 
   async login(dto: LoginDto) {
     console.log('LOGIN DTO:', dto)
 
     const user = await this.userRepo.findOne({
-        where: { email: dto.email },
-    })
-    console.log('USER:', user)
-    
+      where: { email: dto.email },
+    });
+    console.log('USER:', user);
+
     if (!user) {
-        throw new Error('User not found')
+      throw new Error('User not found');
     }
 
-    const isMatch = await bcrypt.compare(dto.password, user.password_hash)
+    const isMatch = await bcrypt.compare(dto.password, user.password_hash);
 
     if (!isMatch) {
-        throw new Error('Invalid password')
+      throw new Error('Invalid password');
     }
 
     if (!user.is_verified) {
-        throw new Error('Please verify your email first')
+      throw new Error('Please verify your email first');
     }
 
     // Generate JWT token
