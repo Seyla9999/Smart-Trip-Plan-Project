@@ -46,12 +46,11 @@ export class AttractionsService {
     return { success: true, data, meta: { total, page, limit } };
   }
 
-  // GET /attractions/hidden-gems → returns only is_hidden_gem = true, not soft-deleted
   async findHiddenGems(limit = 5) {
     const data = await this.repo
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.province', 'p')
-      .where('a.deleted_at IS NULL')          // ← explicit soft-delete guard
+      .where('a.deleted_at IS NULL')
       .andWhere('a.is_hidden_gem = true')
       .orderBy('a.average_rating', 'DESC')
       .take(limit)
