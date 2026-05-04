@@ -5,7 +5,6 @@ import { SponsorsService } from './sponsors.service';
 export class SponsorsController {
   constructor(private readonly service: SponsorsService) {}
 
-  // GET /sponsors
   @Get()
   findAll() {
     return this.service.findAllActive();

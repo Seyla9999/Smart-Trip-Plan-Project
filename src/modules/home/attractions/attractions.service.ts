@@ -21,24 +21,18 @@ export class AttractionsService {
     page?: number;
   }) {
     const limit = Number(q.limit) || 20;
-    const page = Number(q.page) || 1;
+    const page  = Number(q.page)  || 1;
 
     const qb = this.repo
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.province', 'p')
-      .where('a.deleted_at IS NULL'); // only show non-deleted attractions
+      .where('a.deleted_at IS NULL');
 
-    if (q.category) qb.andWhere('a.category = :c', { c: q.category });
-    if (q.province_id)
-      qb.andWhere('a.province_id = :pid', { pid: Number(q.province_id) });
-    if (q.province)
-      qb.andWhere('p.name_en ILIKE :pn', { pn: `%${q.province}%` });
-    if (q.search)
-      qb.andWhere('(a.name_en ILIKE :s OR a.name_kh ILIKE :s)', {
-        s: `%${q.search}%`,
-      });
+    if (q.category)    qb.andWhere('a.category = :c',              { c: q.category });
+    if (q.province_id) qb.andWhere('a.province_id = :pid',         { pid: Number(q.province_id) });
+    if (q.province)    qb.andWhere('p.name_en ILIKE :pn',          { pn: `%${q.province}%` });
+    if (q.search)      qb.andWhere('(a.name_en ILIKE :s OR a.name_kh ILIKE :s)', { s: `%${q.search}%` });
 
-    // is_hidden_gem filter: only show where is_hidden_gem = true
     if (q.is_hidden_gem === 'true') {
       qb.andWhere('a.is_hidden_gem = true');
     }
@@ -52,14 +46,17 @@ export class AttractionsService {
     return { success: true, data, meta: { total, page, limit } };
   }
 
-  // GET /attractions/hidden-gems → returns only is_hidden_gem = true
+  // GET /attractions/hidden-gems → returns only is_hidden_gem = true, not soft-deleted
   async findHiddenGems(limit = 5) {
-    const data = await this.repo.find({
-      where: { is_hidden_gem: true }, // only is_hidden_gem = true
-      relations: ['province'],
-      order: { average_rating: 'DESC' },
-      take: limit,
-    });
+    const data = await this.repo
+      .createQueryBuilder('a')
+      .leftJoinAndSelect('a.province', 'p')
+      .where('a.deleted_at IS NULL')          // ← explicit soft-delete guard
+      .andWhere('a.is_hidden_gem = true')
+      .orderBy('a.average_rating', 'DESC')
+      .take(limit)
+      .getMany();
+
     return { success: true, data };
   }
 
