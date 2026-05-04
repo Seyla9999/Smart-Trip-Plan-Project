@@ -12,6 +12,7 @@
       <div class="sk-tall"><div class="sk-box" style="height:100%;min-height:370px" /></div>
       <div v-for="i in 4" :key="i" class="sk-small"><div class="sk-box" style="height:175px" /></div>
     </div>
+
     <div v-else-if="gems.length > 0" class="gems-grid">
       <div class="gem tall" @click="$router.push(`/attractions/${gems[0].id}`)">
         <div
