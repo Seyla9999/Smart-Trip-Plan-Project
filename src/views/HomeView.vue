@@ -4,7 +4,7 @@
       <div class="loading-spinner" />
       <p class="loading-text">Loading Cambodia...</p>
     </div>
-    <HeroSection />
+    <HeroSection :provinces="provinces" />
 
     <ProvinceScroll
       :provinces="provinces"
@@ -76,7 +76,7 @@ export default defineComponent({
 
     onMounted(async () => {
       try {
-        const data     = await loadHomePage()
+        const data       = await loadHomePage()
         provinces.value  = data.provinces
         hiddenGems.value = data.hiddenGems
         stories.value    = data.stories
