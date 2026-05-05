@@ -1,9 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common'
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
-import { MailerService } from '@nestjs-modules/mailer'
 import { Resend } from 'resend'
 
 import { User } from '../users/user.entity'
@@ -22,16 +21,13 @@ interface PendingUser {
 export class AuthService {
 
   private pendingUsers = new Map<string, PendingUser>();
-  private resend: Resend;
+  private resend: Resend | null = null;
 
   constructor(
     @InjectRepository(User)
     private userRepo: Repository<User>,
-    private mailerService: MailerService,
     private jwtService: JwtService,
-  ) {
-    this.resend = new Resend(process.env.SMTP_PASS);
-  }
+  ) {}
 
   async register(dto: RegisterDto) {
     
@@ -57,10 +53,11 @@ export class AuthService {
     try {
       await this.sendVerificationEmail(dto.email, code);
     } catch (err) {
-      console.error('Failed to send verification email during registration:', err);
-      return {
-        message: 'Registered successfully, but failed to send verification email. Please contact support.',
-      };
+      const errorMessage = err instanceof Error ? err.message : 'Unknown email provider error';
+      console.error('Failed to send verification email during registration:', errorMessage, err);
+      throw new BadRequestException(
+        `Registered account could not be verified because the email could not be sent: ${errorMessage}`,
+      );
     }
 
     return {
@@ -69,6 +66,16 @@ export class AuthService {
   }
 
   async sendVerificationEmail(email: string, code: string) {
+    const resendApiKey = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+
+    if (!resendApiKey) {
+      throw new BadRequestException('Email provider is not configured. Set RESEND_API_KEY in .env.');
+    }
+
+    if (!this.resend) {
+      this.resend = new Resend(resendApiKey);
+    }
+
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
         <h2 style="color: #2e7d32; text-align: center;">Welcome to តោះទៅ! Cambodia</h2>
@@ -84,15 +91,24 @@ export class AuthService {
     `;
 
     try {
-      await this.resend.emails.send({
-        from: 'onboarding@resend.dev',
+      const { data, error } = await this.resend.emails.send({
+        from: 'Travel Cambodia <admin@travelcambodia.site>',
         to: email,
         subject: 'Verify your TravelCambodia account',
         html: emailHtml,
       });
+
+      if (error) {
+        const errorMessage = error.message || 'Resend returned an unknown error';
+        console.error('Resend rejected verification email to', email, errorMessage, error);
+        throw new BadRequestException(`Failed to send verification email: ${errorMessage}`);
+      }
+
+      console.log('Verification email queued for', email, 'message id:', data?.id);
     } catch (err) {
-      console.error('Mailer error sending verification email to', email, err);
-      throw new BadRequestException('Failed to send verification email');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown email provider error';
+      console.error('Mailer error sending verification email to', email, errorMessage, err);
+      throw new BadRequestException(`Failed to send verification email: ${errorMessage}`);
     }
   }
 
@@ -156,29 +172,54 @@ export class AuthService {
     }
   }
 
+  // async verify(email: string, code: string) {
+  //   const pendingUser = this.pendingUsers.get(email);
+  //   if (!pendingUser) {
+  //         throw new Error('Registration session expired or not found. Please register again.')
+  //     }
+
+  //     if (pendingUser.verification_code !== code) {
+  //         throw new Error('Invalid code')
+  //     }
+
+  //   const newUser = this.userRepo.create({
+  //       email: pendingUser.email,
+  //       full_name: pendingUser.full_name,
+  //       password_hash: pendingUser.password_hash,
+  //       is_verified: true, 
+  //       verification_code: '',
+  //   });
+
+  //   await this.userRepo.save(newUser);
+
+  //   this.pendingUsers.delete(email);
+  //   return {
+  //       message: 'Email verified and account created successfully!',
+  //   }
+  // } 
+
   async verify(email: string, code: string) {
     const pendingUser = this.pendingUsers.get(email);
+
     if (!pendingUser) {
-          throw new Error('Registration session expired or not found. Please register again.')
-      }
+      throw new NotFoundException('Registration session expired or not found. Please register again.');
+    }
 
-      if (pendingUser.verification_code !== code) {
-          throw new Error('Invalid code')
-      }
+    if (pendingUser.verification_code !== code) {
+      throw new BadRequestException('Invalid verification code');
+    }
 
-    const newUser = this.userRepo.create({
-        email: pendingUser.email,
-        full_name: pendingUser.full_name,
-        password_hash: pendingUser.password_hash,
-        is_verified: true, 
-        verification_code: '',
+    const user = this.userRepo.create({
+      email: pendingUser.email,
+      full_name: pendingUser.full_name,
+      password_hash: pendingUser.password_hash,
+      is_verified: true,
+      verification_code: null,
     });
 
-    await this.userRepo.save(newUser);
-
+    await this.userRepo.save(user);
     this.pendingUsers.delete(email);
-    return {
-        message: 'Email verified and account created successfully!',
-    }
-  } 
+
+    return { message: 'Email verified successfully' };
+  }
 }
