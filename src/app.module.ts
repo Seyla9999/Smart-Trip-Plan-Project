@@ -4,7 +4,6 @@ import { AuthModule } from './modules/auth/auth.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HttpModule } from '@nestjs/axios';
 import { ProvincesModule } from './modules/home/provinces/provinces.module';
-import { AttractionsModule } from './modules/home/attractions/attractions.module';
 import { StoriesModule } from './modules/home/stories/story.module';
 import { SponsorsModule } from './modules/home/sponsors/sponsors.modules';
 import { WeatherModule } from './modules/home/weather/weather.module';
@@ -12,6 +11,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module'
+import { AttractionsModule } from './modules/attractions/attractions.module'
+import { TripsModule } from './modules/trips/trips.module'
 import { UserPreferences } from './modules/users/user-preferences.entity'
 import { Bookmark } from './modules/bookmarks/bookmark.entity'
 import { Attraction } from './modules/attractions/attraction.entity'
@@ -35,6 +36,9 @@ import { UsersModule } from './modules/users/users.module'
       ssl: {
         rejectUnauthorized: false,
       },
+      extra: {
+        options: `-c search_path=${process.env.DB_SCHEMA || 'public'}`,
+      },
     }),
 
     MailerModule.forRootAsync({
@@ -43,11 +47,14 @@ import { UsersModule } from './modules/users/users.module'
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get('SMTP_HOST'), 
-          port: config.get('SMTP_PORT'), 
-          secure: true, 
+          port: parseInt(config.get('SMTP_PORT') || '587', 10),
+          secure: (config.get('SMTP_PORT') === '465'),
           auth: {
             user: config.get('SMTP_USER'), 
             pass: config.get('SMTP_PASS'), 
+          },
+          tls: {
+            rejectUnauthorized: false,
           },
         },
         defaults: {
@@ -67,6 +74,7 @@ import { UsersModule } from './modules/users/users.module'
     UsersModule,
     BookmarksModule,
     AttractionsModule,
+    TripsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

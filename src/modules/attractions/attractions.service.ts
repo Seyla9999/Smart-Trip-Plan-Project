@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository, SelectQueryBuilder } from 'typeorm'
 import { Attraction } from './attraction.entity'
 import { FilterAttractionsDto } from './dto/filter-attractions.dto'
 import { CreateAttractionDto } from './dto/create-attraction.dto'
+import { UpdateAttractionDto } from './dto/update-attraction.dto'
 
 @Injectable()
 export class AttractionsService {
@@ -185,7 +186,6 @@ export class AttractionsService {
     const result = await this.attractionRepo
       .createQueryBuilder('attraction')
       .select('DISTINCT attraction.category', 'category')
-      .where('attraction.status = :status', { status: 'active' })
       .getRawMany()
 
     return result.map((r) => r.category)
@@ -203,7 +203,6 @@ export class AttractionsService {
       this.attractionRepo
         .createQueryBuilder('attraction')
         .select('AVG(attraction.rating)', 'average')
-        .where('attraction.status = :status', { status: 'active' })
         .getRawOne(),
     ])
 

@@ -2,15 +2,19 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Param,
   Body,
   Query,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common'
 import { AttractionsService } from './attractions.service'
 import { FilterAttractionsDto } from './dto/filter-attractions.dto'
 import { CreateAttractionDto } from './dto/create-attraction.dto'
+import { UpdateAttractionDto } from './dto/update-attraction.dto'
 
 @Controller('attractions')
 export class AttractionsController {
@@ -87,5 +91,20 @@ export class AttractionsController {
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateAttractionDto) {
     return this.attractionsService.create(dto)
+  }
+
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAttractionDto,
+  ) {
+    return this.attractionsService.update(id, dto)
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async delete(@Param('id') id: string) {
+    return this.attractionsService.delete(id)
   }
 }
