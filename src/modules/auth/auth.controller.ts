@@ -19,18 +19,17 @@ export class AuthController {
   }
 
   @Post('verify')
-  verify(@Body() body: { email: string; code: string }) {
+  verify(@Body() body: VerifyDto) {
     return this.authService.verify(body.email, body.code);
   }
 
   @Post('resend')
   resend(@Body() body: { email: string }) {
-    return this.authService.resend(body.email);
+    return this.authService.resendVerificationEmail(body.email);
   }
-}
 
-//   @Post('demo-token')
-//   demoToken() {
-//     return this.authService.generateDemoToken()
-//   }
+  // @Post('demo-token')
+  // demoToken() {
+  //   return this.authService.generateDemoToken()
+  // }
 }
