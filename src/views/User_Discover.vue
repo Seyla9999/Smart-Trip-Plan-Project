@@ -118,19 +118,13 @@
               
               <div class="absolute top-3 right-3 flex flex-col gap-2">
                 <button
-                  @click.stop="toggleBookmark(attraction)"
-                  :class="[
-                    'flex items-center gap-1.5 backdrop-blur-sm text-white text-xs px-2.5 py-1.5 rounded-md font-bold shadow-lg transition-all',
-                    bookmarkedPlaces.has(attraction.id) ? 'bg-red-600/95 hover:bg-red-700' : 'bg-blue-600/95 hover:bg-blue-700'
-                  ]"
+                  type="button"
+                  class="flex items-center gap-1.5 backdrop-blur-sm text-white text-xs px-2.5 py-1.5 rounded-md font-bold shadow-lg transition-all bg-blue-600/95 hover:bg-blue-700"
                 >
-                  <svg v-if="bookmarkedPlaces.has(attraction.id)" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                  </svg>
-                  <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V5z" />
                   </svg>
-                  {{ bookmarkedPlaces.has(attraction.id) ? 'Saved' : 'Save' }}
+                  Bookmark
                 </button>
                 
                 <div class="flex items-center gap-1.5 bg-amber-500/95 backdrop-blur-sm text-white text-xs px-2.5 py-1.5 rounded-md font-bold shadow-lg">
@@ -170,13 +164,10 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
 import { getAttractions, getCategories } from '@/services/attractions.service'
-import { createBookmark, removeBookmark, getUserBookmarks } from '@/services/bookmarks.service'
 
 
-const router = useRouter()
 const searchQuery = ref<string>('')
 const selectedCategory = ref<string>('')
 const categories = ref<string[]>([''])
@@ -184,32 +175,18 @@ const attractions = ref<any[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const sortBy = ref<string>('rating')
-const bookmarkedPlaces = ref<Set<string>>(new Set())
 
-// Fetch categories on mount
 onMounted(async () => {
   await loadCategories()
-  await loadBookmarks()
   await fetchAttractions()
 })
 
-// Load all categories
 async function loadCategories() {
   try {
     const response = await getCategories()
     categories.value = ['', ...response.data.categories]
   } catch (err) {
     console.error('Failed to load categories:', err)
-  }
-}
-
-// Load user bookmarks
-async function loadBookmarks() {
-  try {
-    const response = await getUserBookmarks()
-    bookmarkedPlaces.value = new Set(response.data.data.map(b => b.place_id))
-  } catch (err) {
-    console.error('Failed to load bookmarks:', err)
   }
 }
 
@@ -224,11 +201,19 @@ async function fetchAttractions() {
       category: selectedCategory.value || undefined,
       sortBy: sortBy.value,
       sortOrder: 'DESC',
-      limit: 20,
-      offset: 0,
     })
 
-    attractions.value = response.data.data
+    const rawAttractions = Array.isArray(response.data?.data) ? response.data.data : []
+
+    attractions.value = rawAttractions.map((item: any) => ({
+      id: item.id,
+      name: item.name ?? item.name_en ?? item.name_kh ?? 'Unnamed Attraction',
+      category: item.category ?? 'Unknown',
+      rating: Number(item.rating ?? item.average_rating ?? 0),
+      review_count: Number(item.review_count ?? 0),
+      image_url: item.image_url ?? item.image ?? '',
+      entrance_fee: item.entrance_fee ?? item.entry_fee ?? null,
+    }))
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to fetch attractions'
     console.error('Error fetching attractions:', err)
@@ -241,34 +226,6 @@ async function fetchAttractions() {
 function selectCategory(category: string) {
   selectedCategory.value = category
   fetchAttractions()
-}
-
-// Toggle bookmark
-async function toggleBookmark(attraction: any) {
-  try {
-    if (bookmarkedPlaces.value.has(attraction.id)) {
-      // Remove bookmark
-      // First, find the bookmark ID from the bookmarks list
-      const bookmarks = await getUserBookmarks()
-      const bookmark = bookmarks.data.data.find(b => b.place_id === attraction.id)
-      if (bookmark) {
-        await removeBookmark(bookmark.id)
-        bookmarkedPlaces.value.delete(attraction.id)
-      }
-    } else {
-      // Create bookmark
-      await createBookmark({
-        place_id: attraction.id,
-        place_name: attraction.name,
-        place_type: attraction.category,
-        place_image_url: attraction.image_url,
-      })
-      bookmarkedPlaces.value.add(attraction.id)
-    }
-  } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to save bookmark'
-    console.error('Error toggling bookmark:', err)
-  }
 }
 
 </script>

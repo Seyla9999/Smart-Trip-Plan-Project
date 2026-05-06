@@ -13,13 +13,18 @@ API.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 responses
+// Handle errors
 API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token')
-      window.location.href = '/login'
+      // Only redirect to login if token exists (user was logged in)
+      // If no token exists, the request was made without auth, which is expected for public endpoints
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        localStorage.removeItem('auth_token')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

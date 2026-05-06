@@ -134,9 +134,6 @@ watch(
   { immediate: true },
 );
 
-function toSlug(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "-");
-}
 
 const backendProvinceId = ref<number | null>(null);
 const backendProvince = ref<ProvinceApi | null>(null);
