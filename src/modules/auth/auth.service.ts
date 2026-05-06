@@ -47,6 +47,7 @@ export class AuthService {
       full_name: dto.full_name,
       password_hash: hashed,
       verification_code: code,
+      is_verified: false,
     });
 
     try {
