@@ -11,7 +11,6 @@ export class ProvincesService {
     private dataSource: DataSource,
   ) {}
 
-  // GET /provinces  OR  GET /provinces?search=Battambang
   async findAll(search?: string) {
     let query = `
       SELECT
@@ -31,7 +30,6 @@ export class ProvincesService {
 
     const params: any[] = [];
 
-    // Add search filter if provided
     if (search) {
       query += ` WHERE p.name_en ILIKE $1 OR p.name_kh ILIKE $1 `;
       params.push(`%${search}%`);
@@ -43,7 +41,6 @@ export class ProvincesService {
     return { success: true, data };
   }
 
-  // GET /provinces/:id
   async findOne(id: number) {
     const data = await this.provinceRepo.findOne({ where: { id } });
     if (!data) return { success: false, message: 'Province not found' };

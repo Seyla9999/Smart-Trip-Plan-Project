@@ -5,10 +5,6 @@ import { AttractionsService } from './attractions.service';
 export class AttractionsController {
   constructor(private readonly service: AttractionsService) {}
 
-  // GET /attractions
-  // GET /attractions?category=Sea
-  // GET /attractions?province=Koh Kong
-  // GET /attractions?is_hidden_gem=true
   @Get()
   findAll(
     @Query('category') category?: string,
@@ -30,15 +26,11 @@ export class AttractionsController {
     });
   }
 
-  // IMPORTANT: 'hidden-gems' must be BEFORE ':id'
-  // otherwise NestJS thinks "hidden-gems" is an id!
-  // GET /attractions/hidden-gems
   @Get('hidden-gems')
   findHiddenGems(@Query('limit') limit?: number) {
     return this.service.findHiddenGems(Number(limit) || 5);
   }
 
-  // GET /attractions/:id
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);

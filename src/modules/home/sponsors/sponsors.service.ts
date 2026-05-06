@@ -10,15 +10,21 @@ export class SponsorsService {
     private repo: Repository<Sponsor>,
   ) {}
 
-  // Returns only active sponsors, sorted gold → silver → bronze
   async findAllActive() {
-    const data = await this.repo.find({
-      where: { is_active: true },
-      order: {
-        tier: 'ASC', // gold comes first alphabetically
-        created_at: 'ASC',
-      },
-    });
+    const data = await this.repo
+      .createQueryBuilder('s')
+      .where('s.is_active = true')
+      .orderBy(
+        `CASE s.tier
+          WHEN 'gold'   THEN 1
+          WHEN 'silver' THEN 2
+          WHEN 'bronze' THEN 3
+          ELSE 4
+        END`,
+      )
+      .addOrderBy('s.created_at', 'ASC')
+      .getMany();
+
     return { success: true, data };
   }
 }
