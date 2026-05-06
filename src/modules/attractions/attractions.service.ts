@@ -15,8 +15,12 @@ export class AttractionsService {
 
   async findAll(filters?: any) {
     try {
-      const limit = Math.min(parseInt(filters?.limit) || 10, 100)
-      const offset = parseInt(filters?.offset) || 0
+      const parsedLimit = Number.parseInt(`${filters?.limit ?? ''}`, 10)
+      const hasExplicitLimit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      const limit = hasExplicitLimit ? Math.min(parsedLimit, 100) : undefined
+
+      const parsedOffset = Number.parseInt(`${filters?.offset ?? ''}`, 10)
+      const offset = Number.isFinite(parsedOffset) && parsedOffset >= 0 ? parsedOffset : 0
       const category = filters?.category
       const sortBy = filters?.sortBy || 'average_rating'
       const sortOrder = (filters?.sortOrder || 'DESC').toUpperCase() as 'ASC' | 'DESC'
@@ -37,18 +41,23 @@ export class AttractionsService {
       else if (sortBy === 'created_at') sortField = 'created_at'
 
       query.orderBy(`attraction.${sortField}`, sortOrder)
-      query.skip(offset)
-      query.take(limit)
+
+      if (limit !== undefined) {
+        query.skip(offset)
+        query.take(limit)
+      }
 
       const [data, total] = await query.getManyAndCount()
+      const responseLimit = limit ?? total
+      const pages = responseLimit > 0 ? Math.ceil(total / responseLimit) : 0
 
       return {
         data,
         pagination: {
           total,
-          limit,
-          offset,
-          pages: Math.ceil(total / limit),
+          limit: responseLimit,
+          offset: limit !== undefined ? offset : 0,
+          pages,
         },
       }
     } catch (error) {
