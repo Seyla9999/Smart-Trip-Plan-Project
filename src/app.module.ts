@@ -10,6 +10,12 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { Attraction } from './attractions/entities/attraction.entity';
 import { Province } from './provinces/entities/province.entity';
 import { PointsOfInterestModule } from './points-of-interest/points-of-interest.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { CommunityStoriesModule } from './community-stories/community-stories.module';
+import { AttractionImagesModule } from './attraction-images/attraction-images.module';
+import { Review } from './reviews/entities/review.entity';
+import { Story } from './community-stories/entities/story.entity';
+import { StoryComment } from './community-stories/entities/story-comment.entity';
 
 @Module({
   imports: [
@@ -21,13 +27,13 @@ import { PointsOfInterestModule } from './points-of-interest/points-of-interest.
       type: 'postgres',
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USER,
+      username: process.env.DB_USERNAME || process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
 
       autoLoadEntities: true,
       synchronize: false,
-      entities: [Attraction, Province],
+      entities: [Attraction, Province, Review, Story, StoryComment],
 
       ssl: {
         rejectUnauthorized: false,
@@ -48,6 +54,9 @@ import { PointsOfInterestModule } from './points-of-interest/points-of-interest.
     ProvincesModule,
     AttractionsModule,
     PointsOfInterestModule,
+    ReviewsModule,
+    CommunityStoriesModule,
+    AttractionImagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
