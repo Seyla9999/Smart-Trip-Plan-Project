@@ -10,8 +10,6 @@ export class AttractionsService {
     private repo: Repository<Attraction>,
     private dataSource: DataSource,
   ) {}
-
-  // GET /attractions?category=Sea&province=Koh Kong&limit=4
   async findAll(q: {
     category?: string;
     province?: string;
@@ -61,12 +59,10 @@ export class AttractionsService {
 
     sql += ` GROUP BY a.id, p.id ORDER BY a.average_rating DESC`;
 
-    // Count total (without pagination)
     const countSql   = `SELECT COUNT(*) FROM (${sql}) AS sub`;
     const countResult = await this.dataSource.query(countSql, params);
     const total       = parseInt(countResult[0].count, 10);
 
-    // Add pagination
     sql += ` LIMIT $${idx++} OFFSET $${idx++}`;
     params.push(limit, (page - 1) * limit);
 
@@ -75,7 +71,6 @@ export class AttractionsService {
     return { success: true, data, meta: { total, page, limit } };
   }
 
-  // GET /attractions/hidden-gems → returns only is_hidden_gem = true, not soft-deleted
   async findHiddenGems(limit = 5) {
     const sql = `
       SELECT
@@ -107,7 +102,6 @@ export class AttractionsService {
     return { success: true, data };
   }
 
-  // GET /attractions/:id
   async findOne(id: string) {
     const sql = `
       SELECT
