@@ -13,9 +13,13 @@ import { PointsOfInterestModule } from './points-of-interest/points-of-interest.
 import { ReviewsModule } from './reviews/reviews.module';
 import { CommunityStoriesModule } from './community-stories/community-stories.module';
 import { AttractionImagesModule } from './attraction-images/attraction-images.module';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { NearbyImagesModule } from './nearby-images/nearby-images.module';
 import { Review } from './reviews/entities/review.entity';
 import { Story } from './community-stories/entities/story.entity';
 import { StoryComment } from './community-stories/entities/story-comment.entity';
+import { Bookmark } from './bookmarks/entities/bookmark.entity';
+import { NearbyImage } from './nearby-images/entities/nearby-image.entity';
 
 @Module({
   imports: [
@@ -33,7 +37,7 @@ import { StoryComment } from './community-stories/entities/story-comment.entity'
 
       autoLoadEntities: true,
       synchronize: false,
-      entities: [Attraction, Province, Review, Story, StoryComment],
+      entities: [Attraction, Province, Review, Story, StoryComment, Bookmark, NearbyImage],
 
       ssl: {
         rejectUnauthorized: false,
@@ -57,6 +61,8 @@ import { StoryComment } from './community-stories/entities/story-comment.entity'
     ReviewsModule,
     CommunityStoriesModule,
     AttractionImagesModule,
+    BookmarksModule,
+    NearbyImagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

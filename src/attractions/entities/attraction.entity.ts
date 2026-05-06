@@ -54,6 +54,15 @@ export class Attraction {
   })
   averageRating: Number;
 
+  @Column({ name: 'hero_image', type: 'text', nullable: true })
+  heroImage: string;
+
+  @Column({ name: 'photos', type: 'text', array: true, nullable: true })
+  photos: string[];
+
+  @Column({ name: 'nearby_images', type: 'jsonb', nullable: true })
+  nearbyImages: { name: string; slug: string; location: string; image: string }[];
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Timestamp;
 
