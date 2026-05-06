@@ -23,6 +23,7 @@ export interface Attraction {
   description:    string
   is_hidden_gem:  boolean
   average_rating: number
+  review_count:   number   
   province:       Province
 }
 
@@ -55,7 +56,6 @@ export interface Weather {
   icon_url:       string
   last_updated:   string
 }
-
 
 export async function getProvinces(): Promise<Province[]> {
   const res = await API.get('/provinces')
@@ -93,7 +93,6 @@ export async function getAllWeather(): Promise<Record<number, Weather>> {
   return res.data.data
 }
 
-
 export interface HomePageData {
   provinces:  Province[]
   hiddenGems: Attraction[]
@@ -103,7 +102,6 @@ export interface HomePageData {
 }
 
 export async function loadHomePage(): Promise<HomePageData> {
-
   const [provinces, hiddenGems, stories, sponsors, weather] =
     await Promise.allSettled([
       getProvinces(),
