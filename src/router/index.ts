@@ -10,6 +10,7 @@ import UserView from '../views/UserView.vue'
 import User_Discover from '../views/User_Discover.vue'
 import CommunityView from '../views/CommunityView.vue'
 import ProvinceDetailView from '../views/ProvinceDetailView.vue'
+import AboutView from '../views/AboutView.vue'
 import AttractionDetail from '../components/AttractionDetail.vue'
 
 const router = createRouter({
@@ -77,6 +78,12 @@ const router = createRouter({
       path: '/attraction/:id',
       name: 'AttractionDetail',
       redirect: (to) => `/province/koh-kong/${to.params.id}`,
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: AboutView,
+
     },
     {
       path: '/:pathMatch(.*)*',
