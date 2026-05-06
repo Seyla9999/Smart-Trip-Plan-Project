@@ -22,6 +22,7 @@ import { UsersModule } from './modules/users/users.module'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      
     }),
 
     TypeOrmModule.forRoot({
