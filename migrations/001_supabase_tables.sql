@@ -1,8 +1,3 @@
--- ============================================================
--- Smart Trip: Supabase Migration 001 (already executed)
--- These ALTER TABLE and CREATE TABLE statements were run
--- programmatically. Keep this file as a reference.
--- ============================================================
 
 -- Add author_name and title to existing reviews table
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS author_name VARCHAR(100) DEFAULT 'Anonymous';
@@ -39,8 +34,6 @@ CREATE INDEX IF NOT EXISTS idx_reviews_attraction_id ON reviews(attraction_id);
 CREATE INDEX IF NOT EXISTS idx_stories_published_at ON stories(published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_story_comments_story_id ON story_comments(story_id);
 
--- ============================================================
--- Supabase Storage Buckets (create manually in Dashboard)
--- Storage > New bucket > "attraction-images"  (Public: ON)
--- Storage > New bucket > "story-images"        (Public: ON)
--- ============================================================
+
+
+
