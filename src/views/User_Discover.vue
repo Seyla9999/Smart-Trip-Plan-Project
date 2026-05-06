@@ -96,7 +96,8 @@
         <div 
           v-for="attraction in attractions" 
           :key="attraction.id"
-          class="group"
+          class="group cursor-pointer"
+          @click="goToAttractionDetail(attraction)"
         >
           <div class="relative overflow-hidden rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 bg-white border border-slate-100">
             <div class="relative h-48 overflow-hidden">
@@ -165,7 +166,10 @@
 <script setup lang="ts">
 
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getAttractions, getCategories } from '@/services/attractions.service'
+
+const router = useRouter()
 
 
 const searchQuery = ref<string>('')
@@ -226,6 +230,16 @@ async function fetchAttractions() {
 function selectCategory(category: string) {
   selectedCategory.value = category
   fetchAttractions()
+}
+
+// Navigate to attraction detail page
+function goToAttractionDetail(attraction: any) {
+  router.push({
+    name: 'AttractionDetail',
+    params: {
+      id: attraction.id,
+    },
+  })
 }
 
 </script>

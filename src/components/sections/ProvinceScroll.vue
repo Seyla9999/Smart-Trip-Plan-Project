@@ -27,7 +27,7 @@
             v-for="p in provinces"
             :key="p.id"
             class="pcard"
-            @click="$router.push(`/discover?province=${encodeURIComponent(p.name_en)}`)"
+            @click="goToProvinceDetail(p.name_en)"
           >
             <div
               class="pcard-img"
@@ -58,7 +58,7 @@
             v-for="p in fallback"
             :key="p.name"
             class="pcard"
-            @click="$router.push(`/discover?province=${p.name}`)"
+            @click="goToProvinceDetail(p.name)"
           >
             <div class="pcard-img" :style="{ backgroundImage:`url(${p.img})`, backgroundColor: p.color }">
               <div class="pcard-overlay" />
@@ -81,7 +81,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, PropType } from 'vue'
+import { defineComponent, ref } from 'vue'
+import type { PropType } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Province, Weather } from '@/services/home.service'
 
 export default defineComponent({
@@ -92,10 +94,26 @@ export default defineComponent({
     loading:   { type: Boolean, default: false },
   },
   setup() {
+    const router = useRouter()
     const track = ref<HTMLElement | null>(null)
     function scroll(dir: number) {
       track.value?.scrollBy({ left: dir * 420, behavior: 'smooth' })
     }
+
+    function toSlug(value: string) {
+      return value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+    }
+
+    function goToProvinceDetail(provinceName: string) {
+      router.push(`/province/${toSlug(provinceName)}`)
+    }
+
     const fallback = [
       { name:'Siem Reap',     kh:'សៀមរាប',   img:'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=400&q=70', color:'#4A7C59', attr:42, host:18 },
       { name:'Phnom Penh',    kh:'ភ្នំពេញ',   img:'https://images.unsplash.com/photo-1598946329549-8ac25a6c2890?w=400&q=70', color:'#3D5A80', attr:38, host:24 },
@@ -104,7 +122,7 @@ export default defineComponent({
       { name:'Sihanoukville', kh:'ព្រះសីហនុ', img:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=70', color:'#2196A6', attr:27, host:21 },
       { name:'Ratanakiri',    kh:'រតនគិរី',   img:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&q=70', color:'#6B4C3B', attr:14, host:5  },
     ]
-    return { track, scroll, fallback }
+    return { track, scroll, fallback, goToProvinceDetail }
   },
 })
 </script>

@@ -91,7 +91,7 @@ const router = createRouter({
     {
       path: '/attraction/:id',
       name: 'AttractionDetail',
-      redirect: (to) => `/province/koh-kong/${to.params.id}`,
+      component: AttractionDetail,
     },
     {
       path: '/:pathMatch(.*)*',
@@ -109,7 +109,18 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('auth_token')
-  const publicRoutes = ['home', 'login', 'register', 'verify', 'discover', 'trip', 'trip-results']
+  const publicRoutes = [
+    'home',
+    'login',
+    'register',
+    'verify',
+    'discover',
+    'trip',
+    'trip-results',
+    'province-detail',
+    'place-detail',
+    'AttractionDetail',
+  ]
   const routeName = typeof to.name === 'string' ? to.name : ''
   
   if (!token && !publicRoutes.includes(routeName)) {

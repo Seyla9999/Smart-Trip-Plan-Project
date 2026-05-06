@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter, RouterLink } from "vue-router";
 
 import ProvinceTopSearch from "@/components/province-detail/ProvinceTopSearch.vue";
@@ -8,6 +8,7 @@ import ProvinceFilters from "@/components/province-detail/ProvinceFilters.vue";
 import FeaturedPlaceCard from "@/components/province-detail/FeaturedPlaceCard.vue";
 import PlaceCard from "@/components/province-detail/PlaceCard.vue";
 import PlacePagination from "@/components/province-detail/PlacePagination.vue";
+import { mockProvinces, mockProvinceAttractions, mockWeather } from "@/data/mockProvinces";
 
 type TravelType = "Solo" | "Friends" | "Family";
 type ViewMode = "grid" | "list";
@@ -68,6 +69,42 @@ type WeatherAlertApi = {
 const API_BASE = "http://localhost:3000";
 const FALLBACK_IMAGE =
   "https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg";
+
+function normalizeProvince(raw: any): ProvinceApi | null {
+  if (!raw) return null;
+
+  const id = Number(raw.id ?? raw.province_id ?? raw.provinceId);
+  const nameEn = String(raw.nameEn ?? raw.name_en ?? raw.name ?? "");
+
+  if (!id || !nameEn) return null;
+
+  return {
+    id,
+    nameEn,
+    nameKh: String(raw.nameKh ?? raw.name_kh ?? ""),
+    description: raw.description ?? null,
+    mainImageUrl: raw.mainImageUrl ?? raw.main_image_url ?? null,
+  };
+}
+
+function normalizeAttraction(raw: any): AttractionApi | null {
+  if (!raw) return null;
+
+  const id = String(raw.id ?? raw.attraction_id ?? "");
+  if (!id) return null;
+
+  return {
+    id,
+    provinceId: Number(raw.provinceId ?? raw.province_id ?? raw.province_id ?? 0),
+    nameEn: String(raw.nameEn ?? raw.name_en ?? raw.name ?? ""),
+    nameKh: raw.nameKh ?? raw.name_kh ?? null,
+    category: raw.category ?? raw.main_category ?? null,
+    description: raw.description ?? null,
+    location: raw.location ?? raw.address ?? null,
+    isHiddenGem: Boolean(raw.isHiddenGem ?? raw.is_hidden_gem ?? false),
+    averageRating: raw.averageRating ?? raw.average_rating ?? raw.rating ?? 0,
+  };
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -202,35 +239,88 @@ async function loadProvinceDetail() {
   weatherAlerts.value = [];
 
   try {
-    const provincesResponse = await fetch(`${API_BASE}/provinces`);
-    if (!provincesResponse.ok) {
-      throw new Error("Failed to load provinces.");
+    const localProvince = normalizeProvince(
+      mockProvinces.find((province) => toSlug(province.nameEn) === slug.value),
+    );
+
+    if (localProvince) {
+      backendProvinceId.value = localProvince.id;
+      backendProvince.value = localProvince;
+
+      const localAttractions = mockProvinceAttractions[localProvince.id as keyof typeof mockProvinceAttractions] || [];
+      allPlaces.value = localAttractions.map((attraction, index) =>
+        mapAttractionToPlace(attraction, localProvince, index),
+      );
+      updateFilterCounts(allPlaces.value);
+
+      weather.value = mockWeather as WeatherApi;
+      weatherAlerts.value = [];
     }
 
-    const provinces: ProvinceApi[] = await provincesResponse.json();
+    let provinces: ProvinceApi[] = [];
+    let usesMockData = false;
+
+    try {
+      const provincesResponse = await fetch(`${API_BASE}/provinces`, { signal: AbortSignal.timeout(5000) });
+      if (!provincesResponse.ok) {
+        throw new Error("Failed to load provinces.");
+      }
+      const provincesData = await provincesResponse.json();
+      const rawProvinces = Array.isArray(provincesData)
+        ? provincesData
+        : (provincesData?.provinces ?? provincesData?.data ?? []);
+      provinces = rawProvinces.map(normalizeProvince).filter(Boolean) as ProvinceApi[];
+    } catch (error) {
+      // Fallback to mock data
+      console.warn("Using mock province data (API unavailable)");
+      provinces = mockProvinces as unknown as ProvinceApi[];
+      usesMockData = true;
+    }
 
     const matchedProvince = provinces.find(
       (province) => toSlug(province.nameEn) === slug.value,
     );
 
-    if (!matchedProvince) {
-      throw new Error("Province not found in backend.");
+    const fallbackProvince = matchedProvince || normalizeProvince(
+      mockProvinces.find((province) => toSlug(province.nameEn) === slug.value),
+    );
+
+    if (!fallbackProvince) {
+      throw new Error("Province not found.");
     }
 
-    backendProvinceId.value = matchedProvince.id;
-    backendProvince.value = matchedProvince;
+    backendProvinceId.value = fallbackProvince.id;
+    backendProvince.value = fallbackProvince;
 
-    const [attractionsResponse, weatherResponse] = await Promise.all([
-      fetch(`${API_BASE}/provinces/${matchedProvince.id}/attractions`),
-      fetch(`${API_BASE}/provinces/${matchedProvince.id}/weather`),
-    ]);
+    // Try to fetch attractions and weather from API
+    let attractions: AttractionApi[] = [];
+    try {
+      const attractionsResponse = await fetch(`${API_BASE}/provinces/${fallbackProvince.id}/attractions`, { signal: AbortSignal.timeout(5000) });
+      if (attractionsResponse.ok) {
+        const attractionsData = await attractionsResponse.json();
+        const rawAttractions =
+          attractionsData?.attractions ??
+          attractionsData?.data ??
+          attractionsData;
 
-    if (attractionsResponse.ok) {
-      const attractionsData = await attractionsResponse.json();
-      const attractions: AttractionApi[] = attractionsData.attractions || [];
+        attractions = Array.isArray(rawAttractions)
+          ? rawAttractions.map(normalizeAttraction).filter(Boolean) as AttractionApi[]
+          : [];
+      }
+    } catch (error) {
+      // Use mock attractions
+      console.warn("Using mock attractions data (API unavailable)");
+    }
 
+    if (attractions.length === 0) {
+      const mockData = mockProvinceAttractions[fallbackProvince.id as keyof typeof mockProvinceAttractions];
+      attractions = mockData || [];
+      usesMockData = true;
+    }
+
+    if (attractions.length > 0) {
       allPlaces.value = attractions.map((attraction, index) =>
-        mapAttractionToPlace(attraction, matchedProvince, index),
+        mapAttractionToPlace(attraction, fallbackProvince, index),
       );
       updateFilterCounts(allPlaces.value);
     } else {
@@ -238,10 +328,23 @@ async function loadProvinceDetail() {
       updateFilterCounts([]);
     }
 
-    if (weatherResponse.ok) {
-      const weatherData = await weatherResponse.json();
-      weather.value = weatherData.weather || null;
-      weatherAlerts.value = weatherData.alerts || [];
+    try {
+      const weatherResponse = await fetch(`${API_BASE}/provinces/${fallbackProvince.id}/weather`, { signal: AbortSignal.timeout(5000) });
+      if (weatherResponse.ok) {
+        const weatherData = await weatherResponse.json();
+        weather.value = weatherData.weather || null;
+        weatherAlerts.value = weatherData.alerts || [];
+      } else {
+        weather.value = mockWeather as WeatherApi;
+      }
+    } catch (error) {
+      console.warn("Using mock weather data (API unavailable)");
+      weather.value = mockWeather as WeatherApi;
+      weatherAlerts.value = [];
+    }
+
+    if (usesMockData) {
+      errorMessage.value = "Note: Using sample data (backend unavailable)";
     }
   } catch (error) {
     errorMessage.value =

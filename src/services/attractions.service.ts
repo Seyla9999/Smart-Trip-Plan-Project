@@ -1,4 +1,5 @@
 import API from '@/api/axios'
+import { mockAttractions, mockCategories } from '@/data/mockAttractions'
 
 export interface AttractionsFilterParams {
   search?: string
@@ -41,8 +42,51 @@ export interface AttractionsResponse {
 }
 
 // Get all attractions with filters
-export const getAttractions = (filters: AttractionsFilterParams) => {
-  return API.get<AttractionsResponse>('/attractions', { params: filters })
+export const getAttractions = async (filters: AttractionsFilterParams) => {
+  try {
+    return await API.get<AttractionsResponse>('/attractions', { params: filters })
+  } catch (error) {
+    // Fallback to mock data when API is unavailable
+    console.warn('API unavailable, using mock data')
+    
+    let filtered = [...mockAttractions]
+    
+    if (filters.search) {
+      const search = filters.search.toLowerCase()
+      filtered = filtered.filter(a => 
+        a.name.toLowerCase().includes(search) || 
+        a.description.toLowerCase().includes(search)
+      )
+    }
+    
+    if (filters.category) {
+      filtered = filtered.filter(a => a.category === filters.category)
+    }
+    
+    // Sort
+    if (filters.sortBy === 'name') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (filters.sortBy === 'reviewCount') {
+      filtered.sort((a, b) => (filters.sortOrder === 'ASC' ? a.review_count - b.review_count : b.review_count - a.review_count))
+    } else if (filters.sortBy === 'createdAt') {
+      // For mock data, just keep original order
+    } else {
+      // Default: rating
+      filtered.sort((a, b) => (filters.sortOrder === 'ASC' ? a.rating - b.rating : b.rating - a.rating))
+    }
+    
+    return {
+      data: {
+        data: filtered.slice(0, filters.limit || 20),
+        pagination: {
+          total: filtered.length,
+          limit: filters.limit || 20,
+          offset: filters.offset || 0,
+          pages: Math.ceil(filtered.length / (filters.limit || 20))
+        }
+      }
+    } as any
+  }
 }
 
 // Get attractions by category
@@ -73,8 +117,18 @@ export const getTopRatedAttractions = (limit: number = 10) => {
 }
 
 // Get all categories
-export const getCategories = () => {
-  return API.get<{ categories: string[] }>('/attractions/categories')
+export const getCategories = async () => {
+  try {
+    return await API.get<{ categories: string[] }>('/attractions/categories')
+  } catch (error) {
+    // Fallback to mock categories
+    console.warn('API unavailable, using mock categories')
+    return {
+      data: {
+        categories: mockCategories
+      }
+    } as any
+  }
 }
 
 // Get attraction statistics
