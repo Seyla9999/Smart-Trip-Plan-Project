@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import CommunityFilterBar from '@/components/community/CommunityFilterBar.vue'
 import CommunityHero from '@/components/community/CommunityHero.vue'
 import StoryFeed from '@/components/community/StoryFeed.vue'
@@ -44,7 +44,7 @@ import {
   categoryCoverMap,
   communityCategories,
   communitySortOptions,
-  communityStories,
+  communityStories as fallbackStories,
   popularProvinces,
   topTravelers,
   trendingPlaces,
@@ -58,49 +58,83 @@ import type {
   StoryCategory,
   TopTraveler,
 } from '@/data/community'
+import { fetchStories, createStory, likeStory, fetchStats } from '@/services/community.service'
 
-const STORIES_STORAGE_KEY = 'community:stories'
-const TRAVELERS_STORAGE_KEY = 'community:travelers'
-
-const stories = ref<CommunityStory[]>(loadStories())
-const travelers = ref<TopTraveler[]>(loadTravelers())
+// ── State ──────────────────────────────────────────────────────
+const stories = ref<CommunityStory[]>([...fallbackStories])
+const travelers = ref<TopTraveler[]>(topTravelers.map((t) => ({ ...t })))
 const selectedCategory = ref<CommunityCategory>('All')
 const searchQuery = ref('')
 const sortOption = ref<CommunitySortOption>('latest')
+const apiLoaded = ref(false)
+
+// Track liked IDs locally (Supabase likes are just counters, not per-user for now)
+const LIKED_KEY = 'community:liked_ids'
+const likedIds = ref<Set<string>>(loadLikedIds())
+
+function loadLikedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(LIKED_KEY)
+    return new Set(raw ? JSON.parse(raw) : [])
+  } catch {
+    return new Set()
+  }
+}
+function saveLikedIds() {
+  localStorage.setItem(LIKED_KEY, JSON.stringify([...likedIds.value]))
+}
+
+// ── Load stories from Supabase on mount ───────────────────────
+async function loadFromAPI() {
+  try {
+    const { data } = await fetchStories({ limit: 50 })
+    if (data.length > 0) {
+      // Mark which stories are liked by this user
+      stories.value = data.map((s) => ({ ...s, liked: likedIds.value.has(s.id) }))
+      apiLoaded.value = true
+    }
+  } catch {
+    // Keep fallback stories if API is unavailable
+  }
+}
+
+onMounted(loadFromAPI)
+
+// ── Derived stats from Supabase ───────────────────────────────
+const apiStats = ref({ totalStories: 0, totalLikes: 0 })
+onMounted(async () => {
+  try {
+    apiStats.value = await fetchStats()
+  } catch { /* keep defaults */ }
+})
 
 const composerCategories = communityCategories.filter(
-  (category): category is StoryCategory => category !== 'All',
+  (c): c is StoryCategory => c !== 'All',
 )
 
+// ── Filtering & sorting (client-side on fetched data) ─────────
 const filteredStories = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase()
 
   const results = stories.value.filter((story) => {
     const matchesCategory =
       selectedCategory.value === 'All' || story.category === selectedCategory.value
-
-    if (!matchesCategory) {
-      return false
-    }
-
-    if (!keyword) {
-      return true
-    }
-
+    if (!matchesCategory) return false
+    if (!keyword) return true
     return [story.title, story.excerpt, story.location, story.author.name, story.category]
-      .join(' ')
-      .toLowerCase()
-      .includes(keyword)
+      .join(' ').toLowerCase().includes(keyword)
   })
 
-  return [...results].sort((first, second) => sortStories(first, second, sortOption.value))
+  return [...results].sort((a, b) => sortStories(a, b, sortOption.value))
 })
 
 const featuredStory = computed(() => filteredStories.value[0] ?? null)
 const feedStories = computed(() => filteredStories.value.slice(1))
 
 const heroStats = computed<HeroStat[]>(() => {
-  const totalLikes = stories.value.reduce((sum, story) => sum + story.likes, 0)
+  const totalLikes = apiStats.value.totalLikes ||
+    stories.value.reduce((sum, s) => sum + s.likes, 0)
+  const totalStories = apiStats.value.totalStories || 1800 + stories.value.length
 
   return [
     {
@@ -110,7 +144,7 @@ const heroStats = computed<HeroStat[]>(() => {
     },
     {
       label: 'Stories',
-      value: (1800 + stories.value.length).toLocaleString(),
+      value: totalStories.toLocaleString(),
       hint: 'Post recaps, lists, and quick reviews from every region.',
     },
     {
@@ -121,150 +155,95 @@ const heroStats = computed<HeroStat[]>(() => {
   ]
 })
 
-function sortStories(
-  first: CommunityStory,
-  second: CommunityStory,
-  mode: CommunitySortOption,
-) {
-  if (mode === 'popular') {
-    return second.likes - first.likes
-  }
-
-  if (mode === 'discussed') {
-    return second.comments - first.comments
-  }
-
-  if (mode === 'top-rated') {
-    return second.rating - first.rating
-  }
-
-  return (
-    new Date(second.publishedAt).getTime() - new Date(first.publishedAt).getTime()
-  )
+function sortStories(a: CommunityStory, b: CommunityStory, mode: CommunitySortOption) {
+  if (mode === 'popular') return b.likes - a.likes
+  if (mode === 'discussed') return b.comments - a.comments
+  if (mode === 'top-rated') return b.rating - a.rating
+  return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
 }
 
-function toggleLike(id: number) {
-  stories.value = stories.value.map((story) => {
-    if (story.id !== id) {
-      return story
-    }
+// ── Like toggle (calls Supabase API + updates local state) ────
+async function toggleLike(id: string) {
+  const story = stories.value.find((s) => s.id === id)
+  if (!story) return
 
-    const liked = !story.liked
+  const nowLiked = !story.liked
+  stories.value = stories.value.map((s) =>
+    s.id !== id ? s : { ...s, liked: nowLiked, likes: s.likes + (nowLiked ? 1 : -1) },
+  )
 
-    return {
-      ...story,
-      liked,
-      likes: story.likes + (liked ? 1 : -1),
-    }
-  })
+  if (nowLiked) likedIds.value.add(id)
+  else likedIds.value.delete(id)
+  saveLikedIds()
+
+  // Only call API for stories that came from Supabase (UUID format)
+  if (apiLoaded.value && !id.startsWith('local-')) {
+    try {
+      await likeStory(id, nowLiked)
+    } catch { /* optimistic update already applied */ }
+  }
 }
 
 function toggleFollow(id: number) {
-  travelers.value = travelers.value.map((traveler) =>
-    traveler.id === id ? { ...traveler, followed: !traveler.followed } : traveler,
+  travelers.value = travelers.value.map((t) =>
+    t.id === id ? { ...t, followed: !t.followed } : t,
   )
 }
 
-function handleStorySubmit(payload: ComposerSubmission) {
-  stories.value = [
-    {
-      id: Date.now(),
-      title: payload.title,
-      excerpt: payload.body,
-      image: payload.photoUrl || categoryCoverMap[payload.category],
-      category: payload.category,
-      location: payload.location || 'Cambodia',
-      likes: 0,
-      comments: 0,
-      rating: payload.rating,
-      publishedAt: new Date().toISOString(),
-      author: {
-        name: 'You',
-        handle: '@newtraveler',
-        initials: 'YO',
-        avatarColor: '#1a2340',
-        homeBase: 'Community member',
-      },
-      liked: false,
-    },
-    ...stories.value,
-  ]
+// ── Submit story → Supabase API ───────────────────────────────
+async function handleStorySubmit(payload: ComposerSubmission) {
+  const imageUrl = payload.photoUrl || categoryCoverMap[payload.category]
 
+  if (apiLoaded.value) {
+    try {
+      const created = await createStory(payload, imageUrl)
+      stories.value = [{ ...created, liked: false }, ...stories.value]
+      selectedCategory.value = 'All'
+      searchQuery.value = ''
+      sortOption.value = 'latest'
+      return
+    } catch { /* fall through to local */ }
+  }
+
+  // Fallback: add locally if API unavailable
+  const localStory: CommunityStory = {
+    id: `local-${Date.now()}`,
+    title: payload.title,
+    excerpt: payload.body,
+    image: imageUrl,
+    category: payload.category,
+    location: payload.location || 'Cambodia',
+    likes: 0,
+    comments: 0,
+    rating: payload.rating,
+    publishedAt: new Date().toISOString(),
+    author: {
+      name: 'You',
+      handle: '@newtraveler',
+      initials: 'YO',
+      avatarColor: '#1a2340',
+      homeBase: 'Community member',
+    },
+    liked: false,
+  }
+  stories.value = [localStory, ...stories.value]
   selectedCategory.value = 'All'
   searchQuery.value = ''
   sortOption.value = 'latest'
 }
 
-function loadStories(): CommunityStory[] {
-  if (typeof window === 'undefined') {
-    return getDefaultStories()
-  }
-
-  const storedStories = window.localStorage.getItem(STORIES_STORAGE_KEY)
-  if (!storedStories) {
-    return getDefaultStories()
-  }
-
+// Reload from API when filters change (re-query with server-side params)
+watch([selectedCategory, sortOption], async () => {
+  if (!apiLoaded.value) return
   try {
-    const parsedStories = JSON.parse(storedStories) as CommunityStory[]
-    return Array.isArray(parsedStories) && parsedStories.length > 0
-      ? parsedStories
-      : getDefaultStories()
-  } catch {
-    return getDefaultStories()
-  }
-}
-
-function loadTravelers(): TopTraveler[] {
-  if (typeof window === 'undefined') {
-    return getDefaultTravelers()
-  }
-
-  const storedTravelers = window.localStorage.getItem(TRAVELERS_STORAGE_KEY)
-  if (!storedTravelers) {
-    return getDefaultTravelers()
-  }
-
-  try {
-    const parsedTravelers = JSON.parse(storedTravelers) as TopTraveler[]
-    return Array.isArray(parsedTravelers) && parsedTravelers.length > 0
-      ? parsedTravelers
-      : getDefaultTravelers()
-  } catch {
-    return getDefaultTravelers()
-  }
-}
-
-function getDefaultStories(): CommunityStory[] {
-  return communityStories.map((story) => ({
-    ...story,
-    author: { ...story.author },
-  }))
-}
-
-function getDefaultTravelers(): TopTraveler[] {
-  return topTravelers.map((traveler) => ({ ...traveler }))
-}
-
-watch(
-  stories,
-  (nextStories) => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORIES_STORAGE_KEY, JSON.stringify(nextStories))
-    }
-  },
-  { deep: true },
-)
-
-watch(
-  travelers,
-  (nextTravelers) => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(TRAVELERS_STORAGE_KEY, JSON.stringify(nextTravelers))
-    }
-  },
-  { deep: true },
-)
+    const { data } = await fetchStories({
+      category: selectedCategory.value !== 'All' ? selectedCategory.value : undefined,
+      sort: sortOption.value,
+      limit: 50,
+    })
+    stories.value = data.map((s) => ({ ...s, liked: likedIds.value.has(s.id) }))
+  } catch { /* keep current */ }
+})
 </script>
 
 <style scoped>
