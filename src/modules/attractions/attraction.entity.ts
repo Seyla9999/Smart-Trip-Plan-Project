@@ -9,67 +9,51 @@ import {
 
 @Entity('attractions')
 @Index(['category'])
-@Index(['rating'])
+@Index(['average_rating'])
 @Index(['province_id'])
-@Index(['status'])
 export class Attraction {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
-  @Column()
-  name!: string
+  @Column({ type: 'integer' })
+  province_id!: number
 
-  @Column('text', { nullable: true })
-  description!: string
+  @Column({ type: 'varchar', nullable: true })
+  name_en?: string
 
-  @Column()
-  province_id!: string
+  @Column({ type: 'varchar', nullable: true })
+  name_kh?: string
 
-  @Column()
+  @Column({ type: 'varchar' })
   category!: string
 
-  @Column('simple-array', { nullable: true })
-  sub_categories?: string[]
+  @Column({ type: 'text', nullable: true })
+  description?: string
 
-  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
-  rating!: number
+  @Column({ type: 'geometry', nullable: true })
+  location?: string
 
-  @Column({ type: 'integer', default: 0 })
-  review_count!: number
+  @Column({ type: 'boolean', default: false })
+  is_hidden_gem!: boolean
 
-  @Column({ nullable: true })
-  address!: string
+  @Column({ type: 'numeric', precision: 4, scale: 2, default: 0 })
+  average_rating!: number
 
-  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
-  latitude!: number
-
-  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
-  longitude!: number
-
-  @Column({ nullable: true })
-  image_url!: string
-
-  @Column('text', { nullable: true })
-  opening_hours!: string
-
-  @Column({ nullable: true })
-  entrance_fee!: number
-
-  @Column({ type: 'boolean', default: true })
-  is_open!: boolean
-
-  @Column({ default: 'active' })
-  status!: string
-
-  @Column('simple-array', { nullable: true })
-  amenities?: string[]
-
-  @Column({ type: 'integer', default: 0 })
-  visit_count!: number
-
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp with time zone' })
   created_at!: Date
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamp with time zone' })
   updated_at!: Date
+
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  deleted_at?: Date
+
+  // Getter for backward compatibility
+  get name(): string {
+    return this.name_en || this.name_kh || ''
+  }
+
+  get rating(): number {
+    return Number(this.average_rating) || 0
+  }
 }

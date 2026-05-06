@@ -13,104 +13,54 @@ export class AttractionsService {
     private attractionRepo: Repository<Attraction>,
   ) {}
 
-  async findAll(filters: FilterAttractionsDto) {
-    let query = this.attractionRepo.createQueryBuilder('attraction')
+  async findAll(filters?: any) {
+    try {
+      const limit = Math.min(parseInt(filters?.limit) || 10, 100)
+      const offset = parseInt(filters?.offset) || 0
+      const category = filters?.category
+      const sortBy = filters?.sortBy || 'average_rating'
+      const sortOrder = (filters?.sortOrder || 'DESC').toUpperCase() as 'ASC' | 'DESC'
 
-    if (filters.search) {
-      const searchTerm = `%${filters.search}%`
-      query = query.where(
-        '(attraction.name ILIKE :search OR attraction.description ILIKE :search)',
-        { search: searchTerm },
-      )
-    }
+      const query = this.attractionRepo.createQueryBuilder('attraction')
 
-    if (filters.category) {
-      query = query.andWhere('attraction.category = :category', {
-        category: filters.category,
-      })
-    }
-
-    if (filters.categories && filters.categories.length > 0) {
-      query = query.andWhere('attraction.category IN (:...categories)', {
-        categories: filters.categories,
-      })
-    }
-
-    if (filters.mainCategory) {
-      query = query.andWhere('attraction.category = :mainCategory', {
-        mainCategory: filters.mainCategory,
-      })
-    }
-
-    if (filters.minRating !== undefined) {
-      query = query.andWhere('attraction.rating >= :minRating', {
-        minRating: filters.minRating,
-      })
-    }
-
-    if (filters.maxRating !== undefined) {
-      query = query.andWhere('attraction.rating <= :maxRating', {
-        maxRating: filters.maxRating,
-      })
-    }
-
-    if (filters.province_id) {
-      query = query.andWhere('attraction.province_id = :province_id', {
-        province_id: filters.province_id,
-      })
-    }
-
-    if (filters.isOpen !== undefined) {
-      query = query.andWhere('attraction.is_open = :isOpen', {
-        isOpen: filters.isOpen,
-      })
-    }
-
-    if (filters.maxEntryFee !== undefined) {
-      query = query.andWhere('attraction.entrance_fee <= :maxEntryFee', {
-        maxEntryFee: filters.maxEntryFee,
-      })
-    }
-
-    if (filters.amenities && filters.amenities.length > 0) {
-      for (const amenity of filters.amenities) {
-        query = query.andWhere(':amenity = ANY(attraction.amenities)', {
-          amenity,
-        })
+      if (category) {
+        query.where('attraction.category = :category', { category })
       }
-    }
 
-    // query = query.andWhere('attraction.status = :status', {
-    //   status: 'active',
-    // })
+      // Map sort fields for backward compatibility
+      let sortField = 'average_rating'
+      if (sortBy === 'rating') sortField = 'average_rating'
+      else if (sortBy === 'average_rating') sortField = 'average_rating'
+      else if (sortBy === 'name') sortField = 'name_en'
+      else if (sortBy === 'name_en') sortField = 'name_en'
+      else if (sortBy === 'createdAt') sortField = 'created_at'
+      else if (sortBy === 'created_at') sortField = 'created_at'
 
-    const sortField = this.getSortField(filters.sortBy || 'rating')
-    const sortOrder = filters.sortOrder || 'DESC'
-    query = query.orderBy(sortField, sortOrder)
+      query.orderBy(`attraction.${sortField}`, sortOrder)
+      query.skip(offset)
+      query.take(limit)
 
-    const skip = filters.offset || 0
-    const take = filters.limit || 10
-    query = query.skip(skip).take(take)
+      const [data, total] = await query.getManyAndCount()
 
-    const total = await query.getCount()
-
-    const data = await query.getMany()
-
-    return {
-      data,
-      pagination: {
-        total,
-        limit: take,
-        offset: skip,
-        pages: Math.ceil(total / take),
-      },
+      return {
+        data,
+        pagination: {
+          total,
+          limit,
+          offset,
+          pages: Math.ceil(total / limit),
+        },
+      }
+    } catch (error) {
+      console.error('findAll error:', error)
+      throw error
     }
   }
 
   async findByCategory(category: string, limit: number = 10, offset: number = 0) {
     const [data, total] = await this.attractionRepo.findAndCount({
-      where: { category, status: 'active' },
-      order: { rating: 'DESC' },
+      where: { category },
+      order: { average_rating: 'DESC' },
       take: limit,
       skip: offset,
     })
@@ -129,8 +79,8 @@ export class AttractionsService {
 
   async findByProvince(province_id: string, limit: number = 10, offset: number = 0) {
     const [data, total] = await this.attractionRepo.findAndCount({
-      where: { province_id, status: 'active' },
-      order: { rating: 'DESC' },
+      where: { province_id: parseInt(province_id) },
+      order: { average_rating: 'DESC' },
       take: limit,
       skip: offset,
     })
@@ -149,8 +99,7 @@ export class AttractionsService {
 
   async findTopRated(limit: number = 10) {
     return this.attractionRepo.find({
-      where: { status: 'active', is_open: true },
-      order: { rating: 'DESC' },
+      order: { average_rating: 'DESC' },
       take: limit,
     })
   }
@@ -158,14 +107,23 @@ export class AttractionsService {
 
   async findById(id: string) {
     return this.attractionRepo.findOne({
-      where: { id, status: 'active' },
+      where: { id },
     })
   }
 
 
   async create(dto: CreateAttractionDto) {
-    const attraction = this.attractionRepo.create(dto)
-    return this.attractionRepo.save(attraction)
+    try {
+      console.log('Creating attraction with data:', dto)
+      const attraction = this.attractionRepo.create(dto)
+      console.log('Created entity instance:', attraction)
+      const result = await this.attractionRepo.save(attraction)
+      console.log('Saved attraction:', result)
+      return result
+    } catch (error) {
+      console.error('Create error:', error)
+      throw error
+    }
   }
 
   async update(id: string, dto: Partial<CreateAttractionDto>) {
@@ -175,10 +133,7 @@ export class AttractionsService {
 
 
   async delete(id: string) {
-    return this.attractionRepo.update(
-      { id },
-      { status: 'inactive', updated_at: new Date() },
-    )
+    return this.attractionRepo.delete({ id })
   }
 
 
@@ -194,15 +149,14 @@ export class AttractionsService {
 
   async getStatistics() {
     const [attractions, topRated, avgRating] = await Promise.all([
-      this.attractionRepo.count({ where: { status: 'active' } }),
+      this.attractionRepo.count(),
       this.attractionRepo.find({
-        where: { status: 'active' },
-        order: { rating: 'DESC' },
+        order: { average_rating: 'DESC' },
         take: 5,
       }),
       this.attractionRepo
         .createQueryBuilder('attraction')
-        .select('AVG(attraction.rating)', 'average')
+        .select('AVG(attraction.average_rating)', 'average')
         .getRawOne(),
     ])
 

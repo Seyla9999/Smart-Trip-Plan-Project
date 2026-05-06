@@ -51,11 +51,17 @@ export class AuthService {
       full_name: dto.full_name,
       password_hash: hashed,
       verification_code: code,
+      is_verified: false,
     });
 
-    await this.userRepo.save(user);
-
-    await this.sendVerificationEmail(user.email, code);
+    try {
+      await this.sendVerificationEmail(dto.email, code);
+    } catch (err) {
+      console.error('Failed to send verification email during registration:', err);
+      return {
+        message: 'Registered successfully, but failed to send verification email. Please contact support.',
+      };
+    }
 
     return {
       message: 'Registered successfully. Please verify your email.',
