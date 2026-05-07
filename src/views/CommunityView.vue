@@ -35,11 +35,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import CommunityFilterBar from '@/components/community/CommunityFilterBar.vue'
 import CommunityHero from '@/components/community/CommunityHero.vue'
 import StoryFeed from '@/components/community/StoryFeed.vue'
 import Sidebar from '@/components/community/sidebar/Sidebar.vue'
+import api from '@/api/axios'
 import {
   categoryCoverMap,
   communityCategories,
@@ -62,8 +63,47 @@ import type {
 const STORIES_STORAGE_KEY = 'community:stories'
 const TRAVELERS_STORAGE_KEY = 'community:travelers'
 
-const stories = ref<CommunityStory[]>(loadStories())
-const travelers = ref<TopTraveler[]>(loadTravelers())
+const stories = ref<CommunityStory[]>([])
+const travelers = ref<TopTraveler[]>([])
+const heroStatsData = ref<HeroStat[]>([])
+const loading = ref(true)
+
+// Fetch real data from backend on component mount
+onMounted(async () => {
+  try {
+    console.log('🔄 Fetching data from backend...')
+    const response = await api.get('/community/feed')
+    console.log('✅ Data received from backend:', response.data)
+    
+    // Map backend data to frontend format
+    stories.value = response.data.stories.map((story: any) => ({
+      id: story.id,
+      title: story.title,
+      excerpt: story.excerpt,
+      image: story.image,
+      category: story.category,
+      location: story.location,
+      likes: story.likes,
+      comments: story.comments,
+      rating: story.rating,
+      publishedAt: story.publishedAt,
+      author: story.author,
+      liked: story.liked,
+    }))
+    
+    travelers.value = response.data.travelers
+    heroStatsData.value = response.data.hero || []
+    
+    console.log(`✅ Loaded ${stories.value.length} stories and ${travelers.value.length} travelers from PostgreSQL`)
+    loading.value = false
+  } catch (error) {
+    console.error('❌ Error fetching data from backend:', error)
+    // Fallback to hardcoded data if API fails
+    stories.value = loadStories()
+    travelers.value = loadTravelers()
+    loading.value = false
+  }
+})
 const selectedCategory = ref<CommunityCategory>('All')
 const searchQuery = ref('')
 const sortOption = ref<CommunitySortOption>('latest')
@@ -100,6 +140,11 @@ const featuredStory = computed(() => filteredStories.value[0] ?? null)
 const feedStories = computed(() => filteredStories.value.slice(1))
 
 const heroStats = computed<HeroStat[]>(() => {
+  // Use backend data if available, otherwise fallback to calculated stats
+  if (heroStatsData.value.length > 0) {
+    return heroStatsData.value
+  }
+  
   const totalLikes = stories.value.reduce((sum, story) => sum + story.likes, 0)
 
   return [
@@ -110,12 +155,12 @@ const heroStats = computed<HeroStat[]>(() => {
     },
     {
       label: 'Stories',
-      value: (1800 + stories.value.length).toLocaleString(),
+      value: stories.value.length.toLocaleString(),
       hint: 'Post recaps, lists, and quick reviews from every region.',
     },
     {
       label: 'Likes',
-      value: (86000 + totalLikes).toLocaleString(),
+      value: totalLikes.toLocaleString(),
       hint: 'Signals from the community on what is genuinely worth checking out.',
     },
   ]
@@ -143,7 +188,8 @@ function sortStories(
   )
 }
 
-function toggleLike(id: number) {
+function toggleLike(id: number | string) {
+  // Optimistic update
   stories.value = stories.value.map((story) => {
     if (story.id !== id) {
       return story
@@ -157,42 +203,78 @@ function toggleLike(id: number) {
       likes: story.likes + (liked ? 1 : -1),
     }
   })
+
+  // Send to backend
+  api.patch(`/community/stories/${id}/like`, {
+    userId: travelers.value[0]?.id || '3fff4738-55a9-4724-9c7e-1b256cb198eb'
+  }).catch(error => {
+    console.error('Error toggling like:', error)
+    // Revert on error
+    stories.value = stories.value.map((story) => {
+      if (story.id !== id) {
+        return story
+      }
+      return {
+        ...story,
+        liked: !story.liked,
+        likes: story.likes + (story.liked ? -1 : 1),
+      }
+    })
+  })
 }
 
-function toggleFollow(id: number) {
+function toggleFollow(id: number | string) {
+  // Optimistic update
   travelers.value = travelers.value.map((traveler) =>
     traveler.id === id ? { ...traveler, followed: !traveler.followed } : traveler,
   )
+
+  // Send to backend
+  const traveler = travelers.value.find(t => t.id === id)
+  if (traveler) {
+    api.patch(`/community/travelers/${id}/follow`, {
+      followerId: travelers.value[0]?.id || '3fff4738-55a9-4724-9c7e-1b256cb198eb',
+      follow: traveler.followed
+    }).catch(error => {
+      console.error('Error toggling follow:', error)
+      // Revert on error
+      travelers.value = travelers.value.map((t) =>
+        t.id === id ? { ...t, followed: !t.followed } : t,
+      )
+    })
+  }
 }
 
-function handleStorySubmit(payload: ComposerSubmission) {
-  stories.value = [
-    {
-      id: Date.now(),
+async function handleStorySubmit(payload: ComposerSubmission) {
+  try {
+    console.log('📤 Submitting story to backend:', payload)
+    
+    // Create story in backend database
+    const response = await api.post('/community/stories', {
+      userId: travelers.value[0]?.id || '3fff4738-55a9-4724-9c7e-1b256cb198eb',
       title: payload.title,
-      excerpt: payload.body,
-      image: payload.photoUrl || categoryCoverMap[payload.category],
-      category: payload.category,
-      location: payload.location || 'Cambodia',
-      likes: 0,
-      comments: 0,
-      rating: payload.rating,
-      publishedAt: new Date().toISOString(),
-      author: {
-        name: 'You',
-        handle: '@newtraveler',
-        initials: 'YO',
-        avatarColor: '#1a2340',
-        homeBase: 'Community member',
-      },
-      liked: false,
-    },
-    ...stories.value,
-  ]
+      content: payload.body,
+      attachments: payload.photoUrl ? [{
+        url: payload.photoUrl,
+        fileType: 'image',
+        caption: null
+      }] : []
+    })
 
-  selectedCategory.value = 'All'
-  searchQuery.value = ''
-  sortOption.value = 'latest'
+    console.log('✅ Story created in database:', response.data)
+
+    // Add the new story from backend response to the UI
+    stories.value = [response.data, ...stories.value]
+
+    selectedCategory.value = 'All'
+    searchQuery.value = ''
+    sortOption.value = 'latest'
+    
+    console.log('✅ Story added to UI')
+  } catch (error) {
+    console.error('❌ Error creating story:', error)
+    alert('Failed to create story. Please try again.')
+  }
 }
 
 function loadStories(): CommunityStory[] {
