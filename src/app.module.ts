@@ -1,22 +1,32 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './modules/auth/auth.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HttpModule } from '@nestjs/axios';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 import { ProvincesModule } from './modules/home/provinces/provinces.module';
+import { AttractionsModule } from './modules/attractions/attractions.module';
+import { PointsOfInterestModule } from './points-of-interest/points-of-interest.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { CommunityStoriesModule } from './community-stories/community-stories.module';
 import { StoriesModule } from './modules/home/stories/story.module';
+import { AttractionImagesModule } from './attraction-images/attraction-images.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
+import { NearbyImagesModule } from './nearby-images/nearby-images.module';
 import { SponsorsModule } from './modules/home/sponsors/sponsors.modules';
 import { WeatherModule } from './modules/home/weather/weather.module';
-import { ConfigModule, ConfigService } from '@nestjs/config' 
-import { AppController } from './app.controller'
-import { AppService } from './app.service'
-import { BookmarksModule } from './modules/bookmarks/bookmarks.module'
-import { AttractionsModule } from './modules/attractions/attractions.module'
-import { TripsModule } from './modules/trips/trips.module'
-import { UserPreferences } from './modules/users/user-preferences.entity'
-import { Bookmark } from './modules/bookmarks/bookmark.entity'
-import { Attraction } from './modules/attractions/attraction.entity'
-import { UsersModule } from './modules/users/users.module'
+import { TripsModule } from './modules/trips/trips.module';
+import { Attraction } from './modules/attractions/attraction.entity';
+import { Province } from './provinces/entities/province.entity';
+import { Review } from './reviews/entities/review.entity';
+import { Story } from './community-stories/entities/story.entity';
+import { StoryComment } from './community-stories/entities/story-comment.entity';
+import { Bookmark } from './modules/bookmarks/bookmark.entity';
+import { NearbyImage } from './nearby-images/entities/nearby-image.entity';
+import { UserPreferences } from './modules/users/user-preferences.entity';
 
 @Module({
   imports: [
@@ -34,6 +44,8 @@ import { UsersModule } from './modules/users/users.module'
       database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: false,
+      entities: [Attraction, Province, Review, Story, StoryComment, Bookmark, NearbyImage],
+
       ssl: {
         rejectUnauthorized: false,
       },

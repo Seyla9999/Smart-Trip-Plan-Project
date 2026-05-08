@@ -1,8 +1,5 @@
-import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Entity, OneToMany, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Attraction } from '../../attractions/entities/attraction.entity';
 
 @Entity('provinces')
 export class Province {
@@ -13,7 +10,7 @@ export class Province {
   nameEn: string;
 
   @Column({ name: 'name_kh', type: 'varchar' })
-  nameKh: string;
+  nameKh: string | null;
 
   @Column({ type: 'text', nullable: true })
   description: string;
@@ -26,4 +23,7 @@ export class Province {
 
   @Column({ name: 'updated_at', type: 'timestamptz', nullable: true })
   updatedAt: Date;
+  
+  @OneToMany(() => Attraction, (attraction) => attraction.province)
+  attractions: Attraction[];
 }
