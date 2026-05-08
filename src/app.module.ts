@@ -1,40 +1,47 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HttpModule } from '@nestjs/axios';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { ProvincesModule } from './provinces/provinces.module';
-import { AttractionsModule } from './attractions/attractions.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { Attraction } from './attractions/entities/attraction.entity';
-import { Province } from './provinces/entities/province.entity';
+import { UsersModule } from './modules/users/users.module';
+import { ProvincesModule } from './modules/home/provinces/provinces.module';
+import { AttractionsModule } from './modules/attractions/attractions.module';
 import { PointsOfInterestModule } from './points-of-interest/points-of-interest.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { CommunityStoriesModule } from './community-stories/community-stories.module';
+import { StoriesModule } from './modules/home/stories/story.module';
 import { AttractionImagesModule } from './attraction-images/attraction-images.module';
-import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 import { NearbyImagesModule } from './nearby-images/nearby-images.module';
+import { SponsorsModule } from './modules/home/sponsors/sponsors.modules';
+import { WeatherModule } from './modules/home/weather/weather.module';
+import { TripsModule } from './modules/trips/trips.module';
+import { Attraction } from './modules/attractions/attraction.entity';
+import { Province } from './provinces/entities/province.entity';
 import { Review } from './reviews/entities/review.entity';
 import { Story } from './community-stories/entities/story.entity';
 import { StoryComment } from './community-stories/entities/story-comment.entity';
-import { Bookmark } from './bookmarks/entities/bookmark.entity';
+import { Bookmark } from './modules/bookmarks/bookmark.entity';
 import { NearbyImage } from './nearby-images/entities/nearby-image.entity';
+import { UserPreferences } from './modules/users/user-preferences.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      
     }),
 
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USERNAME || process.env.DB_USER,
+      username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-
       autoLoadEntities: true,
       synchronize: false,
       entities: [Attraction, Province, Review, Story, StoryComment, Bookmark, NearbyImage],
@@ -44,29 +51,43 @@ import { NearbyImage } from './nearby-images/entities/nearby-image.entity';
       },
     }),
 
-    MailerModule.forRoot({
-      transport: {
-        service: 'gmail',
-        auth: {
-          user: process.env.MAIL_USER,
-          pass: process.env.MAIL_PASS,
+    MailerModule.forRootAsync({
+      imports: [ConfigModule], 
+      inject: [ConfigService], 
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get('SMTP_HOST'), 
+          port: parseInt(config.get('SMTP_PORT') || '587', 10),
+          secure: (config.get('SMTP_PORT') === '465'),
+          auth: {
+            user: config.get('SMTP_USER'), 
+            pass: config.get('SMTP_PASS'), 
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
         },
-      },
+        defaults: {
+          from: config.get('SMTP_FROM'),
+        },
+      }),
     }),
+    
 
     AuthModule,
+    HttpModule,
     ProvincesModule,
     AttractionsModule,
-    PointsOfInterestModule,
-    ReviewsModule,
-    CommunityStoriesModule,
-    AttractionImagesModule,
+    StoriesModule,
+    SponsorsModule,
+    WeatherModule,
+    UsersModule,
     BookmarksModule,
-    NearbyImagesModule,
+    AttractionsModule,
+    TripsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
-
 console.log('ENV CHECK:', process.env.DB_HOST);
