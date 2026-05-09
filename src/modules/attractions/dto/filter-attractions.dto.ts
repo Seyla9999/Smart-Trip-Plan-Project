@@ -35,7 +35,7 @@ export class FilterAttractionsDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['Nature', 'Culture', 'Adventure', 'Historical', 'Religious', 'Urban', 'Beach', 'Culinary', 'Religious', 'Eco-Tourism'])
+  @IsIn(['Nature', 'Culture', 'Adventure', 'Historical', 'Religious', 'Urban', 'Beach', 'Culinary', 'Eco-Tourism'])
   mainCategory?: string
 
   @IsOptional()
@@ -57,20 +57,21 @@ export class FilterAttractionsDto {
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  limit: number = 10
+  limit?: number
+
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  offset: number = 0 
+  offset?: number
 
   @IsOptional()
   @IsString()
-  @IsIn(['rating', 'name', 'createdAt', 'reviewCount', 'visitCount'])
-  sortBy?: string = 'rating'
+  @IsIn(['rating', 'average_rating', 'name', 'name_en', 'name_kh', 'createdAt', 'created_at', 'reviewCount', 'visitCount'])
+  sortBy?: string
 
   @IsOptional()
   @IsString()
   @IsIn(['DESC', 'ASC'])
-  sortOrder?: 'DESC' | 'ASC' = 'DESC' 
+  sortOrder?: 'DESC' | 'ASC'
 }

@@ -47,6 +47,9 @@ import { UserPreferences } from './modules/users/user-preferences.entity';
       ssl: {
         rejectUnauthorized: false,
       },
+      extra: {
+        options: `-c search_path=${process.env.DB_SCHEMA || 'public'}`,
+      },
     }),
 
     MailerModule.forRootAsync({

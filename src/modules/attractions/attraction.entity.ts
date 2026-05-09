@@ -19,15 +19,15 @@ import { Province } from '../provinces/province.entity'
 export class Attraction {
   @PrimaryGeneratedColumn('uuid')
   id!: string
-
+  
   @Column()
   name_en!: string
 
   @Column({ nullable: true })
   name_kh!: string
 
-  @Column('text', { nullable: true })
-  description!: string
+  @Column({ type: 'varchar', nullable: true })
+  name_en?: string
 
   @Column()
   province_id!: number

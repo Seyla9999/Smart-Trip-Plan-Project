@@ -27,7 +27,9 @@ export class AuthService {
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    this.resend = new Resend(process.env.SMTP_PASS);
+  }
 
   async register(dto: RegisterDto) {
     

@@ -4,6 +4,7 @@ import { Repository, SelectQueryBuilder, IsNull } from 'typeorm'
 import { Attraction } from './attraction.entity'
 import { FilterAttractionsDto } from './dto/filter-attractions.dto'
 import { CreateAttractionDto } from './dto/create-attraction.dto'
+import { UpdateAttractionDto } from './dto/update-attraction.dto'
 
 @Injectable()
 export class AttractionsService {
@@ -64,21 +65,31 @@ export class AttractionsService {
     const sortOrder = filters.sortOrder || 'DESC'
     query = query.orderBy(sortField, sortOrder)
 
-    const skip = filters.offset || 0
-    const take = filters.limit || 10
-    query = query.skip(skip).take(take)
+      query.orderBy(`attraction.${sortField}`, sortOrder)
 
+      if (limit !== undefined) {
+        query.skip(offset)
+        query.take(limit)
+      }
     const total = await query.getCount()
     const data = await query.getMany()
 
-    return {
-      data,
-      pagination: {
-        total,
-        limit: take,
-        offset: skip,
-        pages: Math.ceil(total / take),
-      },
+      const [data, total] = await query.getManyAndCount()
+      const responseLimit = limit ?? total
+      const pages = responseLimit > 0 ? Math.ceil(total / responseLimit) : 0
+
+      return {
+        data,
+        pagination: {
+          total,
+          limit: responseLimit,
+          offset: limit !== undefined ? offset : 0,
+          pages,
+        },
+      }
+    } catch (error) {
+      console.error('findAll error:', error)
+      throw error
     }
   }
 
@@ -286,11 +297,17 @@ export class AttractionsService {
   }
 
   async create(dto: CreateAttractionDto) {
-    const attraction = this.attractionRepo.create({
-      ...dto,
-      province_id: parseInt(dto.province_id as any),
-    })
-    return this.attractionRepo.save(attraction)
+    try {
+      console.log('Creating attraction with data:', dto)
+      const attraction = this.attractionRepo.create(dto)
+      console.log('Created entity instance:', attraction)
+      const result = await this.attractionRepo.save(attraction)
+      console.log('Saved attraction:', result)
+      return result
+    } catch (error) {
+      console.error('Create error:', error)
+      throw error
+    }
   }
 
   async update(id: string, dto: Partial<CreateAttractionDto>) {
