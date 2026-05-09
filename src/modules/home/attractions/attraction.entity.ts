@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { Province } from '../provinces/province.entity';
+import { Province } from '../../provinces/province.entity';
 
 @Entity('attractions')
 export class Attraction {
