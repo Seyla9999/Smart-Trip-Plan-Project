@@ -10,6 +10,7 @@ export class AttractionsService {
     private repo: Repository<Attraction>,
     private dataSource: DataSource,
   ) {}
+
   async findAll(q: {
     category?: string;
     province?: string;
@@ -21,9 +22,28 @@ export class AttractionsService {
   }) {
     const limit = Number(q.limit) || 20;
     const page  = Number(q.page)  || 1;
+    const conditions: string[] = ['a.deleted_at IS NULL'];
+    const params: any[]        = [];
+    let   idx                  = 1;
 
-    // ✅ Use raw SQL to include review_count in one query
-    let sql = `
+    if (q.category)    { conditions.push(`a.category = $${idx++}`);                                    params.push(q.category); }
+    if (q.province_id) { conditions.push(`a.province_id = $${idx++}`);                                 params.push(Number(q.province_id)); }
+    if (q.province)    { conditions.push(`p.name_en ILIKE $${idx++}`);                                 params.push(`%${q.province}%`); }
+    if (q.search)      { conditions.push(`(a.name_en ILIKE $${idx} OR a.name_kh ILIKE $${idx++})`);   params.push(`%${q.search}%`); }
+    if (q.is_hidden_gem === 'true') { conditions.push(`a.is_hidden_gem = true`); }
+
+    const where = conditions.join(' AND ');
+
+    const countSql    = `
+      SELECT COUNT(DISTINCT a.id)
+      FROM attractions a
+      LEFT JOIN provinces p ON p.id = a.province_id
+      WHERE ${where}
+    `;
+    const countResult = await this.dataSource.query(countSql, params);
+    const total       = parseInt(countResult[0].count, 10);
+
+    const dataSql = `
       SELECT
         a.id,
         a.province_id,
@@ -33,6 +53,7 @@ export class AttractionsService {
         a.description,
         a.is_hidden_gem,
         a.average_rating,
+        a.image_url,
         a.created_at,
         a.updated_at,
         COUNT(r.id)::int AS review_count,
@@ -43,30 +64,16 @@ export class AttractionsService {
           'main_image_url', p.main_image_url
         ) AS province
       FROM attractions a
-      LEFT JOIN provinces p  ON p.id  = a.province_id
-      LEFT JOIN reviews   r  ON r.attraction_id = a.id
-      WHERE a.deleted_at IS NULL
+      LEFT JOIN provinces p ON p.id = a.province_id
+      LEFT JOIN reviews   r ON r.attraction_id = a.id
+      WHERE ${where}
+      GROUP BY a.id, p.id
+      ORDER BY a.average_rating DESC
+      LIMIT $${idx++} OFFSET $${idx++}
     `;
-
-    const params: any[] = [];
-    let   idx           = 1;
-
-    if (q.category)    { sql += ` AND a.category = $${idx++}`;              params.push(q.category); }
-    if (q.province_id) { sql += ` AND a.province_id = $${idx++}`;           params.push(Number(q.province_id)); }
-    if (q.province)    { sql += ` AND p.name_en ILIKE $${idx++}`;           params.push(`%${q.province}%`); }
-    if (q.search)      { sql += ` AND (a.name_en ILIKE $${idx} OR a.name_kh ILIKE $${idx++})`; params.push(`%${q.search}%`); }
-    if (q.is_hidden_gem === 'true') { sql += ` AND a.is_hidden_gem = true`; }
-
-    sql += ` GROUP BY a.id, p.id ORDER BY a.average_rating DESC`;
-
-    const countSql   = `SELECT COUNT(*) FROM (${sql}) AS sub`;
-    const countResult = await this.dataSource.query(countSql, params);
-    const total       = parseInt(countResult[0].count, 10);
-
-    sql += ` LIMIT $${idx++} OFFSET $${idx++}`;
     params.push(limit, (page - 1) * limit);
 
-    const data = await this.dataSource.query(sql, params);
+    const data = await this.dataSource.query(dataSql, params);
 
     return { success: true, data, meta: { total, page, limit } };
   }
@@ -82,6 +89,7 @@ export class AttractionsService {
         a.description,
         a.is_hidden_gem,
         a.average_rating,
+        a.image_url,
         COUNT(r.id)::int AS review_count,
         json_build_object(
           'id',             p.id,
@@ -106,6 +114,7 @@ export class AttractionsService {
     const sql = `
       SELECT
         a.*,
+        a.image_url,
         COUNT(r.id)::int AS review_count,
         ROUND(AVG(r.rating)::numeric, 1) AS computed_rating,
         json_build_object(

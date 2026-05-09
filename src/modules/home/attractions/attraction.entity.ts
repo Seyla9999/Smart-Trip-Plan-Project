@@ -34,6 +34,7 @@ export class Attraction {
   @Column({ nullable: true, type: 'text' })
   description: string;
 
+  // is_hidden_gem = true → this attraction appears in the Hidden Gems section
   @Column({ default: false })
   is_hidden_gem: boolean;
 

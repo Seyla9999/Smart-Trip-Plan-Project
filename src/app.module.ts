@@ -7,16 +7,13 @@ import { ProvincesModule } from './modules/home/provinces/provinces.module';
 import { StoriesModule } from './modules/home/stories/story.module';
 import { SponsorsModule } from './modules/home/sponsors/sponsors.modules';
 import { WeatherModule } from './modules/home/weather/weather.module';
-import { ConfigModule, ConfigService } from '@nestjs/config' 
-import { AppController } from './app.controller'
-import { AppService } from './app.service'
-import { BookmarksModule } from './modules/bookmarks/bookmarks.module'
-import { AttractionsModule } from './modules/attractions/attractions.module'
-import { TripsModule } from './modules/trips/trips.module'
-import { UserPreferences } from './modules/users/user-preferences.entity'
-import { Bookmark } from './modules/bookmarks/bookmark.entity'
-import { Attraction } from './modules/attractions/attraction.entity'
-import { UsersModule } from './modules/users/users.module'
+import { AttractionsModule } from './modules/home/attractions/attractions.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
+import { TripsModule } from './modules/trips/trips.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -24,42 +21,41 @@ import { UsersModule } from './modules/users/users.module'
       isGlobal: true,
     }),
 
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      autoLoadEntities: true,
-      synchronize: false,
-      ssl: {
-        rejectUnauthorized: false,
-      },
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host:     config.get<string>('DB_HOST'),
+        port:     config.get<number>('DB_PORT') || 6543,
+        username: config.get<string>('DB_USERNAME'),
+        password: config.get<string>('DB_PASSWORD'),
+        database: config.get<string>('DB_NAME'),
+        autoLoadEntities: true,
+        synchronize: false,
+        ssl: { rejectUnauthorized: false },
+      }),
     }),
 
     MailerModule.forRootAsync({
-      imports: [ConfigModule], 
-      inject: [ConfigService], 
+      imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         transport: {
-          host: config.get('SMTP_HOST'), 
-          port: parseInt(config.get('SMTP_PORT') || '587', 10),
-          secure: (config.get('SMTP_PORT') === '465'),
+          host:   config.get('SMTP_HOST'),
+          port:   parseInt(config.get('SMTP_PORT') || '587', 10),
+          secure: config.get('SMTP_PORT') === '465',
           auth: {
-            user: config.get('SMTP_USER'), 
-            pass: config.get('SMTP_PASS'), 
+            user: config.get('SMTP_USER'),
+            pass: config.get('SMTP_PASS'),
           },
-          tls: {
-            rejectUnauthorized: false,
-          },
+          tls: { rejectUnauthorized: false },
         },
         defaults: {
           from: config.get('SMTP_FROM'),
         },
       }),
     }),
-    
 
     AuthModule,
     HttpModule,
@@ -70,11 +66,9 @@ import { UsersModule } from './modules/users/users.module'
     WeatherModule,
     UsersModule,
     BookmarksModule,
-    AttractionsModule,
     TripsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
-console.log('ENV CHECK:', process.env.DB_HOST);
