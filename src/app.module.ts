@@ -5,6 +5,8 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HttpModule } from '@nestjs/axios';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
+// Modules
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProvincesModule } from './modules/provinces/provinces.module';
@@ -18,6 +20,8 @@ import { NearbyImagesModule } from './nearby-images/nearby-images.module';
 import { SponsorsModule } from './modules/sponsors/sponsors.module';
 import { WeatherModule } from './modules/weather/weather.module';
 import { TripsModule } from './modules/trips/trips.module';
+
+// Entities
 import { Attraction } from './modules/attractions/attraction.entity';
 import { Province } from './modules/provinces/province.entity';
 import { Story } from './community-stories/entities/story.entity';
@@ -53,27 +57,24 @@ import { UserPreferences } from './modules/users/user-preferences.entity';
     }),
 
     MailerModule.forRootAsync({
-      imports: [ConfigModule], 
-      inject: [ConfigService], 
+      imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         transport: {
-          host: config.get('SMTP_HOST'), 
-          port: parseInt(config.get('SMTP_PORT') || '587', 10),
-          secure: (config.get('SMTP_PORT') === '465'),
+          host:   config.get('SMTP_HOST'),
+          port:   parseInt(config.get('SMTP_PORT') || '587', 10),
+          secure: config.get('SMTP_PORT') === '465',
           auth: {
-            user: config.get('SMTP_USER'), 
-            pass: config.get('SMTP_PASS'), 
+            user: config.get('SMTP_USER'),
+            pass: config.get('SMTP_PASS'),
           },
-          tls: {
-            rejectUnauthorized: false,
-          },
+          tls: { rejectUnauthorized: false },
         },
         defaults: {
           from: config.get('SMTP_FROM'),
         },
       }),
     }),
-    
 
     AuthModule,
     HttpModule,
@@ -90,4 +91,3 @@ import { UserPreferences } from './modules/users/user-preferences.entity';
   providers: [AppService],
 })
 export class AppModule {}
-console.log('ENV CHECK:', process.env.DB_HOST);
