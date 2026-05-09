@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
-import { NearbyImage } from './entities/nearby-image.entity';
+import { NearbyImage } from '../modules/nearby-images/nearby-image.entity';
 
 @Injectable()
 export class NearbyImagesService {

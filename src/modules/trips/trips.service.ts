@@ -10,6 +10,9 @@ import { randomBytes } from 'crypto'
 
 @Injectable()
 export class TripsService {
+  findAll() {
+    throw new Error('Method not implemented.')
+  }
   constructor(
     @InjectRepository(Trip)
     private tripRepo: Repository<Trip>,
@@ -27,6 +30,7 @@ export class TripsService {
     const trip = this.tripRepo.create({
       title: dto.title,
       description: dto.description,
+      destination: dto.destination,
       start_date: dto.start_date ? new Date(dto.start_date) : null,
       end_date: dto.end_date ? new Date(dto.end_date) : null,
       owner_id: userId,
@@ -43,6 +47,23 @@ export class TripsService {
 
     await this.memberRepo.save(member)
 
-    return this.tripRepo.findOne({ where: { id: saved.id } })
+    if (dto.locations && dto.locations.length > 0) {
+      const itineraryItems = dto.locations.map((loc) => {
+        return this.itineraryRepo.create({
+          trip: saved, // Link to the trip
+          title: loc.name,
+          // If your ItineraryItem entity has latitude/longitude columns, add them here:
+          // latitude: loc.lat,
+          // longitude: loc.lng
+        } as Partial<ItineraryItem>);
+      });
+
+      await this.itineraryRepo.save(itineraryItems);
+    }
+
+    return this.tripRepo.findOne({ 
+        where: { id: saved.id },
+      relations: ['members', 'itinerary_items'],
+    })
   }
 }

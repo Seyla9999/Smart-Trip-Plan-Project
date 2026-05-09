@@ -1,18 +1,47 @@
-import { IsString, IsOptional, IsDateString } from 'class-validator'
+import {
+  IsString,
+  IsOptional,
+  IsDateString,
+  IsNotEmpty,
+  ValidateNested,
+  IsArray,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+class LocationDto {
+  @IsNotEmpty()
+  lat: number;
+  
+  @IsNotEmpty()
+  lng: number;
+  
+  @IsString()
+  name: string;
+}
 
 export class CreateTripDto {
   @IsString()
-  title!: string
+  @IsNotEmpty()
+  title!: string;
 
   @IsOptional()
   @IsString()
-  description?: string
+  description?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  destination?: string;
 
   @IsOptional()
   @IsDateString()
-  start_date?: string
+  start_date?: string;
 
   @IsOptional()
   @IsDateString()
-  end_date?: string
+  end_date?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LocationDto)
+  locations?: LocationDto[];
 }

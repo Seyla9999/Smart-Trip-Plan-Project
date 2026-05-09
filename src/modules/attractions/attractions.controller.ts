@@ -60,6 +60,11 @@ export class AttractionsController {
     return this.attractionsService.findTopRated(limit ? parseInt(limit) : 10)
   }
 
+  @Get('hidden-gems')
+  @HttpCode(HttpStatus.OK)
+  async getHiddenGems(@Query('limit') limit?: string) {
+    return this.attractionsService.findHiddenGems(limit ? parseInt(limit) : 5)
+  }
 
   @Get('categories')
   @HttpCode(HttpStatus.OK)
@@ -79,7 +84,7 @@ export class AttractionsController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async getById(@Param('id') id: string) {
-    return this.attractionsService.findById(id)
+    return this.attractionsService.findOne(id)
   }
 
 
@@ -87,5 +92,13 @@ export class AttractionsController {
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateAttractionDto) {
     return this.attractionsService.create(dto)
+  }
+
+  // Development/testing helper: seed a sample attraction
+  @Get('seed/tatai')
+  @HttpCode(HttpStatus.OK)
+  async seedTatai() {
+    const attraction = await this.attractionsService.seedTataiWaterfall()
+    return { success: true, data: attraction }
   }
 }

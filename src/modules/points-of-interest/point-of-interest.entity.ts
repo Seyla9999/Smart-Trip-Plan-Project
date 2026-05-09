@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Province } from '../../provinces/entities/province.entity';
+import { Province } from '../provinces/province.entity';
 
 @Entity('points_of_interest')
 export class PointOfInterest {

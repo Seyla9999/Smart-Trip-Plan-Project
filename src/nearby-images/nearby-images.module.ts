@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { NearbyImage } from './entities/nearby-image.entity';
+import { NearbyImage } from '../modules/nearby-images/nearby-image.entity';
 import { NearbyImagesService } from './nearby-images.service';
 import { NearbyImagesController } from './nearby-images.controller';
 

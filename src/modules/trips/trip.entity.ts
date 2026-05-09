@@ -7,47 +7,53 @@ import { PackingListItem } from './packing-list-item.entity'
 @Entity('trips')
 export class Trip {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
   @Column()
-  title!: string
+  title!: string;
+
+  @Column()
+  destination?: string;
 
   @Column({ nullable: true })
-  description!: string
+  description!: string;
 
   @Column({ nullable: true })
-  start_date!: Date
+  start_date!: Date;
 
   @Column({ nullable: true })
-  end_date!: Date
+  end_date!: Date;
 
   @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
-  owner!: User
+  owner!: User;
 
   @Column()
-  owner_id!: string
+  owner_id!: string;
 
   @Column({ unique: true })
-  invite_token!: string
+  invite_token!: string;
 
   @Column({ default: 'active' })
-  status!: string
+  status!: string;
 
   @Column({ default: () => 'CURRENT_TIMESTAMP' })
-  created_at!: Date
+  created_at!: Date;
 
   @Column({ nullable: true })
-  updated_at!: Date
+  updated_at!: Date;
 
   @Column({ nullable: true })
-  deleted_at!: Date
+  deleted_at!: Date;
 
   @OneToMany(() => TripMember, (m) => m.trip)
-  members!: TripMember[]
+  members!: TripMember[];
 
   @OneToMany(() => ItineraryItem, (i) => i.trip)
-  itinerary_items!: ItineraryItem[]
+  itinerary_items!: ItineraryItem[];
 
   @OneToMany(() => PackingListItem, (p) => p.trip)
-  packing_list!: PackingListItem[]
+  packing_list!: PackingListItem[];
+
+  @Column('json', { nullable: true })
+  locations?: { lat: number; lng: number; name: string }[];
 }
