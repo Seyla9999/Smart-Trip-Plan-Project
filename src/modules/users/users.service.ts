@@ -21,4 +21,7 @@ export class UsersService {
   save(user: User) {
     return this.repo.save(user);
   }
+  async countAll(): Promise<number> {
+    return this.repo.count()
+  }
 }

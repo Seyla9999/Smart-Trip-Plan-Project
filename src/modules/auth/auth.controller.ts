@@ -19,7 +19,7 @@ export class AuthController {
   }
 
   @Post('verify')
-  verify(@Body() body: { email: string; code: string }) {
+  verify(@Body() body: VerifyDto) {
     return this.authService.verify(body.email, body.code);
   }
 
