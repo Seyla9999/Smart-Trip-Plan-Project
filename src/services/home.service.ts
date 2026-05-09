@@ -23,7 +23,8 @@ export interface Attraction {
   description:    string
   is_hidden_gem:  boolean
   average_rating: number
-  review_count:   number   
+  review_count:   number
+  image_url:      string  
   province:       Province
 }
 

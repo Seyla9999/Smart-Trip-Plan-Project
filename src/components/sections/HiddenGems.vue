@@ -14,13 +14,12 @@
     </div>
 
     <div v-else-if="gems.length > 0" class="gems-grid">
-      <div class="gem tall" @click="$router.push(`/attractions/${gems[0].id}`)">
+
+      <div class="gem tall" @click="$router.push('/discover')">
         <div
           class="gem-img"
           :style="{
-            backgroundImage: gems[0].province?.main_image_url
-              ? `url(${gems[0].province.main_image_url})`
-              : `url(https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=70)`,
+            backgroundImage: `url(${getImage(gems[0])})`,
             backgroundColor: '#4A7C59',
           }"
         >
@@ -28,7 +27,8 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">{{ gems[0].name_en }}</div>
-            <div class="gem-prov">{{ gems[0].province?.name_en }}</div>
+            <div class="gem-prov">📍 {{ gems[0].province?.name_en }}</div>
+            <div class="gem-rating">{{ getStars(gems[0].average_rating) }}</div>
           </div>
         </div>
       </div>
@@ -36,14 +36,12 @@
         v-for="gem in gems.slice(1, 5)"
         :key="gem.id"
         class="gem"
-        @click="$router.push(`/attractions/${gem.id}`)"
+        @click="$router.push('/discover')"
       >
         <div
           class="gem-img"
           :style="{
-            backgroundImage: gem.province?.main_image_url
-              ? `url(${gem.province.main_image_url})`
-              : `url(https://images.unsplash.com/photo-1511497584788-876760111969?w=400&q=70)`,
+            backgroundImage: `url(${getImage(gem)})`,
             backgroundColor: '#2D6A4F',
           }"
         >
@@ -51,12 +49,11 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">{{ gem.name_en }}</div>
-            <div class="gem-prov">{{ gem.province?.name_en }}</div>
+            <div class="gem-prov">📍 {{ gem.province?.name_en }}</div>
           </div>
         </div>
       </div>
     </div>
-
     <div v-else class="gems-grid">
       <div class="gem tall">
         <div class="gem-img" style="background-image:url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=70');background-color:#6B4C3B">
@@ -64,7 +61,7 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">Banteay Chhmar</div>
-            <div class="gem-prov">Banteay Meanchey</div>
+            <div class="gem-prov">📍 Banteay Meanchey</div>
           </div>
         </div>
       </div>
@@ -74,7 +71,7 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">{{ g.name }}</div>
-            <div class="gem-prov">{{ g.province }}</div>
+            <div class="gem-prov">📍 {{ g.province }}</div>
           </div>
         </div>
       </div>
@@ -86,6 +83,8 @@
 import { defineComponent, PropType } from 'vue'
 import type { Attraction } from '@/services/home.service'
 
+const STAR_MAP = ['','★☆☆☆☆','★★☆☆☆','★★★☆☆','★★★★☆','★★★★★']
+
 export default defineComponent({
   name: 'HiddenGems',
   props: {
@@ -93,13 +92,25 @@ export default defineComponent({
     loading: { type: Boolean, default: false },
   },
   setup() {
+    function getImage(gem: Attraction): string {
+      return gem.image_url
+          || gem.province?.main_image_url
+          || 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=70'
+    }
+
+    function getStars(rating: number): string {
+      const r = Math.min(Math.round(Number(rating) || 0), 5)
+      return STAR_MAP[r] || '★★★☆☆'
+    }
+
     const staticGems = [
-      { name: 'Preah Vihear',    province: 'Preah Vihear',   image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&q=70', color: '#5B5EA6' },
-      { name: 'Yeak Laom Lake',  province: 'Ratanakiri',     image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&q=70', color: '#6B4C3B' },
-      { name: 'Tatai Waterfall', province: 'Koh Kong',       image: 'https://images.unsplash.com/photo-1564760055775-d63b17a55c44?w=400&q=70', color: '#2D6A8F' },
-      { name: 'Koh Ta Kiev',     province: 'Sihanoukville',  image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=70', color: '#2196A6' },
+      { name: 'Preah Vihear',    province: 'Preah Vihear',  image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&q=70', color: '#5B5EA6' },
+      { name: 'Yeak Laom Lake',  province: 'Ratanakiri',    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&q=70', color: '#6B4C3B' },
+      { name: 'Tatai Waterfall', province: 'Koh Kong',      image: 'https://images.unsplash.com/photo-1564760055775-d63b17a55c44?w=400&q=70', color: '#2D6A8F' },
+      { name: 'Koh Ta Kiev',     province: 'Sihanoukville', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=70', color: '#2196A6' },
     ]
-    return { staticGems }
+
+    return { getImage, getStars, staticGems }
   },
 })
 </script>
@@ -122,6 +133,7 @@ export default defineComponent({
 .gem-name  { font-family: 'Cinzel', serif; font-size: 14px; color: #fff; font-weight: 700; margin-bottom: 2px; }
 .gem.tall .gem-name { font-size: 18px; }
 .gem-prov  { font-size: 11px; color: rgba(255,255,255,.6); }
+.gem-rating { font-size: 12px; color: #F4D58D; margin-top: 4px; }
 .sk-tall  { grid-row: span 2; border-radius: 12px; overflow: hidden; }
 .sk-small { border-radius: 12px; overflow: hidden; }
 .sk-box   { background: linear-gradient(90deg, #E8E5E0 25%, #F0EDE8 50%, #E8E5E0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 12px; }
