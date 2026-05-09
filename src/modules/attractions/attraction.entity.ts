@@ -4,72 +4,62 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm'
+import { Province } from '../provinces/province.entity'
 
 @Entity('attractions')
 @Index(['category'])
-@Index(['rating'])
+@Index(['average_rating'])
 @Index(['province_id'])
-@Index(['status'])
+@Index(['deleted_at'])
 export class Attraction {
   @PrimaryGeneratedColumn('uuid')
   id!: string
+  
+  @Column()
+  name_en!: string
+
+  @Column({ nullable: true })
+  name_kh!: string
 
   @Column()
-  name!: string
+  province_id!: number
 
-  @Column('text', { nullable: true })
-  description!: string
+  @ManyToOne(() => Province, (province) => province.attractions)
+  @JoinColumn({ name: 'province_id' })
+  province?: Province
 
-  @Column()
-  province_id!: string
-
-  @Column()
+  @Column({ nullable: true })
   category!: string
 
-  @Column('simple-array', { nullable: true })
-  sub_categories?: string[]
+  @Column({ type: 'geometry', spatialFeatureType: 'Point', srid: 4326, nullable: true })
+  location?: any
 
-  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
-  rating!: number
+  @Column({ name: 'hero_image', type: 'text', nullable: true })
+  hero_image?: string
 
-  @Column({ type: 'integer', default: 0 })
-  review_count!: number
+  @Column({ name: 'photos', type: 'text', array: true, nullable: true })
+  photos?: string[]
 
-  @Column({ nullable: true })
-  address!: string
+  @Column({ name: 'nearby_images', type: 'jsonb', nullable: true })
+  nearby_images?: any
 
-  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
-  latitude!: number
+  @Column({ type: 'decimal', default: 0 })
+  average_rating!: number
 
-  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
-  longitude!: number
-
-  @Column({ nullable: true })
-  image_url!: string
-
-  @Column('text', { nullable: true })
-  opening_hours!: string
-
-  @Column({ nullable: true })
-  entrance_fee!: number
-
-  @Column({ type: 'boolean', default: true })
-  is_open!: boolean
-
-  @Column({ default: 'active' })
-  status!: string
-
-  @Column('simple-array', { nullable: true })
-  amenities?: string[]
-
-  @Column({ type: 'integer', default: 0 })
-  visit_count!: number
+  @Column({ default: false })
+  is_hidden_gem!: boolean
 
   @CreateDateColumn()
   created_at!: Date
 
   @UpdateDateColumn()
   updated_at!: Date
+
+  @DeleteDateColumn()
+  deleted_at!: Date
 }
