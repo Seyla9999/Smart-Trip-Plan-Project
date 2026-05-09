@@ -26,9 +26,6 @@ export class Attraction {
   @Column({ nullable: true })
   name_kh!: string
 
-  @Column({ type: 'varchar', nullable: true })
-  name_en?: string
-
   @Column()
   province_id!: number
 

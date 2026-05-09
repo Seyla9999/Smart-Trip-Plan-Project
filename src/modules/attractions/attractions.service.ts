@@ -65,31 +65,25 @@ export class AttractionsService {
     const sortOrder = filters.sortOrder || 'DESC'
     query = query.orderBy(sortField, sortOrder)
 
-      query.orderBy(`attraction.${sortField}`, sortOrder)
+    const limit = (filters as any).limit as number | undefined
+    const offset = (filters as any).offset || 0
 
-      if (limit !== undefined) {
-        query.skip(offset)
-        query.take(limit)
-      }
-    const total = await query.getCount()
-    const data = await query.getMany()
+    if (limit !== undefined) {
+      query.skip(offset).take(limit)
+    }
 
-      const [data, total] = await query.getManyAndCount()
-      const responseLimit = limit ?? total
-      const pages = responseLimit > 0 ? Math.ceil(total / responseLimit) : 0
+    const [data, total] = await query.getManyAndCount()
+    const responseLimit = limit ?? total
+    const pages = responseLimit > 0 ? Math.ceil(total / responseLimit) : 0
 
-      return {
-        data,
-        pagination: {
-          total,
-          limit: responseLimit,
-          offset: limit !== undefined ? offset : 0,
-          pages,
-        },
-      }
-    } catch (error) {
-      console.error('findAll error:', error)
-      throw error
+    return {
+      data,
+      pagination: {
+        total,
+        limit: responseLimit,
+        offset,
+        pages,
+      },
     }
   }
 
