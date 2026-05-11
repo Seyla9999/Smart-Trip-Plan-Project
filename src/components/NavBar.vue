@@ -17,13 +17,10 @@
       </ul>
 
       <div class="nav-actions">
-        <!-- Not logged in: show Login + Sign Up -->
         <template v-if="!user">
           <a href="/login"    class="btn-login">Login</a>
           <a href="/register" class="btn-signup">Sign Up Free</a>
         </template>
-
-        <!-- ✅ Logged in: show avatar circle with dropdown -->
         <div v-else class="user-menu" ref="menuRef">
           <button class="avatar-btn" @click="menuOpen = !menuOpen">
             <img
@@ -36,8 +33,6 @@
               {{ getInitials(user.full_name) }}
             </div>
           </button>
-
-          <!-- Dropdown menu -->
           <transition name="drop">
             <div v-if="menuOpen" class="user-dropdown">
               <div class="dropdown-header">
@@ -110,9 +105,6 @@ export default defineComponent({
     const route      = useRoute()
     const currentPath = computed(() => route.path)
     const user = ref<any>(null)
-
-    // ✅ Reads user from localStorage
-    // Tries multiple keys since different auth implementations use different keys
     function loadUser() {
       const raw = localStorage.getItem('user_data')
                 || localStorage.getItem('user')
@@ -124,14 +116,12 @@ export default defineComponent({
       }
     }
 
-    // ✅ Get initials from full name — "San Meyhieng" → "SM"
     function getInitials(name: string): string {
       if (!name) return '?'
       return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
     }
 
     function handleLogout() {
-      // Clear all possible auth keys
       localStorage.removeItem('user_data')
       localStorage.removeItem('user')
       localStorage.removeItem('currentUser')
@@ -142,8 +132,6 @@ export default defineComponent({
       mobileOpen.value = false
       router.push('/login')
     }
-
-    // Close dropdown when clicking outside
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
         menuOpen.value = false
@@ -153,7 +141,6 @@ export default defineComponent({
     onMounted(() => {
       loadUser()
       document.addEventListener('click', handleClickOutside)
-      // Listen for login event dispatched by auth pages
       window.addEventListener('user-logged-in', loadUser)
       window.addEventListener('storage', loadUser)
     })
@@ -174,7 +161,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Base ── */
 .navbar { background: #1a2340; height: 64px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
 .navbar-container { max-width: 1400px; margin: 0 auto; padding: 0 40px; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 
@@ -188,21 +174,15 @@ export default defineComponent({
 .nav-link.active { color: #fff; border-bottom-color: #C8922A; }
 
 .nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-/* Buttons */
 .btn-login { padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 6px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
 .btn-login:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .btn-signup { padding: 8px 18px; background: #C8922A; border-radius: 6px; color: #fff; text-decoration: none; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: background 0.2s; white-space: nowrap; }
 .btn-signup:hover { background: #b07820; }
-
-/* ✅ Avatar circle */
 .user-menu { position: relative; }
 .avatar-btn { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; }
 .avatar-circle { width: 36px; height: 36px; background: #C8922A; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; font-family: 'DM Sans', sans-serif; border: 2px solid rgba(255,255,255,0.3); transition: border-color 0.2s, transform 0.2s; }
 .avatar-circle:hover { border-color: #fff; transform: scale(1.05); }
 .avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.3); }
-
-/* ✅ Dropdown */
 .user-dropdown { position: absolute; top: calc(100% + 12px); right: 0; width: 230px; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); border: 1px solid #E0DDD6; overflow: hidden; z-index: 999; }
 .dropdown-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #F5F3EE; }
 .dh-circle { width: 36px; height: 36px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; font-family: 'DM Sans', sans-serif; }
@@ -215,11 +195,8 @@ export default defineComponent({
 .dd-logout { color: #AE2012; }
 .dd-logout:hover { background: #FFF0EF !important; }
 
-/* Dropdown animation */
 .drop-enter-active, .drop-leave-active { transition: opacity 0.15s, transform 0.15s; }
 .drop-enter-from, .drop-leave-to { opacity: 0; transform: translateY(-8px); }
-
-/* Hamburger */
 .hamburger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 8px; flex-shrink: 0; }
 .hamburger span { display: block; width: 22px; height: 2px; background: #fff; border-radius: 2px; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 998; }

@@ -1,7 +1,6 @@
 <template>
   <div class="profile-page" v-if="user">
 
-    <!-- ─── COVER + AVATAR ─── -->
     <div class="cover-section">
       <div class="cover-bg" />
       <div class="cover-overlay" />
@@ -29,8 +28,6 @@
         </div>
       </div>
     </div>
-
-    <!-- ─── TABS ─── -->
     <div class="tabs-bar">
       <div class="container">
         <div class="tabs">
@@ -41,10 +38,8 @@
       </div>
     </div>
 
-    <!-- ─── CONTENT ─── -->
     <div class="tab-content container">
 
-      <!-- MY TRIPS -->
       <div v-if="activeTab === 'trips'">
         <div v-if="tripsLoading" class="loading-state">Loading trips...</div>
         <div v-else-if="trips.length === 0" class="empty-state">
@@ -65,7 +60,6 @@
         </div>
       </div>
 
-      <!-- MY STORIES -->
       <div v-if="activeTab === 'stories'">
         <div v-if="storiesLoading" class="loading-state">Loading stories...</div>
         <div v-else-if="stories.length === 0" class="empty-state">
@@ -87,7 +81,6 @@
         </div>
       </div>
 
-      <!-- BOOKMARKS -->
       <div v-if="activeTab === 'bookmarks'">
         <div v-if="bookmarksLoading" class="loading-state">Loading bookmarks...</div>
         <div v-else-if="bookmarks.length === 0" class="empty-state">
@@ -109,8 +102,6 @@
           </div>
         </div>
       </div>
-
-      <!-- SETTINGS -->
       <div v-if="activeTab === 'settings'" class="settings-section">
         <h2 class="settings-title">Edit Profile</h2>
         <div class="settings-form">
@@ -185,7 +176,6 @@
     </div>
   </div>
 
-  <!-- Not logged in -->
   <div v-else class="not-logged-in">
     <div class="nli-icon">🔒</div>
     <div class="nli-title">Please log in to view your profile</div>
@@ -259,7 +249,6 @@ export default defineComponent({
       }
     }
 
-    // ✅ Read user from localStorage — tries all possible keys
     async function loadProfile() {
       const raw = localStorage.getItem('user_data')
                 || localStorage.getItem('user')
@@ -275,15 +264,11 @@ export default defineComponent({
           bio:        user.value.bio        || '',
           avatar_url: user.value.avatar_url || '',
         }
-
-        // Auto-select tab based on URL path
         const path = router.currentRoute.value.path
         if (path.includes('/trips'))     activeTab.value = 'trips'
         if (path.includes('/stories'))   activeTab.value = 'stories'
         if (path.includes('/bookmarks')) activeTab.value = 'bookmarks'
         if (path.includes('/settings'))  activeTab.value = 'settings'
-
-        // Load data in parallel
         await Promise.allSettled([loadTrips(), loadStories(), loadBookmarks()])
       } catch {
         user.value = null
@@ -336,7 +321,6 @@ export default defineComponent({
         if (res.ok) {
           const data    = await res.json()
           const updated = { ...user.value, ...(data.data || data) }
-          // Update all possible localStorage keys
           const key = localStorage.getItem('user_data') ? 'user_data'
                     : localStorage.getItem('user')       ? 'user'
                     : 'user_data'
@@ -418,20 +402,17 @@ export default defineComponent({
 .profile-page { min-height: 100vh; background: #F5F3EE; font-family: 'DM Sans', sans-serif; }
 .container { max-width: 1100px; margin: 0 auto; padding: 0 48px; }
 
-/* Cover */
 .cover-section { position: relative; height: 220px; }
 .cover-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #1a2340 0%, #2D6A4F 100%); }
 .cover-overlay { position: absolute; inset: 0; background: url('/hero/hero1.jpg') center/cover no-repeat; opacity: 0.15; }
 .profile-hero { position: absolute; bottom: -44px; left: 50%; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 20px; width: 100%; }
 
-/* Avatar */
 .avatar-wrap { position: relative; flex-shrink: 0; }
 .big-avatar { width: 92px; height: 92px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.15); overflow: hidden; }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .avatar-initials { font-size: 28px; font-weight: 700; color: #fff; font-family: 'Cinzel', serif; }
 .avatar-badge { position: absolute; bottom: 0; right: 0; background: #C8922A; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; border: 2px solid #fff; }
 
-/* Profile info */
 .profile-info { flex: 1; padding-bottom: 8px; }
 .profile-name { font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700; color: #fff; margin: 0 0 2px; text-shadow: 0 1px 8px rgba(0,0,0,0.3); }
 .profile-username { font-size: 13px; color: rgba(255,255,255,0.6); margin: 0 0 4px; }
@@ -445,7 +426,6 @@ export default defineComponent({
 .btn-edit { padding: 8px 18px; background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.35); border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
 .btn-edit:hover { background: rgba(255,255,255,0.25); }
 
-/* Tabs */
 .tabs-bar { background: #fff; border-bottom: 1px solid #E0DDD6; margin-top: 52px; }
 .tabs { display: flex; gap: 0; }
 .tab { padding: 14px 20px; background: none; border: none; border-bottom: 2px solid transparent; font-size: 13px; font-weight: 500; color: #6B6B6B; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
@@ -453,7 +433,6 @@ export default defineComponent({
 .tab.active { color: #2D6A4F; border-bottom-color: #2D6A4F; font-weight: 600; }
 .tab-content { padding: 36px 48px; }
 
-/* Loading / Empty */
 .loading-state { text-align: center; padding: 40px; color: #888; font-size: 14px; }
 .empty-state { text-align: center; padding: 60px 20px; }
 .es-icon  { font-size: 48px; margin-bottom: 14px; }
@@ -462,7 +441,6 @@ export default defineComponent({
 .es-btn   { display: inline-block; padding: 10px 24px; background: #2D6A4F; color: #fff; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; }
 .es-btn:hover { background: #1e4d39; }
 
-/* Trips */
 .trips-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .trip-card { background: #fff; border-radius: 12px; padding: 18px; border: 1px solid #E0DDD6; }
 .tc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
@@ -474,7 +452,6 @@ export default defineComponent({
 .tc-dates { font-size: 12px; color: #6B6B6B; margin-bottom: 6px; }
 .tc-desc  { font-size: 12px; color: #888; line-height: 1.5; }
 
-/* Stories */
 .stories-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .story-card { background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #E0DDD6; }
 .sc-img    { height: 130px; background-size: cover; background-position: center; }
@@ -486,7 +463,6 @@ export default defineComponent({
 .sc-date   { font-size: 11px; color: #888; margin-bottom: 6px; }
 .sc-preview { font-size: 12px; color: #666; line-height: 1.5; }
 
-/* Bookmarks */
 .bookmarks-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .bookmark-card { background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #E0DDD6; cursor: pointer; transition: transform 0.2s; }
 .bookmark-card:hover { transform: translateY(-2px); }
@@ -498,7 +474,6 @@ export default defineComponent({
 .bk-prov { font-size: 12px; color: #6B6B6B; margin-bottom: 4px; }
 .bk-cat  { font-size: 11px; color: #C8922A; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
 
-/* Settings */
 .settings-section { max-width: 560px; }
 .settings-title    { font-family: 'Cinzel', serif; font-size: 20px; color: #1a1a1a; margin-bottom: 24px; }
 .settings-subtitle { font-family: 'Cinzel', serif; font-size: 16px; color: #1a1a1a; margin-bottom: 20px; }
@@ -524,7 +499,6 @@ export default defineComponent({
 .btn-danger   { padding: 9px 20px; background: #AE2012; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
 .btn-danger:hover { background: #8B1A0E; }
 
-/* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .modal { background: #fff; border-radius: 16px; padding: 32px; max-width: 380px; width: 90%; }
 .modal-title { font-family: 'Cinzel', serif; font-size: 18px; color: #1a1a1a; margin-bottom: 10px; }
@@ -533,7 +507,6 @@ export default defineComponent({
 .btn-cancel         { flex: 1; padding: 10px; border: 1.5px solid #E0DDD6; border-radius: 8px; background: none; font-size: 14px; cursor: pointer; }
 .btn-confirm-delete { flex: 1; padding: 10px; background: #AE2012; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
 
-/* Not logged in */
 .not-logged-in { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
 .nli-icon  { font-size: 48px; }
 .nli-title { font-family: 'Cinzel', serif; font-size: 20px; color: #1a1a1a; }
