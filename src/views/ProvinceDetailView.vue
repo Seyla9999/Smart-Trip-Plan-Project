@@ -8,7 +8,11 @@ import ProvinceFilters from "@/components/province-detail/ProvinceFilters.vue";
 import FeaturedPlaceCard from "@/components/province-detail/FeaturedPlaceCard.vue";
 import PlaceCard from "@/components/province-detail/PlaceCard.vue";
 import PlacePagination from "@/components/province-detail/PlacePagination.vue";
-import { mockProvinces, mockProvinceAttractions, mockWeather } from "@/data/mockProvinces";
+import {
+  mockProvinces,
+  mockProvinceAttractions,
+  mockWeather,
+} from "@/data/mockProvinces";
 
 type TravelType = "Solo" | "Friends" | "Family";
 type ViewMode = "grid" | "list";
@@ -46,6 +50,7 @@ type AttractionApi = {
   location: string | null;
   isHiddenGem: boolean;
   averageRating: number | string;
+  reviewCount: number | string;
 };
 
 type WeatherApi = {
@@ -95,7 +100,7 @@ function normalizeAttraction(raw: any): AttractionApi | null {
 
   return {
     id,
-    provinceId: Number(raw.provinceId ?? raw.province_id ?? raw.province_id ?? 0),
+    provinceId: Number(raw.provinceId ?? raw.province_id ?? 0),
     nameEn: String(raw.nameEn ?? raw.name_en ?? raw.name ?? ""),
     nameKh: raw.nameKh ?? raw.name_kh ?? null,
     category: raw.category ?? raw.main_category ?? null,
@@ -103,6 +108,7 @@ function normalizeAttraction(raw: any): AttractionApi | null {
     location: raw.location ?? raw.address ?? null,
     isHiddenGem: Boolean(raw.isHiddenGem ?? raw.is_hidden_gem ?? false),
     averageRating: raw.averageRating ?? raw.average_rating ?? raw.rating ?? 0,
+    reviewCount: raw.reviewCount ?? raw.review_count ?? 0,
   };
 }
 
@@ -128,6 +134,10 @@ const fromDate = computed(() => {
 
 const toDate = computed(() => {
   return (route.query.to as string) || "";
+});
+
+const shouldShowTopSearch = computed(() => {
+  return !!route.query.type || !!route.query.from || !!route.query.to;
 });
 
 function formatQueryDate(dateString: string) {
@@ -171,7 +181,6 @@ watch(
   { immediate: true },
 );
 
-
 const backendProvinceId = ref<number | null>(null);
 const backendProvince = ref<ProvinceApi | null>(null);
 const allPlaces = ref<Place[]>([]);
@@ -211,8 +220,9 @@ function mapAttractionToPlace(
   index: number,
 ): Place {
   const category = attraction.category || "Cultural";
-  const discovery = attraction.isHiddenGem ? "Hidden gems" : "Most popular";
   const rating = Number(attraction.averageRating || 0);
+  const reviews = Number(attraction.reviewCount || 0);
+  const discovery = reviews > 0 ? "Most popular" : "Hidden gems";
 
   return {
     id: attraction.id,
@@ -221,12 +231,22 @@ function mapAttractionToPlace(
     category,
     discovery,
     rating,
-    reviews: 0,
+    reviews,
     description: attraction.description || "No description available yet.",
     image: province.mainImageUrl || FALLBACK_IMAGE,
     tags: [category, discovery],
     featured: index === 0,
   };
+}
+
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
 }
 
 async function loadProvinceDetail() {
@@ -247,9 +267,17 @@ async function loadProvinceDetail() {
       backendProvinceId.value = localProvince.id;
       backendProvince.value = localProvince;
 
-      const localAttractions = mockProvinceAttractions[localProvince.id as keyof typeof mockProvinceAttractions] || [];
-      allPlaces.value = localAttractions.map((attraction, index) =>
-        mapAttractionToPlace(attraction, localProvince, index),
+      const localAttractions =
+        mockProvinceAttractions[
+          localProvince.id as keyof typeof mockProvinceAttractions
+        ] || [];
+
+      allPlaces.value = localAttractions.map((attraction: any, index: number) =>
+        mapAttractionToPlace(
+          normalizeAttraction(attraction) as AttractionApi,
+          localProvince,
+          index,
+        ),
       );
       updateFilterCounts(allPlaces.value);
 
@@ -261,17 +289,23 @@ async function loadProvinceDetail() {
     let usesMockData = false;
 
     try {
-      const provincesResponse = await fetch(`${API_BASE}/provinces`, { signal: AbortSignal.timeout(5000) });
+      const provincesResponse = await fetch(`${API_BASE}/provinces`, {
+        signal: AbortSignal.timeout(5000),
+      });
+
       if (!provincesResponse.ok) {
         throw new Error("Failed to load provinces.");
       }
+
       const provincesData = await provincesResponse.json();
       const rawProvinces = Array.isArray(provincesData)
         ? provincesData
         : (provincesData?.provinces ?? provincesData?.data ?? []);
-      provinces = rawProvinces.map(normalizeProvince).filter(Boolean) as ProvinceApi[];
+
+      provinces = rawProvinces
+        .map(normalizeProvince)
+        .filter(Boolean) as ProvinceApi[];
     } catch (error) {
-      // Fallback to mock data
       console.warn("Using mock province data (API unavailable)");
       provinces = mockProvinces as unknown as ProvinceApi[];
       usesMockData = true;
@@ -281,9 +315,13 @@ async function loadProvinceDetail() {
       (province) => toSlug(province.nameEn) === slug.value,
     );
 
-    const fallbackProvince = matchedProvince || normalizeProvince(
-      mockProvinces.find((province) => toSlug(province.nameEn) === slug.value),
-    );
+    const fallbackProvince =
+      matchedProvince ||
+      normalizeProvince(
+        mockProvinces.find(
+          (province) => toSlug(province.nameEn) === slug.value,
+        ),
+      );
 
     if (!fallbackProvince) {
       throw new Error("Province not found.");
@@ -292,10 +330,13 @@ async function loadProvinceDetail() {
     backendProvinceId.value = fallbackProvince.id;
     backendProvince.value = fallbackProvince;
 
-    // Try to fetch attractions and weather from API
     let attractions: AttractionApi[] = [];
     try {
-      const attractionsResponse = await fetch(`${API_BASE}/provinces/${fallbackProvince.id}/attractions`, { signal: AbortSignal.timeout(5000) });
+      const attractionsResponse = await fetch(
+        `${API_BASE}/attractions/province/${fallbackProvince.id}`,
+        { signal: AbortSignal.timeout(5000) },
+      );
+
       if (attractionsResponse.ok) {
         const attractionsData = await attractionsResponse.json();
         const rawAttractions =
@@ -304,17 +345,23 @@ async function loadProvinceDetail() {
           attractionsData;
 
         attractions = Array.isArray(rawAttractions)
-          ? rawAttractions.map(normalizeAttraction).filter(Boolean) as AttractionApi[]
+          ? (rawAttractions
+              .map(normalizeAttraction)
+              .filter(Boolean) as AttractionApi[])
           : [];
       }
     } catch (error) {
-      // Use mock attractions
       console.warn("Using mock attractions data (API unavailable)");
     }
 
     if (attractions.length === 0) {
-      const mockData = mockProvinceAttractions[fallbackProvince.id as keyof typeof mockProvinceAttractions];
-      attractions = mockData || [];
+      const mockData =
+        mockProvinceAttractions[
+          fallbackProvince.id as keyof typeof mockProvinceAttractions
+        ];
+      attractions = (mockData || [])
+        .map((item: any) => normalizeAttraction(item))
+        .filter(Boolean) as AttractionApi[];
       usesMockData = true;
     }
 
@@ -329,7 +376,11 @@ async function loadProvinceDetail() {
     }
 
     try {
-      const weatherResponse = await fetch(`${API_BASE}/provinces/${fallbackProvince.id}/weather`, { signal: AbortSignal.timeout(5000) });
+      const weatherResponse = await fetch(
+        `${API_BASE}/weather/${fallbackProvince.id}`,
+        { signal: AbortSignal.timeout(5000) },
+      );
+
       if (weatherResponse.ok) {
         const weatherData = await weatherResponse.json();
         weather.value = weatherData.weather || null;
@@ -412,7 +463,7 @@ const sortedPlaces = computed(() => {
   }
 
   if (sortOption.value === "most-popular") {
-    return list.sort((a, b) => b.reviews - a.reviews);
+    return list.sort((a, b) => b.rating * b.reviews - a.rating * a.reviews);
   }
 
   return list;
@@ -435,19 +486,6 @@ const totalResults = computed(() => {
   return featuredPlace.value
     ? filteredPlaces.value.length + 1
     : filteredPlaces.value.length;
-});
-
-const weatherSummary = computed(() => {
-  if (!weather.value) return null;
-
-  return {
-    temp: weather.value.tempCelsius ?? "--",
-    condition: weather.value.conditionText || "No weather data",
-    icon: weather.value.iconUrl || "",
-    updatedAt: weather.value.lastUpdated
-      ? new Date(weather.value.lastUpdated).toLocaleString("en-GB")
-      : "",
-  };
 });
 
 watch([slug, filteredPlaces, sortOption], () => {
@@ -489,16 +527,6 @@ function setTravelType(value: TravelType) {
   selectedTravelType.value = value;
 }
 
-function toSlug(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
 function openPlaceDetail(place: Place) {
   router.push(`/province/${slug.value}/${toSlug(place.name)}`);
 }
@@ -507,6 +535,7 @@ function openPlaceDetail(place: Place) {
 <template>
   <main class="province-detail-page">
     <ProvinceTopSearch
+      v-if="shouldShowTopSearch"
       :province-name="backendProvince?.nameEn || provinceName"
       :selected-travel-type="selectedTravelType"
       :from-date="fromDate"
@@ -617,6 +646,14 @@ function openPlaceDetail(place: Place) {
                 @select="openPlaceDetail"
               />
             </div>
+
+            <PlacePagination
+              :current-page="currentPage"
+              :total-pages="totalPages"
+              @go-to-page="goToPage"
+              @prev-page="prevPage"
+              @next-page="nextPage"
+            />
           </section>
         </div>
       </div>

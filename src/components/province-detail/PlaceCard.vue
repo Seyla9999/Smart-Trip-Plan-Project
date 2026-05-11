@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 type Place = {
-  id: number;
+  id: number | string;
   name: string;
   province: string;
   category: string;
@@ -21,8 +23,20 @@ const emit = defineEmits<{
   (e: "select", place: Place): void;
 }>();
 
+const isFavorite = ref(false);
+
 function handleSelect() {
   emit("select", props.place);
+}
+
+function toggleFavorite(event: MouseEvent) {
+  event.stopPropagation();
+  isFavorite.value = !isFavorite.value;
+}
+
+function shortDescription(text: string, max = 120) {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max) + "..." : text;
 }
 </script>
 
@@ -46,11 +60,15 @@ function handleSelect() {
         <span class="rating">★ {{ place.rating }}</span>
       </div>
 
-      <p class="card-description">{{ place.description }}</p>
+      <p class="card-description">
+        {{ shortDescription(place.description, 120) }}
+      </p>
 
       <div class="card-footer">
         <span>{{ place.reviews }} REVIEWS</span>
-        <button class="heart-btn">♡</button>
+        <button class="heart-btn" type="button" @click="toggleFavorite">
+          {{ isFavorite ? "♥" : "♡" }}
+        </button>
       </div>
     </div>
   </article>
@@ -63,7 +81,9 @@ function handleSelect() {
   overflow: hidden;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .place-card:hover,
