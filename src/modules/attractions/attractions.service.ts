@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, SelectQueryBuilder, IsNull } from 'typeorm'
+import { Repository, IsNull, DataSource } from 'typeorm'
 import { Attraction } from './attraction.entity'
 import { FilterAttractionsDto } from './dto/filter-attractions.dto'
 import { CreateAttractionDto } from './dto/create-attraction.dto'
@@ -11,92 +11,118 @@ export class AttractionsService {
   constructor(
     @InjectRepository(Attraction)
     private attractionRepo: Repository<Attraction>,
+    private dataSource: DataSource,
   ) {}
 
-  async findAll(filters: FilterAttractionsDto) {
-    let query = this.attractionRepo.createQueryBuilder('attraction')
-      .where('attraction.deleted_at IS NULL') // Only show non-deleted
+  async findAll(filters: FilterAttractionsDto & {
+    province?: string
+    province_id?: number
+    is_hidden_gem?: string
+    limit?: number
+    page?: number
+    offset?: number
+  }) {
+    const limit  = Number(filters.limit)  || 20
+    const page   = Number(filters.page)   || 1
+    const offset = Number(filters.offset) || (page - 1) * limit
+    const conditions: string[] = ['a.deleted_at IS NULL']
+    const params: any[]        = []
+    let   idx                  = 1
 
-    if (filters.search) {
-      const searchTerm = `%${filters.search}%`
-      query = query.andWhere(
-        '(attraction.name_en ILIKE :search OR attraction.name_kh ILIKE :search OR attraction.description ILIKE :search)',
-        { search: searchTerm },
-      )
-    }
+    if (filters.category)    { conditions.push(`a.category = $${idx++}`);                                    params.push(filters.category) }
+    if (filters.province_id) { conditions.push(`a.province_id = $${idx++}`);                                 params.push(Number(filters.province_id)) }
+    if (filters.province)    { conditions.push(`p.name_en ILIKE $${idx++}`);                                 params.push(`%${filters.province}%`) }
+    if (filters.search)      { conditions.push(`(a.name_en ILIKE $${idx} OR a.name_kh ILIKE $${idx++})`);   params.push(`%${filters.search}%`) }
+    if (filters.is_hidden_gem === 'true') { conditions.push(`a.is_hidden_gem = true`) }
+    if (filters.minRating !== undefined) { conditions.push(`a.average_rating >= $${idx++}`); params.push(filters.minRating) }
 
-    if (filters.category) {
-      query = query.andWhere('attraction.category = :category', {
-        category: filters.category,
-      })
-    }
+    const where = conditions.join(' AND ')
 
-    if (filters.categories && filters.categories.length > 0) {
-      query = query.andWhere('attraction.category IN (:...categories)', {
-        categories: filters.categories,
-      })
-    }
-
-    if (filters.mainCategory) {
-      query = query.andWhere('attraction.category = :mainCategory', {
-        mainCategory: filters.mainCategory,
-      })
-    }
-
-    if (filters.minRating !== undefined) {
-      query = query.andWhere('attraction.average_rating >= :minRating', {
-        minRating: filters.minRating,
-      })
-    }
-
-    if (filters.maxRating !== undefined) {
-      query = query.andWhere('attraction.average_rating <= :maxRating', {
-        maxRating: filters.maxRating,
-      })
-    }
-
-    if (filters.province_id) {
-      query = query.andWhere('attraction.province_id = :province_id', {
-        province_id: filters.province_id,
-      })
-    }
-
-    const sortField = this.getSortField(filters.sortBy || 'rating')
-    const sortOrder = filters.sortOrder || 'DESC'
-    query = query.orderBy(sortField, sortOrder)
-
-    const limit = (filters as any).limit as number | undefined
-    const offset = (filters as any).offset || 0
-
-    if (limit !== undefined) {
-      query.skip(offset).take(limit)
-    }
-
-    const [data, total] = await query.getManyAndCount()
-    const responseLimit = limit ?? total
-    const pages = responseLimit > 0 ? Math.ceil(total / responseLimit) : 0
+    const countResult = await this.dataSource.query(
+      `SELECT COUNT(DISTINCT a.id) FROM attractions a
+       LEFT JOIN provinces p ON p.id = a.province_id
+       WHERE ${where}`,
+      params,
+    )
+    const total = parseInt(countResult[0].count, 10)
+    const data = await this.dataSource.query(
+      `SELECT
+        a.id,
+        a.province_id,
+        a.name_en,
+        a.name_kh,
+        a.category,
+        a.average_rating,
+        a.is_hidden_gem,
+        a.image_url,
+        a.hero_image,
+        COUNT(r.id)::int AS review_count,
+        json_build_object(
+          'id',             p.id,
+          'name_en',        p.name_en,
+          'name_kh',        p.name_kh,
+          'main_image_url', p.main_image_url
+        ) AS province
+       FROM attractions a
+       LEFT JOIN provinces p ON p.id = a.province_id
+       LEFT JOIN reviews   r ON r.attraction_id = a.id
+       WHERE ${where}
+       GROUP BY a.id, p.id
+       ORDER BY a.average_rating DESC
+       LIMIT $${idx++} OFFSET $${idx++}`,
+      [...params, limit, offset],
+    )
 
     return {
+      success: true,
       data,
-      pagination: {
-        total,
-        limit: responseLimit,
-        offset,
-        pages,
-      },
+      meta:       { total, page, limit },
+      pagination: { total, limit, offset, pages: Math.ceil(total / limit) },
     }
   }
 
-  // Find single attraction by id or slug (supports id or name-based slug)
+  async findHiddenGems(limit: number = 5) {
+    const data = await this.dataSource.query(
+      `SELECT
+        a.id,
+        a.province_id,
+        a.name_en,
+        a.name_kh,
+        a.category,
+        a.average_rating,
+        a.is_hidden_gem,
+        a.image_url,
+        a.hero_image,
+        COUNT(r.id)::int AS review_count,
+        json_build_object(
+          'id',             p.id,
+          'name_en',        p.name_en,
+          'name_kh',        p.name_kh,
+          'main_image_url', p.main_image_url
+        ) AS province
+       FROM attractions a
+       LEFT JOIN provinces p ON p.id = a.province_id
+       LEFT JOIN reviews   r ON r.attraction_id = a.id
+       WHERE a.deleted_at IS NULL
+         AND a.is_hidden_gem = true
+       GROUP BY a.id, p.id
+       ORDER BY a.average_rating DESC
+       LIMIT $1`,
+      [limit],
+    )
+    return { success: true, data }
+  }
+
   async findOne(identifier: string) {
     const isUuid = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(identifier)
 
     let attraction: Attraction | null = null
 
     if (isUuid) {
-      attraction = await this.attractionRepo.findOne({ where: { id: identifier, deleted_at: IsNull() } as any })
+      attraction = await this.attractionRepo.findOne({
+        where: { id: identifier, deleted_at: IsNull() } as any,
+      })
     } else {
-      // try converting slug (e.g. tatai-waterfall) into a flexible search
       const nameLike = `%${identifier.replace(/-/g, ' ')}%`
       attraction = await this.attractionRepo
         .createQueryBuilder('attraction')
@@ -105,219 +131,96 @@ export class AttractionsService {
         .getOne()
     }
 
-    if (!attraction) {
-      throw new NotFoundException(`Attraction "${identifier}" not found`)
-    }
+    if (!attraction) throw new NotFoundException(`Attraction "${identifier}" not found`)
 
     const nearbyPOIs = await this.findNearbyPointsOfInterest(attraction as any)
-
-    return {
-      ...attraction,
-      nearbyPOIs,
-    }
+    return { ...attraction, nearbyPOIs }
   }
 
-  // Find nearby points of interest (PostGIS) — returns grouped categories
   async findNearbyPointsOfInterest(attraction: any) {
-    if (!attraction || !attraction.location) {
-      return {
-        hospitals: [],
-        police: [],
-        restaurants: [],
-        atms: [],
-        cafes: [],
-        pharmacies: [],
-      }
+    if (!attraction?.location) {
+      return { hospitals: [], police: [], restaurants: [], atms: [], cafes: [], pharmacies: [] }
     }
 
-    // build query
     const query = `
-      SELECT 
-        id,
-        name_en as name,
-        category,
-        address,
-        contact_number as contactNumber,
-        is_open_24h as isOpen24h,
-        ST_X(location::geometry) as longitude,
-        ST_Y(location::geometry) as latitude,
-        ROUND(ST_Distance(
-          location::geography, 
-          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-        )) as distance_meters
+      SELECT id, name_en as name, category, address, contact_number as contactNumber,
+             is_open_24h as isOpen24h,
+             ST_X(location::geometry) as longitude,
+             ST_Y(location::geometry) as latitude,
+             ROUND(ST_Distance(location::geography,
+               ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)) as distance_meters
       FROM points_of_interest
-      WHERE 
-        ST_DWithin(
-          location::geography, 
-          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-          5000
-        )
-      ORDER BY distance_meters ASC
-    `
+      WHERE ST_DWithin(location::geography,
+              ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 5000)
+      ORDER BY distance_meters ASC`
 
     let lng: number | null = null
     let lat: number | null = null
     const loc = attraction.location as any
-    if (loc) {
-      if (loc.coordinates) {
-        lng = loc.coordinates[0]
-        lat = loc.coordinates[1]
-      } else if (loc.x !== undefined && loc.y !== undefined) {
-        lng = loc.x
-        lat = loc.y
-      }
-    }
+    if (loc?.coordinates) { lng = loc.coordinates[0]; lat = loc.coordinates[1] }
+    else if (loc?.x !== undefined) { lng = loc.x; lat = loc.y }
 
     if (!lng || !lat) {
-      return {
-        hospitals: [],
-        police: [],
-        restaurants: [],
-        atms: [],
-        cafes: [],
-        pharmacies: [],
-      }
+      return { hospitals: [], police: [], restaurants: [], atms: [], cafes: [], pharmacies: [] }
     }
 
     const results = await this.attractionRepo.manager.query(query, [lng, lat])
-
     return {
-      hospitals: results.filter((p: any) => p.category === 'hospital'),
-      police: results.filter((p: any) => p.category === 'police'),
+      hospitals:   results.filter((p: any) => p.category === 'hospital'),
+      police:      results.filter((p: any) => p.category === 'police'),
       restaurants: results.filter((p: any) => p.category === 'restaurant'),
-      atms: results.filter((p: any) => p.category === 'atm'),
-      cafes: results.filter((p: any) => p.category === 'cafe'),
-      pharmacies: results.filter((p: any) => p.category === 'pharmacy'),
-      all: results,
+      atms:        results.filter((p: any) => p.category === 'atm'),
+      cafes:       results.filter((p: any) => p.category === 'cafe'),
+      pharmacies:  results.filter((p: any) => p.category === 'pharmacy'),
+      all:         results,
     }
   }
 
-  // Seed Tatai Waterfall (useful for local testing)
-  async seedTataiWaterfall() {
-    const existing = await this.attractionRepo.findOne({ where: { name_en: 'Tatai Waterfall', deleted_at: IsNull() } as any })
-    if (existing) return existing
-
-    const province = await this.attractionRepo.manager.query(
-      `SELECT id FROM provinces WHERE name_en ILIKE '%Koh Kong%' LIMIT 1`,
-    )
-
-    if (!province || province.length === 0) {
-      console.log('Koh Kong province not found; please add it first')
-      return null
-    }
-
-    const location = { type: 'Point', coordinates: [103.2, 11.6] }
-
-    const attraction = this.attractionRepo.create({
-      name_en: 'Tatai Waterfall',
-      name_kh: 'ទឹកធ្លាក់តាតៃ',
-      province_id: province[0].id,
-      category: 'waterfall',
-      description: `A scenic waterfall in the Cardamom Mountains.`,
-      is_hidden_gem: true,
-      average_rating: 4.9,
-      location,
-    } as any)
-
-    const saved = await this.attractionRepo.save(attraction)
-    return saved
-  }
-
-  async findByCategory(category: string, limit: number = 10, offset: number = 0) {
+  async findByCategory(category: string, limit = 10, offset = 0) {
     const [data, total] = await this.attractionRepo.findAndCount({
-      where: { category, deleted_at: IsNull() },
+      where: { category, deleted_at: IsNull() } as any,
       order: { average_rating: 'DESC' },
-      take: limit,
-      skip: offset,
+      take: limit, skip: offset,
     })
-
-    return {
-      data,
-      pagination: {
-        total,
-        limit,
-        offset,
-        pages: Math.ceil(total / limit),
-      },
-    }
+    return { data, pagination: { total, limit, offset, pages: Math.ceil(total / limit) } }
   }
 
-  async findByProvince(province_id: string, limit: number = 10, offset: number = 0) {
+  async findByProvince(province_id: string, limit = 10, offset = 0) {
     const [data, total] = await this.attractionRepo.findAndCount({
-      where: { province_id: parseInt(province_id), deleted_at: IsNull() },
+      where: { province_id: parseInt(province_id), deleted_at: IsNull() } as any,
       order: { average_rating: 'DESC' },
-      take: limit,
-      skip: offset,
+      take: limit, skip: offset,
     })
-
-    return {
-      data,
-      pagination: {
-        total,
-        limit,
-        offset,
-        pages: Math.ceil(total / limit),
-      },
-    }
+    return { data, pagination: { total, limit, offset, pages: Math.ceil(total / limit) } }
   }
 
-  async findTopRated(limit: number = 10) {
+  async findTopRated(limit = 10) {
     return this.attractionRepo.find({
-      where: { deleted_at: IsNull() },
+      where: { deleted_at: IsNull() } as any,
       order: { average_rating: 'DESC' },
       take: limit,
     })
-  }
-
-  // Find hidden gems (attractions marked as is_hidden_gem = true)
-  async findHiddenGems(limit: number = 5) {
-    const [data, total] = await this.attractionRepo.findAndCount({
-      where: { is_hidden_gem: true, deleted_at: IsNull() },
-      order: { average_rating: 'DESC' },
-      take: limit,
-    })
-
-    return {
-      success: true,
-      data,
-      pagination: { total, limit },
-    }
   }
 
   async findById(id: string) {
-    return this.attractionRepo.findOne({
-      where: { id, deleted_at: IsNull() },
-    })
+    return this.attractionRepo.findOne({ where: { id, deleted_at: IsNull() } as any })
   }
 
   async create(dto: CreateAttractionDto) {
-    try {
-      console.log('Creating attraction with data:', dto)
-      const attraction = this.attractionRepo.create(dto)
-      console.log('Created entity instance:', attraction)
-      const result = await this.attractionRepo.save(attraction)
-      console.log('Saved attraction:', result)
-      return result
-    } catch (error) {
-      console.error('Create error:', error)
-      throw error
-    }
+    const attraction = this.attractionRepo.create(dto)
+    return this.attractionRepo.save(attraction)
   }
 
   async update(id: string, dto: Partial<CreateAttractionDto>) {
     const updateData: any = { ...dto }
-    if (dto.province_id) {
-      updateData.province_id = parseInt(dto.province_id as any)
-    }
+    if (dto.province_id) updateData.province_id = parseInt(dto.province_id as any)
     await this.attractionRepo.update({ id }, updateData)
     return this.findById(id)
   }
 
   async delete(id: string) {
     const attraction = await this.attractionRepo.findOne({ where: { id } })
-    if (attraction) {
-      return this.attractionRepo.softRemove(attraction)
-    }
+    if (attraction) return this.attractionRepo.softRemove(attraction)
     return null
   }
 
@@ -328,15 +231,14 @@ export class AttractionsService {
       .where('attraction.deleted_at IS NULL')
       .andWhere('attraction.category IS NOT NULL')
       .getRawMany()
-
     return result.map((r) => r.category).filter(Boolean)
   }
 
   async getStatistics() {
     const [attractions, topRated, avgRating] = await Promise.all([
-      this.attractionRepo.count({ where: { deleted_at: IsNull() } }),
+      this.attractionRepo.count({ where: { deleted_at: IsNull() } as any }),
       this.attractionRepo.find({
-        where: { deleted_at: IsNull() },
+        where: { deleted_at: IsNull() } as any,
         order: { average_rating: 'DESC' },
         take: 5,
       }),
@@ -346,12 +248,34 @@ export class AttractionsService {
         .where('attraction.deleted_at IS NULL')
         .getRawOne(),
     ])
-
     return {
       totalAttractions: attractions,
       averageRating: parseFloat(avgRating?.average || 0),
       topRated,
     }
+  }
+
+  async seedTataiWaterfall() {
+    const existing = await this.attractionRepo.findOne({
+      where: { name_en: 'Tatai Waterfall', deleted_at: IsNull() } as any,
+    })
+    if (existing) return existing
+
+    const province = await this.attractionRepo.manager.query(
+      `SELECT id FROM provinces WHERE name_en ILIKE '%Koh Kong%' LIMIT 1`,
+    )
+    if (!province?.length) return null
+
+    const attraction = this.attractionRepo.create({
+      name_en: 'Tatai Waterfall',
+      name_kh: 'ទឹកធ្លាក់តាតៃ',
+      province_id: province[0].id,
+      category: 'waterfall',
+      is_hidden_gem: true,
+      average_rating: 4.9,
+      location: { type: 'Point', coordinates: [103.2, 11.6] },
+    } as any)
+    return this.attractionRepo.save(attraction)
   }
 
   private getSortField(sortBy: string): string {
@@ -363,4 +287,3 @@ export class AttractionsService {
     return fieldMap[sortBy] || 'attraction.average_rating'
   }
 }
-
