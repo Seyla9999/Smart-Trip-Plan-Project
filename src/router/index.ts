@@ -15,6 +15,7 @@ import AttractionDetail from '../components/AttractionDetail.vue'
 import TripPlannerView from '../views/TripPlannerView.vue'
 import TripFormView from '../views/TripFormView.vue'
 import TripResultsView from '../views/TripResultsView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -99,6 +100,27 @@ const router = createRouter({
       name: 'about',
       component: AboutView,
 
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
+    },
+    {
+      path: '/profile/trips',
+      component: ProfileView,
+    },
+    {
+      path: '/profile/stories',
+      component: ProfileView,
+    },
+    {
+      path: '/profile/bookmarks',
+      component: ProfileView,
+    },
+    {
+      path: '/profile/settings',
+      component: ProfileView,
     },
     {
       path: '/:pathMatch(.*)*',
