@@ -15,17 +15,17 @@ export class Attraction {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
-  @Column({ type: 'integer' })
-  province_id!: number
+  @Column({ type: 'integer', nullable: true })
+  province_id?: number
 
-  @Column({ type: 'varchar', nullable: true })
-  name_en?: string
+  @Column({ type: 'varchar' })
+  name_en!: string
 
   @Column({ type: 'varchar', nullable: true })
   name_kh?: string
 
-  @Column({ type: 'varchar' })
-  category!: string
+  @Column({ type: 'varchar', nullable: true })
+  category?: string
 
   @Column({ type: 'text', nullable: true })
   description?: string
@@ -38,6 +38,18 @@ export class Attraction {
 
   @Column({ type: 'numeric', precision: 4, scale: 2, default: 0 })
   average_rating!: number
+
+  @Column({ type: 'text', nullable: true })
+  hero_image?: string
+
+  @Column({ type: 'text', array: true, nullable: true })
+  photos?: string[]
+
+  @Column({ type: 'jsonb', nullable: true })
+  nearby_images?: object | null
+
+  @Column({ type: 'text', nullable: true })
+  image_url?: string
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   created_at!: Date
