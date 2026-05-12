@@ -65,11 +65,17 @@ export class AttractionsController {
   async getTopRated(@Query('limit') limit?: string) {
     return this.attractionsService.findTopRated(limit ? parseInt(limit) : 10)
   }
- 
+
+  @Get('hidden-gems')
+  @HttpCode(HttpStatus.OK)
+  async getHiddenGems(@Query('limit') limit?: string) {
+    return this.attractionsService.findHiddenGems(limit ? parseInt(limit) : 5)
+  }
+
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async getById(@Param('id') id: string) {
-    return this.attractionsService.findById(id)
+    return this.attractionsService.findOne(id)
   }
 
   @Get('')
@@ -97,5 +103,13 @@ export class AttractionsController {
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string) {
     return this.attractionsService.delete(id)
+  }
+
+  // Development/testing helper: seed a sample attraction
+  @Get('seed/tatai')
+  @HttpCode(HttpStatus.OK)
+  async seedTatai() {
+    const attraction = await this.attractionsService.seedTataiWaterfall()
+    return { success: true, data: attraction }
   }
 }

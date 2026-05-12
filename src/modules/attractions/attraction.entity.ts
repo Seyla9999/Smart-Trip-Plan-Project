@@ -4,68 +4,62 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm'
+import { Province } from '../provinces/province.entity'
 
 @Entity('attractions')
 @Index(['category'])
 @Index(['average_rating'])
 @Index(['province_id'])
+@Index(['deleted_at'])
 export class Attraction {
   @PrimaryGeneratedColumn('uuid')
   id!: string
-
-  @Column({ type: 'integer', nullable: true })
-  province_id?: number
-
-  @Column({ type: 'varchar' })
+  
+  @Column()
   name_en!: string
 
-  @Column({ type: 'varchar', nullable: true })
-  name_kh?: string
+  @Column({ nullable: true })
+  name_kh!: string
 
-  @Column({ type: 'varchar', nullable: true })
-  category?: string
+  @Column()
+  province_id!: number
 
-  @Column({ type: 'text', nullable: true })
-  description?: string
+  @ManyToOne(() => Province, (province) => province.attractions)
+  @JoinColumn({ name: 'province_id' })
+  province?: Province
 
-  @Column({ type: 'geometry', nullable: true })
-  location?: string
+  @Column({ nullable: true })
+  category!: string
 
-  @Column({ type: 'boolean', default: false })
-  is_hidden_gem!: boolean
+  @Column({ type: 'geometry', spatialFeatureType: 'Point', srid: 4326, nullable: true })
+  location?: any
 
-  @Column({ type: 'numeric', precision: 4, scale: 2, default: 0 })
-  average_rating!: number
-
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'hero_image', type: 'text', nullable: true })
   hero_image?: string
 
-  @Column({ type: 'text', array: true, nullable: true })
+  @Column({ name: 'photos', type: 'text', array: true, nullable: true })
   photos?: string[]
 
-  @Column({ type: 'jsonb', nullable: true })
-  nearby_images?: object | null
+  @Column({ name: 'nearby_images', type: 'jsonb', nullable: true })
+  nearby_images?: any
 
-  @Column({ type: 'text', nullable: true })
-  image_url?: string
+  @Column({ type: 'decimal', default: 0 })
+  average_rating!: number
 
-  @CreateDateColumn({ type: 'timestamp with time zone' })
+  @Column({ default: false })
+  is_hidden_gem!: boolean
+
+  @CreateDateColumn()
   created_at!: Date
 
-  @UpdateDateColumn({ type: 'timestamp with time zone' })
+  @UpdateDateColumn()
   updated_at!: Date
 
-  @Column({ type: 'timestamp with time zone', nullable: true })
-  deleted_at?: Date
-
-  // Getter for backward compatibility
-  get name(): string {
-    return this.name_en || this.name_kh || ''
-  }
-
-  get rating(): number {
-    return Number(this.average_rating) || 0
-  }
+  @DeleteDateColumn()
+  deleted_at!: Date
 }
