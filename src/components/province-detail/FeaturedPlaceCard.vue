@@ -1,6 +1,6 @@
 <script setup lang="ts">
 type Place = {
-  id: number;
+  id: string | number;
   name: string;
   province: string;
   category: string;

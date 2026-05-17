@@ -7,7 +7,6 @@ import ProvinceInfoBar from "@/components/province-detail/ProvinceInfoBar.vue";
 import ProvinceFilters from "@/components/province-detail/ProvinceFilters.vue";
 import FeaturedPlaceCard from "@/components/province-detail/FeaturedPlaceCard.vue";
 import PlaceCard from "@/components/province-detail/PlaceCard.vue";
-import PlacePagination from "@/components/province-detail/PlacePagination.vue";
 import { mockProvinces, mockProvinceAttractions, mockWeather } from "@/data/mockProvinces";
 
 type TravelType = "Solo" | "Friends" | "Family";
@@ -145,7 +144,7 @@ function formatQueryDate(dateString: string) {
 
 const displayDateRange = computed(() => {
   if (fromDate.value && toDate.value) {
-    return `${formatQueryDate(fromDate.value)} – ${formatQueryDate(toDate.value)}`;
+    return `${formatQueryDate(fromDate.value)} â€“ ${formatQueryDate(toDate.value)}`;
   }
 
   if (fromDate.value) {
@@ -522,11 +521,11 @@ function openPlaceDetail(place: Place) {
       <div class="page-container">
         <div class="breadcrumb">
           <RouterLink to="/" class="breadcrumb-link">HOME</RouterLink>
-          <span>›</span>
+          <span>â€º</span>
           <RouterLink to="/discover" class="breadcrumb-link">
             DISCOVER
           </RouterLink>
-          <span>›</span>
+          <span>â€º</span>
           <strong>{{
             (backendProvince?.nameEn || provinceName).toUpperCase()
           }}</strong>
@@ -550,7 +549,7 @@ function openPlaceDetail(place: Place) {
                   {{ backendProvince?.nameEn || provinceName }} attractions
                 </h1>
                 <p class="results-text">
-                  {{ totalResults }} results · {{ selectedTravelType }} trip ·
+                  {{ totalResults }} results Â· {{ selectedTravelType }} trip Â·
                   {{ displayDateRange }}
                 </p>
 
@@ -581,7 +580,7 @@ function openPlaceDetail(place: Place) {
                   :class="{ active: viewMode === 'grid' }"
                   @click="viewMode = 'grid'"
                 >
-                  ▦
+                  â–¦
                 </button>
 
                 <button
@@ -589,7 +588,7 @@ function openPlaceDetail(place: Place) {
                   :class="{ active: viewMode === 'list' }"
                   @click="viewMode = 'list'"
                 >
-                  ☰
+                  â˜°
                 </button>
 
                 <select v-model="sortOption" class="sort-select">

@@ -73,7 +73,7 @@
               target="_blank"
               rel="noopener"
               class="map-link"
-            >Open in OpenStreetMap ↗</a>
+            >Open in OpenStreetMap Ã¢â€ â€”</a>
           </div>
           <div v-else class="map-placeholder">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="#C8922A" stroke="white" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="white" stroke="#C8922A"/></svg>
@@ -102,14 +102,14 @@
             </div>
             <p class="review-author-name">Reviewing as <strong>{{ currentUserName }}</strong></p>
             <input v-model="newReview.title" class="review-input" placeholder="Title (optional)" maxlength="200" />
-            <textarea v-model="newReview.comment" class="review-textarea" placeholder="Share your experience…" rows="4" maxlength="2000"></textarea>
+            <textarea v-model="newReview.comment" class="review-textarea" placeholder="Share your experienceÃ¢â‚¬Â¦" rows="4" maxlength="2000"></textarea>
             <div class="review-form-footer">
-              <span v-if="reviewSuccess" class="review-success">✓ Review submitted!</span>
+              <span v-if="reviewSuccess" class="review-success">Ã¢Å“â€œ Review submitted!</span>
               <button
                 class="btn-submit-review"
                 :disabled="submittingReview || !newReview.comment.trim()"
                 @click="submitReview"
-              >{{ submittingReview ? 'Submitting…' : 'Submit Review' }}</button>
+              >{{ submittingReview ? 'SubmittingÃ¢â‚¬Â¦' : 'Submit Review' }}</button>
             </div>
           </div>
           <div v-else class="review-login-prompt">
@@ -188,7 +188,7 @@
             >
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            {{ savingFavorite ? 'Saving…' : isFavorited ? 'Favorited' : 'Save to favorites' }}
+            {{ savingFavorite ? 'SavingÃ¢â‚¬Â¦' : isFavorited ? 'Favorited' : 'Save to favorites' }}
           </button>
 
           <div class="info-list">
@@ -203,7 +203,7 @@
               <div class="info-icon duration"></div>
               <div>
                 <p class="info-label">VISIT DURATION</p>
-                <p class="info-value">{{ attraction.info?.duration || '2–4 hours' }}</p>
+                <p class="info-value">{{ attraction.info?.duration || '2Ã¢â‚¬â€œ4 hours' }}</p>
               </div>
             </div>
             <div class="info-row">
@@ -231,7 +231,7 @@
 
           <div class="cta-box" v-if="!isLoggedIn">
             <p>Sign up free to save this to a trip and invite friends to join you.</p>
-            <button class="btn-cta" @click="$router.push('/register')">Sign up to save →</button>
+            <button class="btn-cta" @click="$router.push('/register')">Sign up to save Ã¢â€ â€™</button>
           </div>
         </div>
       </aside>
@@ -292,16 +292,6 @@ const mapCoords = computed(() => {
   return null
 })
 
-const hasNearbyPOIs = computed(() =>
-  nearbyPOIs.value && (
-    nearbyPOIs.value.hospitals?.length ||
-    nearbyPOIs.value.police?.length ||
-    nearbyPOIs.value.restaurants?.length ||
-    nearbyPOIs.value.atms?.length ||
-    nearbyPOIs.value.cafes?.length ||
-    nearbyPOIs.value.pharmacies?.length
-  )
-)
 
 // Normalise raw DB fields into the shape the template needs
 function normalizeAttraction(data: any) {
@@ -357,7 +347,7 @@ function normalizeAttraction(data: any) {
     location:    data.location,
     info: {
       bestTime:   'Year-round',
-      duration:   '2–4 hours',
+      duration:   '2Ã¢â‚¬â€œ4 hours',
       difficulty: 'Moderate',
       bestFor:    'All travelers',
       province:   data.province?.name_en || '',
@@ -420,7 +410,7 @@ async function checkBookmark(attractionId: string) {
       bookmarkId.value  = found.id
     }
   } catch {
-    // silently ignore — user may not be authenticated
+    // silently ignore Ã¢â‚¬â€ user may not be authenticated
   }
 }
 
@@ -428,7 +418,7 @@ async function toggleFavorite() {
   if (savingFavorite.value) return
   if (!isLoggedIn.value) { router.push('/login'); return }
 
-  // Optimistic update — flip state immediately so UI responds instantly
+  // Optimistic update Ã¢â‚¬â€ flip state immediately so UI responds instantly
   const prevFavorited  = isFavorited.value
   const prevBookmarkId = bookmarkId.value
   isFavorited.value = !prevFavorited
@@ -455,7 +445,7 @@ async function toggleFavorite() {
   }
 }
 
-// ── Reviews ──────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Reviews Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function submitReview() {
   if (!newReview.value.comment.trim() || !newReview.value.rating) return
@@ -479,7 +469,7 @@ async function submitReview() {
   }
 }
 
-// ── Leaflet map ──────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Leaflet map Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function loadLeaflet(): Promise<void> {
   return new Promise((resolve) => {
@@ -512,7 +502,7 @@ async function initMap() {
 
   leafletMap = L.map(mapEl.value).setView([mapCoords.value.lat, mapCoords.value.lng], 14)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: 'Ã‚Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(leafletMap)
 
   // Main attraction pin
@@ -556,7 +546,7 @@ async function initMap() {
         L.marker([Number(poi.latitude), Number(poi.longitude)], { icon: poiIcon })
           .addTo(leafletMap)
           .bindPopup(
-            `<b>${poi.name}</b><br><i>${cfg.title}</i><br>${Math.round(poi.distance_meters)}m away${poi.isOpen24h ? ' · Open 24h' : ''}`,
+            `<b>${poi.name}</b><br><i>${cfg.title}</i><br>${Math.round(poi.distance_meters)}m away${poi.isOpen24h ? ' Ã‚Â· Open 24h' : ''}`,
           )
       }
     }
@@ -578,7 +568,7 @@ onUnmounted(() => {
   if (leafletMap) { leafletMap.remove(); leafletMap = null }
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 watch(
   () => [route.params.slug, route.params.placeSlug, route.params.id],
@@ -590,11 +580,7 @@ watch(
 <style scoped>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-.attraction-page {
-  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-  color: #1a1a1a;
-  background: #fff;
-}
+.attraction-page { font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif; color: #1a1a1a; background: #fff; }
 
 /* Loading */
 .loading-state {
@@ -645,21 +631,10 @@ watch(
   max-width: 1200px; margin: 0 auto; width: 100%;
 }
 .hero-badges { display: flex; gap: 8px; margin-bottom: 10px; }
-.badge {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-  padding: 3px 8px; border-radius: 4px;
-  background: rgba(255,255,255,0.15); color: #fff;
-  border: 1px solid rgba(255,255,255,0.3);
-}
-.hero-title {
-  font-size: 2.6rem; font-weight: 700; color: #fff;
-  margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
+.badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+.hero-title { font-size: 2.6rem; font-weight: 700; color: #fff; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .hero-meta { display: flex; align-items: center; gap: 1.5rem; }
-.meta-location, .meta-rating {
-  display: flex; align-items: center; gap: 5px;
-  color: rgba(255,255,255,0.9); font-size: 14px;
-}
+.meta-location, .meta-rating { display: flex; align-items: center; gap: 5px; color: rgba(255,255,255,0.9); font-size: 14px; }
 .reviews { color: rgba(255,255,255,0.65); }
 
 /* Layout */
@@ -671,10 +646,7 @@ watch(
 
 /* Tags */
 .tags-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 2rem; }
-.tag {
-  padding: 5px 14px; border: 1px solid #ccc; border-radius: 20px;
-  font-size: 13px; color: #444; cursor: pointer; transition: all 0.2s;
-}
+.tag { padding: 5px 14px; border: 1px solid #ccc; border-radius: 20px; font-size: 13px; color: #444; cursor: pointer; transition: all 0.2s; }
 .tag:hover { border-color: #C8922A; color: #C8922A; }
 
 /* Sections */
@@ -815,18 +787,21 @@ watch(
 .nearby-name { font-size: 13px; font-weight: 600; color: #222; margin: 8px 4px 2px; }
 .nearby-location { font-size: 11px; color: #888; margin: 0 4px 8px; }
 
+/* Nearby */
+.nearby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.nearby-card { cursor: pointer; border-radius: 10px; overflow: hidden; transition: transform 0.2s; }
+.nearby-card:hover { transform: translateY(-4px); }
+.nearby-img { aspect-ratio: 4/3; overflow: hidden; }
+.nearby-img img { width: 100%; height: 100%; object-fit: cover; }
+.nearby-name { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-top: 6px; padding: 0 4px; }
+.nearby-location { font-size: 10px; color: #888; padding: 0 4px; letter-spacing: 0.05em; }
+
 /* Sidebar */
 .sidebar { position: sticky; top: 76px; }
 .sidebar-card { border: 1px solid #e0e0e0; border-radius: 14px; padding: 1.25rem; background: #fff; }
 .sidebar-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
 .sidebar-sub { font-size: 12px; color: #888; margin-bottom: 1rem; }
-
-.btn-add-trip {
-  display: flex; align-items: center; justify-content: center; gap: 7px;
-  width: 100%; padding: 10px; background: #C8922A; color: #fff; border: none;
-  border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
-  margin-bottom: 8px; transition: background 0.2s;
-}
+.btn-add-trip { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 10px; background: #C8922A; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 8px; transition: background 0.2s; }
 .btn-add-trip:hover { background: #b07820; }
 
 .btn-favorite {
@@ -852,13 +827,9 @@ watch(
 .province   { background: #ede7f6; }
 .info-label { font-size: 10px; letter-spacing: 0.08em; color: #aaa; margin-bottom: 1px; }
 .info-value { font-size: 13px; font-weight: 600; color: #222; }
-
 .cta-box { background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 12px; }
 .cta-box p { font-size: 12px; color: #555; line-height: 1.5; margin-bottom: 8px; }
-.btn-cta {
-  width: 100%; padding: 8px; background: #C8922A; color: #fff; border: none;
-  border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s;
-}
+.btn-cta { width: 100%; padding: 8px; background: #C8922A; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .btn-cta:hover { background: #b07820; }
 
 /* Responsive */
@@ -866,6 +837,7 @@ watch(
   .main-wrapper { grid-template-columns: 1fr; }
   .sidebar { position: static; }
   .photo-grid { grid-template-columns: repeat(2, 1fr); }
+  .nearby-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 600px) {
   .hero-title { font-size: 1.8rem; }

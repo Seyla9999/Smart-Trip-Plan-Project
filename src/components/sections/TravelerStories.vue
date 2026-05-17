@@ -5,10 +5,10 @@
         <h2 class="section-title">Traveler Stories</h2>
         <p class="section-sub">Real experiences from our community of travelers</p>
       </div>
-      <a href="/community" class="see-all">See All →</a>
+      <a href="/community" class="see-all">See All Ã¢â€ â€™</a>
     </div>
     <div class="scroll-wrap">
-      <button class="arrow left" @click="scroll(-1)">‹</button>
+      <button class="arrow left" @click="scroll(-1)">Ã¢â‚¬Â¹</button>
       <div class="scroll-track" ref="track">
         <template v-if="loading">
           <div v-for="i in 4" :key="i" class="scard skeleton">
@@ -67,20 +67,20 @@
               <div class="scard-title">{{ s.title }}</div>
               <div class="scard-foot">
                 <span class="scard-rating">{{ s.rating }}</span>
-                <span class="scard-likes">♡ {{ s.likes }}</span>
+                <span class="scard-likes">Ã¢â„¢Â¡ {{ s.likes }}</span>
               </div>
             </div>
           </div>
         </template>
 
       </div>
-      <button class="arrow right" @click="scroll(1)">›</button>
+      <button class="arrow right" @click="scroll(1)">Ã¢â‚¬Âº</button>
     </div>
   </section>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, PropType } from 'vue'
+import { defineComponent, ref, type PropType } from 'vue'
 import type { Story } from '@/services/home.service'
 
 const AVATAR_COLORS = ['#1D3557','#C8922A','#2D6A4F','#5C4B8A','#AE2012','#2196A6','#6B4C3B']
@@ -128,11 +128,11 @@ export default defineComponent({
     }
 
     const staticStories = [
-      { title: 'Cycling through the temples of Angkor at dawn', province: 'Siem Reap', image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=400&q=70', color: '#4A7C59', author: 'Dara Sok', initials: 'DS', avColor: '#1D3557', rating: '★★★★★', likes: 284 },
-      { title: 'A week of solitude on Koh Kong Sandkem', province: 'Koh Kong', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=70', color: '#2196A6', author: 'Sophea Ros', initials: 'SR', avColor: '#C8922A', rating: '★★★★★', likes: 197 },
-      { title: "Tasting my way through Siem Reap's markets", province: 'Siem Reap', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=70', color: '#7A6030', author: 'Judy Afkar', initials: 'JA', avColor: '#5C4B8A', rating: '★★★★☆', likes: 156 },
-      { title: 'Ethical elephant trekking in Mondulkiri', province: 'Mondulkiri', image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=70', color: '#3E6B47', author: 'Susan Park', initials: 'SP', avColor: '#2D6A4F', rating: '★★★★★', likes: 209 },
-      { title: 'Bokor Hill Station — misty roads and old ruins', province: 'Kampot', image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=400&q=70', color: '#5C7A3E', author: 'Kanha Sok', initials: 'KS', avColor: '#AE2012', rating: '★★★★☆', likes: 143 },
+      { title: 'Cycling through the temples of Angkor at dawn', province: 'Siem Reap', image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=400&q=70', color: '#4A7C59', author: 'Dara Sok', initials: 'DS', avColor: '#1D3557', rating: 'Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦', likes: 284 },
+      { title: 'A week of solitude on Koh Kong Sandkem', province: 'Koh Kong', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=70', color: '#2196A6', author: 'Sophea Ros', initials: 'SR', avColor: '#C8922A', rating: 'Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦', likes: 197 },
+      { title: "Tasting my way through Siem Reap's markets", province: 'Siem Reap', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=70', color: '#7A6030', author: 'Judy Afkar', initials: 'JA', avColor: '#5C4B8A', rating: 'Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€ ', likes: 156 },
+      { title: 'Ethical elephant trekking in Mondulkiri', province: 'Mondulkiri', image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=70', color: '#3E6B47', author: 'Susan Park', initials: 'SP', avColor: '#2D6A4F', rating: 'Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦', likes: 209 },
+      { title: 'Bokor Hill Station Ã¢â‚¬â€ misty roads and old ruins', province: 'Kampot', image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=400&q=70', color: '#5C7A3E', author: 'Kanha Sok', initials: 'KS', avColor: '#AE2012', rating: 'Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€ ', likes: 143 },
     ]
 
     return { track, scroll, getStoryImage, getInitials, getAvatarColor, formatDate, truncate, staticStories }

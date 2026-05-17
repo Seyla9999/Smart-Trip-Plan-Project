@@ -11,15 +11,15 @@
 
     <div class="hero-stats">
       <div class="stat-card">
-        <div class="stat-num">{{ stats.provinces || '—' }}</div>
+        <div class="stat-num">{{ stats.provinces || 'Ã¢â‚¬â€' }}</div>
         <div class="stat-label">Provinces</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num">{{ stats.attractions ? stats.attractions + '+' : '—' }}</div>
+        <div class="stat-num">{{ stats.attractions ? stats.attractions + '+' : 'Ã¢â‚¬â€' }}</div>
         <div class="stat-label">Attractions</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num">{{ stats.travelers || '—' }}</div>
+        <div class="stat-num">{{ stats.travelers || 'Ã¢â‚¬â€' }}</div>
         <div class="stat-label">Travelers</div>
       </div>
     </div>
@@ -59,15 +59,15 @@
           <span :class="dateDisplay ? 'date-filled' : 'date-placeholder'">
             {{ dateDisplay || "Pick Date" }}
           </span>
-          <span v-if="dateDisplay" class="date-clear" @click.stop="clearDates">✕</span>
+          <span v-if="dateDisplay" class="date-clear" @click.stop="clearDates">Ã¢Å“â€¢</span>
         </div>
         <div class="sf-opt">Optional</div>
 
         <div v-if="showCal" class="calendar-drop" @click.stop>
           <div class="cal-header">
-            <button class="cal-nav" @click="prevMonth">‹</button>
+            <button class="cal-nav" @click="prevMonth">Ã¢â‚¬Â¹</button>
             <span class="cal-month">{{ monthNames[calMonth] }} {{ calYear }}</span>
-            <button class="cal-nav" @click="nextMonth">›</button>
+            <button class="cal-nav" @click="nextMonth">Ã¢â‚¬Âº</button>
           </div>
           <div class="cal-grid">
             <div v-for="d in ['Su','Mo','Tu','We','Th','Fr','Sa']" :key="d" class="cal-day-label">{{ d }}</div>
@@ -86,7 +86,7 @@
           <div class="cal-footer">
             <span v-if="!startDate">Click to select check-in date</span>
             <span v-else-if="!endDate">Now select check-out date</span>
-            <span v-else>{{ formatDate(startDate) }} → {{ formatDate(endDate) }}</span>
+            <span v-else>{{ formatDate(startDate) }} Ã¢â€ â€™ {{ formatDate(endDate) }}</span>
             <button v-if="startDate || endDate" class="cal-reset" @click="clearDates">Reset</button>
           </div>
         </div>
@@ -126,7 +126,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onUnmounted, onMounted, PropType } from 'vue'
+import { defineComponent, ref, computed, onUnmounted, onMounted, type PropType } from 'vue'
 import type { Province } from '@/services/home.service'
 
 export default defineComponent({
@@ -221,7 +221,7 @@ export default defineComponent({
     function clearDates() { startDate.value = null; endDate.value = null }
     function openDatePicker() { showCal.value = !showCal.value }
     const dateDisplay = computed(() => {
-      if (startDate.value && endDate.value) return `${formatDate(startDate.value)} – ${formatDate(endDate.value)}`
+      if (startDate.value && endDate.value) return `${formatDate(startDate.value)} Ã¢â‚¬â€œ ${formatDate(endDate.value)}`
       if (startDate.value) return `From ${formatDate(startDate.value)}`
       return ''
     })
@@ -229,7 +229,7 @@ export default defineComponent({
     onMounted(() => document.addEventListener('click', handleOutsideClick))
     onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
 
-    // ── Quick search ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Quick search Ã¢â€â‚¬Ã¢â€â‚¬
     const quickTags = ['Angkor Wat', 'Kampot', 'Koh Kong', 'Phnom Penh', 'Mondulkiri']
     function toSlug(v: string) { return v.toLowerCase().trim().replace(/\s+/g, '-') }
     function doSearch() {
