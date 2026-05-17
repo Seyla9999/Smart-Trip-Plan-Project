@@ -143,12 +143,14 @@ export default defineComponent({
       document.addEventListener('click', handleClickOutside)
       window.addEventListener('user-logged-in', loadUser)
       window.addEventListener('storage', loadUser)
+      window.addEventListener('user-updated', loadUser)
     })
 
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)
       window.removeEventListener('user-logged-in', loadUser)
       window.removeEventListener('storage', loadUser)
+      window.removeEventListener('user-updated', loadUser)
     })
 
     return {

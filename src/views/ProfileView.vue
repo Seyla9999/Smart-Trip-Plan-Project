@@ -297,6 +297,7 @@ export default defineComponent({
     function saveUserLocally(updated: any) {
       localStorage.setItem(getStorageKey(), JSON.stringify(updated))
       user.value = { ...updated }
+      window.dispatchEvent(new Event('user-updated'))
     }
 
     async function loadProfile() {
@@ -314,7 +315,9 @@ export default defineComponent({
             const freshData = await freshRes.json()
             if (freshData.success && freshData.data) {
               
-              const updated = { ...localUser, ...freshData.data }
+              const updated = { ...localUser, ...freshData.data,
+                avatar_url: freshData.data.avatar_url || localUser.avatar_url,
+               }
               
               localStorage.setItem(getStorageKey(), JSON.stringify(updated))
               user.value = updated
