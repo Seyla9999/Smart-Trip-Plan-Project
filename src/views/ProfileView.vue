@@ -10,7 +10,6 @@
     </div>
     <div class="profile-header-wrap">
       <div class="container profile-header">
-
         <div class="avatar-outer">
           <div class="avatar-wrap">
             <div class="big-avatar" :style="{ background: avatarColor }">
@@ -24,7 +23,6 @@
           </div>
           <div class="role-badge" :class="user.role">{{ formatRole(user.role) }}</div>
         </div>
-
         <div class="header-right">
           <div class="profile-stats">
             <div class="pstat"><span class="pstat-num">{{ stats.trips }}</span><span class="pstat-lbl">Trips</span></div>
@@ -33,7 +31,6 @@
           </div>
           <p class="profile-bio" v-if="user.bio">{{ user.bio }}</p>
         </div>
-
         <div class="profile-actions">
           <button class="btn-edit" @click="activeTab = 'settings'">✏️ Edit Profile</button>
         </div>
@@ -51,6 +48,7 @@
         </div>
       </div>
     </div>
+
     <div class="tab-content container">
 
       <div v-if="activeTab === 'trips'">
@@ -69,8 +67,8 @@
             </div>
             <div class="tc-title">{{ t.title }}</div>
             <div class="tc-dates" v-if="t.start_date">📅 {{ formatDate(t.start_date) }} → {{ formatDate(t.end_date) }}</div>
-            <div class="tc-type"  v-if="t.travel_type">✈️ {{ t.travel_type }}</div>
-            <div class="tc-desc"  v-if="t.description">{{ truncate(t.description, 80) }}</div>
+            <div class="tc-type" v-if="t.travel_type">✈️ {{ t.travel_type }}</div>
+            <div class="tc-desc" v-if="t.description">{{ truncate(t.description, 80) }}</div>
           </div>
         </div>
       </div>
@@ -112,7 +110,7 @@
             <div class="bk-body">
               <div class="bk-name">{{ b.attraction?.name_en || 'Saved Place' }}</div>
               <div class="bk-prov" v-if="b.attraction?.province">📍 {{ b.attraction.province.name_en }}</div>
-              <div class="bk-cat"  v-if="b.attraction?.category">{{ b.attraction.category }}</div>
+              <div class="bk-cat" v-if="b.attraction?.category">{{ b.attraction.category }}</div>
             </div>
           </div>
         </div>
@@ -120,7 +118,6 @@
 
       <div v-if="activeTab === 'settings'" class="settings-section">
         <h2 class="settings-title">Edit Profile</h2>
-
         <div class="avatar-upload-row">
           <div class="aus-avatar" :style="{ background: avatarColor }">
             <img v-if="previewUrl || user.avatar_url" :src="previewUrl || user.avatar_url" class="avatar-img" />
@@ -136,7 +133,6 @@
             <span v-if="uploadMsg" class="upload-msg">{{ uploadMsg }}</span>
           </div>
         </div>
-
         <div class="settings-form">
           <div class="form-group">
             <label class="form-label">Full Name</label>
@@ -161,7 +157,6 @@
             <span v-if="saveMsg" class="save-msg" :class="saveMsgType">{{ saveMsg }}</span>
           </div>
         </div>
-
         <div class="settings-divider" />
         <h3 class="settings-subtitle">Change Password</h3>
         <div class="settings-form">
@@ -182,14 +177,12 @@
             <span v-if="pwMsg" class="save-msg" :class="pwMsgType">{{ pwMsg }}</span>
           </div>
         </div>
-
         <div class="settings-divider" />
         <div class="danger-zone">
           <h3 class="danger-title">⚠️ Danger Zone</h3>
           <p class="danger-desc">Once you delete your account, there is no going back.</p>
           <button class="btn-danger" @click="confirmDelete = true">Delete Account</button>
         </div>
-
         <div v-if="confirmDelete" class="modal-overlay" @click.self="confirmDelete = false">
           <div class="modal">
             <div class="modal-icon">⚠️</div>
@@ -210,7 +203,7 @@
     <div class="nli-icon">🔒</div>
     <h2 class="nli-title">Please log in to view your profile</h2>
     <div class="nli-actions">
-      <a href="/login"    class="btn-login-big">Login</a>
+      <a href="/login" class="btn-login-big">Login</a>
       <a href="/register" class="btn-signup-big">Sign Up Free</a>
     </div>
   </div>
@@ -248,7 +241,7 @@ export default defineComponent({
 
     const form    = ref({ full_name: '', username: '', email: '', bio: '' })
     const pwForm  = ref({ current: '', newPw: '', confirm: '' })
-    const saving  = ref(false)
+    const saving   = ref(false)
     const pwSaving = ref(false)
     const saveMsg  = ref('')
     const saveMsgType = ref('success')
@@ -291,7 +284,7 @@ export default defineComponent({
       const token = getToken()
       return {
         ...(isJson ? { 'Content-Type': 'application/json' } : {}),
-        ...(token   ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       }
     }
 
@@ -311,21 +304,44 @@ export default defineComponent({
                 || localStorage.getItem('user')
                 || localStorage.getItem('currentUser')
       if (!raw) { user.value = null; return }
+
       try {
-        user.value = JSON.parse(raw)
+        const localUser = JSON.parse(raw)
+        user.value = localUser
+        try {
+          const freshRes = await fetch(`${API_URL}/users/${localUser.id}`)
+          if (freshRes.ok) {
+            const freshData = await freshRes.json()
+            if (freshData.success && freshData.data) {
+              
+              const updated = { ...localUser, ...freshData.data }
+              
+              localStorage.setItem(getStorageKey(), JSON.stringify(updated))
+              user.value = updated
+            }
+          }
+        } catch {
+          
+        }
+
         form.value = {
           full_name: user.value.full_name || '',
           username:  user.value.username  || '',
           email:     user.value.email     || '',
           bio:       user.value.bio       || '',
         }
+
         const path = router.currentRoute.value.path
         if (path.includes('/trips'))     activeTab.value = 'trips'
         if (path.includes('/stories'))   activeTab.value = 'stories'
         if (path.includes('/bookmarks')) activeTab.value = 'bookmarks'
         if (path.includes('/settings'))  activeTab.value = 'settings'
+
         await Promise.allSettled([loadTrips(), loadStories(), loadBookmarks()])
-      } catch { user.value = null }
+
+      } catch {
+        user.value = null
+      }
     }
 
     async function loadTrips() {
@@ -367,27 +383,34 @@ export default defineComponent({
       saveMsg.value = ''
       try {
         const res = await fetch(`${API_URL}/users/${user.value.id}`, {
-          method: 'PUT', headers: getHeaders(),
+          method: 'PUT',
+          headers: getHeaders(),
           body: JSON.stringify({
             full_name: form.value.full_name,
             username:  form.value.username,
             bio:       form.value.bio,
           }),
         })
-        const updated = { ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }
+
         if (res.ok) {
-          const data = await res.json()
-          saveUserLocally({ ...updated, ...(data.data || data) })
-          saveMsg.value = '✅ Profile updated successfully!'
+          const data    = await res.json()
+          const updated = { ...user.value, ...(data.data || data) }
+          saveUserLocally(updated)
+          form.value.full_name = updated.full_name || ''
+          form.value.username  = updated.username  || ''
+          form.value.bio       = updated.bio       || ''
+          saveMsg.value     = '✅ Profile updated successfully!'
           saveMsgType.value = 'success'
         } else {
+          const updated = { ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }
           saveUserLocally(updated)
-          saveMsg.value     = res.status === 401 ? '✅ Saved locally! (Backend needs JWT)' : '⚠️ Saved locally. Backend error'
-          saveMsgType.value = 'success'
+          saveMsg.value     = '⚠️ Saved locally. Backend error'
+          saveMsgType.value = 'error'
         }
       } catch {
-        saveUserLocally({ ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio })
-        saveMsg.value = '✅ Saved locally!'
+        const updated = { ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }
+        saveUserLocally(updated)
+        saveMsg.value     = '✅ Saved locally! (Backend offline)'
         saveMsgType.value = 'success'
       } finally {
         saving.value = false
@@ -412,7 +435,9 @@ export default defineComponent({
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
         })
-        const avatarUrl = res.ok ? ((await res.json()).avatar_url || previewUrl.value) : previewUrl.value
+        const avatarUrl = res.ok
+          ? ((await res.json()).avatar_url || previewUrl.value)
+          : previewUrl.value
         saveUserLocally({ ...user.value, avatar_url: avatarUrl })
         uploadMsg.value = '✅ Photo updated!'
       } catch {
@@ -423,23 +448,44 @@ export default defineComponent({
     }
 
     async function changePassword() {
-      if (pwForm.value.newPw !== pwForm.value.confirm) { pwMsg.value = '❌ Passwords do not match!'; pwMsgType.value = 'error'; return }
+      if (pwForm.value.newPw !== pwForm.value.confirm) {
+        pwMsg.value = '❌ Passwords do not match!'
+        pwMsgType.value = 'error'
+        return
+      }
       pwSaving.value = true; pwMsg.value = ''
       try {
         const res = await fetch(`${API_URL}/users/${user.value.id}/change-password`, {
-          method: 'POST', headers: getHeaders(),
-          body: JSON.stringify({ current_password: pwForm.value.current, new_password: pwForm.value.newPw }),
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({
+            current_password: pwForm.value.current,
+            new_password: pwForm.value.newPw,
+          }),
         })
-        pwMsg.value = res.ok ? '✅ Password updated!' : '❌ Wrong current password.'
+        pwMsg.value     = res.ok ? '✅ Password updated!' : '❌ Wrong current password.'
         pwMsgType.value = res.ok ? 'success' : 'error'
         if (res.ok) pwForm.value = { current: '', newPw: '', confirm: '' }
-      } catch { pwMsg.value = '❌ Network error.'; pwMsgType.value = 'error' }
-      finally { pwSaving.value = false; setTimeout(() => { pwMsg.value = '' }, 3000) }
+      } catch {
+        pwMsg.value = '❌ Network error.'
+        pwMsgType.value = 'error'
+      } finally {
+        pwSaving.value = false
+        setTimeout(() => { pwMsg.value = '' }, 3000)
+      }
     }
 
     async function deleteAccount() {
-      try { await fetch(`${API_URL}/users/${user.value.id}/delete-account`, { method: 'POST', headers: getHeaders() }) }
-      finally { localStorage.clear(); sessionStorage.clear(); router.push('/') }
+      try {
+        await fetch(`${API_URL}/users/${user.value.id}/delete-account`, {
+          method: 'POST',
+          headers: getHeaders(),
+        })
+      } finally {
+        localStorage.clear()
+        sessionStorage.clear()
+        router.push('/')
+      }
     }
 
     async function removeBookmark(id: string) {
@@ -483,86 +529,33 @@ export default defineComponent({
 .cover-section { position: relative; height: 240px; overflow: hidden; }
 .cover-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #1a2340 0%, #2D6A4F 100%); }
 .cover-overlay { position: absolute; inset: 0; background: url('/hero/hero1.jpg') center/cover no-repeat; opacity: 0.25; }
-
-.cover-content {
-  position: absolute;
-  bottom: 10px;           
-  left: 310px;
-  text-align: left;
-  z-index: 2;
-}
-.cover-name {
-  font-family: 'Cinzel', serif;
-  font-size: 30px; font-weight: 700;
-  color: #fff;
-  text-shadow: 0 2px 16px rgba(0,0,0,0.55);
-  margin: 0 0 2px;
-}
+.cover-content { position: absolute; bottom: 10px; left: 310px; text-align: left; z-index: 2; }
+.cover-name { font-family: 'Cinzel', serif; font-size: 30px; font-weight: 700; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,0.55); margin: 0 0 2px; }
 .cover-username { font-size: 13px; color: rgba(255,255,255,0.65); margin: 0; }
 
 .profile-header-wrap { background: #fff; border-bottom: 1px solid #E0DDD6; }
 .profile-header { display: flex; align-items: center; gap: 20px; padding: 12px 0 16px; }
-
-.avatar-outer {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  margin-top: -56px;
-}
-
+.avatar-outer { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: -56px; }
 .avatar-wrap { position: relative; }
-.big-avatar {
-  width: 100px; height: 100px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  border: 4px solid #fff;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
-  overflow: hidden;
-}
+.big-avatar { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.18); overflow: hidden; }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .avatar-initials { font-size: 30px; font-weight: 700; color: #fff; font-family: 'Cinzel', serif; }
-
-.camera-btn {
-  position: absolute;
-  bottom: 2px; right: 2px;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: #1a2340; color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; cursor: pointer;
-  border: 2px solid #fff;
-  transition: background 0.2s;
-  z-index: 3;
-}
+.camera-btn { position: absolute; bottom: 2px; right: 2px; width: 28px; height: 28px; border-radius: 50%; background: #1a2340; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; border: 2px solid #fff; transition: background 0.2s; z-index: 3; }
 .camera-btn:hover { background: #C8922A; }
 .file-input { display: none; }
-
-.role-badge {
-  font-size: 9px; font-weight: 700;
-  padding: 3px 12px; border-radius: 20px;
-  white-space: nowrap; letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: 1.5px solid rgba(255,255,255,0.5);
-  margin-top: 2px;
-}
+.role-badge { font-size: 9px; font-weight: 700; padding: 3px 12px; border-radius: 20px; white-space: nowrap; letter-spacing: 0.06em; text-transform: uppercase; border: 1.5px solid rgba(255,255,255,0.5); margin-top: 2px; }
 .role-badge.traveler  { background: #C8922A; color: #fff; }
 .role-badge.admin     { background: #1D3557; color: #fff; }
 .role-badge.moderator { background: #2D6A4F; color: #fff; }
-
-
 .header-right { flex: 1; padding: 4px 0; }
 .profile-stats { display: flex; gap: 28px; margin-bottom: 8px; }
 .pstat { display: flex; flex-direction: column; align-items: center; }
 .pstat-num { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; color: #2D6A4F; line-height: 1; }
 .pstat-lbl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
 .profile-bio { font-size: 14px; color: #4a4a4a; line-height: 1.6; max-width: 480px; margin: 0; }
-
 .profile-actions { padding: 4px 0; flex-shrink: 0; }
 .btn-edit { padding: 9px 20px; background: #1a2340; border: none; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s; }
 .btn-edit:hover { background: #2D6A4F; }
-
 
 .tabs-bar { background: #fff; border-bottom: 1px solid #E0DDD6; }
 .tabs { display: flex; max-width: 1100px; margin: 0 auto; padding: 0 48px; }
@@ -570,7 +563,6 @@ export default defineComponent({
 .tab:hover  { color: #1a1a1a; }
 .tab.active { color: #2D6A4F; border-bottom-color: #2D6A4F; font-weight: 600; }
 .tab-content { padding: 36px 48px; }
-
 
 .loading-state { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 60px; color: #888; }
 .spinner { width: 20px; height: 20px; border: 2px solid #E0DDD6; border-top-color: #2D6A4F; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
@@ -608,7 +600,6 @@ export default defineComponent({
 .sc-date    { font-size: 11px; color: #888; margin-bottom: 6px; }
 .sc-preview { font-size: 12px; color: #666; line-height: 1.5; }
 
-
 .bookmarks-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .bookmark-card { background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #E0DDD6; cursor: pointer; transition: transform 0.2s; }
 .bookmark-card:hover { transform: translateY(-2px); }
@@ -624,7 +615,6 @@ export default defineComponent({
 .settings-title    { font-family: 'Cinzel', serif; font-size: 20px; color: #1a1a1a; margin-bottom: 24px; }
 .settings-subtitle { font-family: 'Cinzel', serif; font-size: 16px; color: #1a1a1a; margin-bottom: 20px; }
 .settings-divider  { height: 1px; background: #E0DDD6; margin: 32px 0; }
-
 .avatar-upload-row { display: flex; align-items: center; gap: 20px; padding: 20px; background: #F5F3EE; border-radius: 12px; border: 1px solid #E0DDD6; margin-bottom: 24px; }
 .aus-avatar { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden; font-family: 'Cinzel', serif; }
 .aus-info { flex: 1; }
@@ -633,7 +623,6 @@ export default defineComponent({
 .aus-btn   { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: #1a2340; color: #fff; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
 .aus-btn:hover { background: #2D6A4F; }
 .upload-msg { font-size: 12px; color: #3B6D11; margin-left: 8px; }
-
 .settings-form { display: flex; flex-direction: column; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-label { font-size: 12px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -649,13 +638,11 @@ export default defineComponent({
 .save-msg { font-size: 13px; line-height: 1.4; max-width: 320px; }
 .save-msg.success { color: #3B6D11; }
 .save-msg.error   { color: #854F0B; }
-
 .danger-zone  { background: #FFF5F5; border: 1px solid #FCCACA; border-radius: 12px; padding: 20px 24px; }
 .danger-title { font-size: 15px; font-weight: 600; color: #AE2012; margin-bottom: 6px; }
 .danger-desc  { font-size: 13px; color: #6B6B6B; margin-bottom: 14px; }
 .btn-danger   { padding: 9px 20px; background: #AE2012; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .btn-danger:hover { background: #8B1A0E; }
-
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .modal { background: #fff; border-radius: 16px; padding: 32px; max-width: 380px; width: 90%; text-align: center; }
 .modal-icon  { font-size: 36px; margin-bottom: 12px; }
@@ -664,7 +651,6 @@ export default defineComponent({
 .modal-actions { display: flex; gap: 12px; }
 .btn-cancel         { flex: 1; padding: 10px; border: 1.5px solid #E0DDD6; border-radius: 8px; background: none; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .btn-confirm-delete { flex: 1; padding: 10px; background: #AE2012; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
-
 .not-logged-in { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 48px; }
 .nli-icon  { font-size: 52px; }
 .nli-title { font-family: 'Cinzel', serif; font-size: 22px; color: #1a1a1a; }
@@ -675,6 +661,7 @@ export default defineComponent({
 @media (max-width: 768px) {
   .container, .tabs { padding: 0 20px; }
   .cover-name { font-size: 22px; }
+  .cover-content { left: 130px; }
   .trips-grid, .stories-grid, .bookmarks-grid { grid-template-columns: 1fr; }
   .tab-content { padding: 24px 20px; }
   .profile-stats { display: none; }
