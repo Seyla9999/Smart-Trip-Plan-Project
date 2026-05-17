@@ -98,7 +98,11 @@ const router = createRouter({
       path: '/about',
       name: 'about',
       component: AboutView,
-
+    },
+    {
+      path: '/map',
+      name: 'map',
+      component: () => import('../views/MapView.vue'),
     },
     {
       path: '/:pathMatch(.*)*',
@@ -127,6 +131,7 @@ router.beforeEach((to, _from, next) => {
     'province-detail',
     'place-detail',
     'AttractionDetail',
+    'map',
   ]
   const routeName = typeof to.name === 'string' ? to.name : ''
   
