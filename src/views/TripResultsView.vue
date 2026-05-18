@@ -151,6 +151,7 @@
             </div>
           </div>
 
+<<<<<<< HEAD
           <!-- Leaflet Map -->
           <div class="map-container">
             <div class="leaflet-map-wrapper">
@@ -158,10 +159,47 @@
               <div v-if="isLoadingRoute" class="map-loading-overlay">
                 <div class="map-loading-spinner"></div>
                 <span>Loading route...</span>
+=======
+          <!-- Interactive Map -->
+          <!-- <div class="map-container">
+            <div class="map-canvas">
+         
+              <svg class="map-background" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#f0f0f0" stroke-width="1"/>
+                  </pattern>
+                </defs>
+                <rect width="800" height="500" fill="#e8f5e9"/>
+                <rect width="800" height="500" fill="url(#grid)"/>
+           
+                <line x1="0" y1="250" x2="800" y2="250" stroke="#d4a574" stroke-width="20"/>
+                <line x1="400" y1="0" x2="400" y2="500" stroke="#d4a574" stroke-width="20"/>
+              </svg>
+
+          
+              <div class="map-center-marker">📍 {{ destinationName }}</div>
+
+        
+              <div
+                v-for="poi in filteredPOIs"
+                :key="poi.id"
+                class="map-marker"
+                :style="{ left: poi.x + '%', top: poi.y + '%' }"
+                @mouseenter="hoveredPOI = poi.id"
+                @mouseleave="hoveredPOI = null"
+              >
+                <div class="marker-icon">{{ poi.icon }}</div>
+                <div v-if="hoveredPOI === poi.id" class="marker-tooltip">
+                  <div class="tooltip-title">{{ poi.name }}</div>
+                  <div class="tooltip-desc">{{ poi.description }}</div>
+                  <div class="tooltip-distance">📍 {{ poi.distance }}</div>
+                </div>
+>>>>>>> 7897b74bfeae0cee94685c44811a8354658f725c
               </div>
             </div>
 
-            <!-- Map Legend -->
+    
             <div class="map-legend">
               <div class="legend-title">Available Services</div>
               <div class="legend-items">
@@ -188,6 +226,24 @@
                 </div>
               </div>
             </div>
+          </div> -->
+
+          <div class="map-container">
+            <div class="map-canvas" style="border: none;">
+              
+              <GoogleMap
+                :api-key="googleMapsApiKey"
+                style="width: 100%; height: 100%; min-height: 400px; border-radius: 8px;"
+                :center="mapCenter"
+                :zoom="13"
+              >
+                <Marker :options="{ position: mapCenter, title: destinationName }" />
+              </GoogleMap>
+
+            </div>
+
+            <div class="map-legend">
+               </div>
           </div>
         </div>
 
@@ -253,6 +309,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+<<<<<<< HEAD
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -263,7 +320,24 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 })
+=======
+import { GoogleMap, Marker } from 'vue3-google-map';
+>>>>>>> 7897b74bfeae0cee94685c44811a8354658f725c
 
+const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const provinceCoords: Record<string, { lat: number, lng: number }> = {
+  'phnom-penh': { lat: 11.5564, lng: 104.9282 },
+  'siem-reap': { lat: 13.3611, lng: 103.8595 },
+  'koh-kong': { lat: 11.6155, lng: 102.9838 },
+  'kampot': { lat: 10.6104, lng: 104.1814 },
+  'kep': { lat: 10.4833, lng: 104.3167 },
+  'battambang': { lat: 13.0957, lng: 103.2022 },
+  'mondulkiri': { lat: 12.4558, lng: 107.1881 }
+};
+
+const mapCenter = computed(() => {
+  return provinceCoords[destination.value] || { lat: 11.5564, lng: 104.9282 }; // Defaults to Phnom Penh
+});
 interface Attraction {
   id: number
   name: string

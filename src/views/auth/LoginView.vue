@@ -107,6 +107,7 @@ const handleLogin = async () => {
     })
     
     localStorage.setItem('user_data', JSON.stringify(res.data.user));
+    window.dispatchEvent(new Event('user-updated'))
     success.value = res.data.message
 
     setTimeout(() => {
