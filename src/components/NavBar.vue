@@ -36,10 +36,18 @@
           <transition name="drop">
             <div v-if="menuOpen" class="user-dropdown">
               <div class="dropdown-header">
-                <div class="dh-circle">{{ getInitials(user.full_name) }}</div>
+                <img
+                  v-if="user && user.avatar_url"
+                  :src="getAvatarSrc(user.avatar_url)"
+                  :alt="user.full_name"
+                  class="dh-avatar-img"
+                />
+                <div v-else class="dh-circle">
+                  {{ getInitials(user ? user.full_name : '') }}
+                </div>
                 <div class="dh-info">
-                  <div class="dh-name">{{ user.full_name }}</div>
-                  <div class="dh-email">{{ user.email }}</div>
+                  <div class="dh-name">{{ user ? user.full_name : 'Guest' }}</div>
+                  <div class="dh-email">{{ user ? user.email : '' }}</div>  
                 </div>
               </div>
               <div class="dd-divider" />
@@ -77,7 +85,15 @@
         </template>
         <div v-else class="mobile-user">
           <div class="mobile-user-info">
-            <div class="mobile-avatar">{{ getInitials(user.full_name) }}</div>
+            <img
+              v-if="user.avatar_url"
+              :src="getAvatarSrc(user.avatar_url)"
+              :alt="user.full_name"
+              class="mobile-avatar-img"
+            />
+            <div v-else class="mobile-avatar">
+              {{ getInitials(user.full_name) }}
+            </div>
             <span class="mobile-name">{{ user.full_name }}</span>
           </div>
           <a href="/profile"          class="mobile-dd-link" @click="mobileOpen = false">👤 My Profile</a>
@@ -195,11 +211,43 @@ export default defineComponent({
 .avatar-circle:hover { border-color: #fff; transform: scale(1.05); }
 .avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.3); }
 .user-dropdown { position: absolute; top: calc(100% + 12px); right: 0; width: 230px; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); border: 1px solid #E0DDD6; overflow: hidden; z-index: 999; }
-.dropdown-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #F5F3EE; }
-.dh-circle { width: 36px; height: 36px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; font-family: 'DM Sans', sans-serif; }
-.dh-info { min-width: 0; }
+.dropdown-header { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 14px 16px; 
+  background: #F5F3EE; 
+}
+.dh-avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(0, 0, 0, 0.05);
+}
+.dh-circle { 
+  width: 36px; 
+  height: 36px; 
+  background: #C8922A; 
+  border-radius: 50%; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 13px; 
+  font-weight: 700; 
+  color: #fff; 
+  flex-shrink: 0; 
+  font-family: 'DM Sans', sans-serif; 
+}
+.dh-info { 
+  min-width: 0; 
+  display: flex;
+  flex-direction: column;
+}
 .dh-name  { font-size: 13px; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-email { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 .dd-divider { height: 1px; background: #E0DDD6; }
 .dd-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 13px; color: #1a1a1a; text-decoration: none; transition: background 0.15s; font-family: 'DM Sans', sans-serif; width: 100%; background: none; border: none; cursor: pointer; text-align: left; }
 .dd-item:hover { background: #F5F3EE; }
@@ -220,6 +268,7 @@ export default defineComponent({
 .mobile-user { display: flex; flex-direction: column; gap: 8px; }
 .mobile-user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .mobile-avatar { width: 34px; height: 34px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+.mobile-avatar-img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0; }
 .mobile-name { color: #fff; font-size: 14px; font-family: 'DM Sans', sans-serif; }
 .mobile-dd-link { padding: 9px 0; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-family: 'DM Sans', sans-serif; border-bottom: 1px solid rgba(255,255,255,0.07); }
 .mobile-dd-link:hover { color: #fff; }
