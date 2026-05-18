@@ -25,7 +25,7 @@
           <button class="avatar-btn" @click="menuOpen = !menuOpen">
             <img
               v-if="user.avatar_url"
-              :src="user.avatar_url"
+              :src="getAvatarSrc(user.avatar_url)"
               :alt="user.full_name"
               class="avatar-img"
             />
@@ -95,16 +95,19 @@
 import { computed, defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default defineComponent({
   name: 'NavBar',
   setup() {
-    const mobileOpen = ref(false)
-    const menuOpen   = ref(false)
-    const menuRef    = ref<HTMLElement | null>(null)
-    const router     = useRouter()
-    const route      = useRoute()
+    const mobileOpen  = ref(false)
+    const menuOpen    = ref(false)
+    const menuRef     = ref<HTMLElement | null>(null)
+    const router      = useRouter()
+    const route       = useRoute()
     const currentPath = computed(() => route.path)
-    const user = ref<any>(null)
+    const user        = ref<any>(null)
+
     function loadUser() {
       const raw = localStorage.getItem('user_data')
                 || localStorage.getItem('user')
@@ -121,17 +124,26 @@ export default defineComponent({
       return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
     }
 
+    function getAvatarSrc(url: string | null): string {
+      if (!url) return ''
+      if (url.startsWith('data:'))  return url 
+      if (url.startsWith('http'))   return url 
+      if (url.startsWith('/uploads')) return `${BACKEND_URL}${url}` 
+      return url
+    }
+
     function handleLogout() {
       localStorage.removeItem('user_data')
       localStorage.removeItem('user')
       localStorage.removeItem('currentUser')
       localStorage.removeItem('token')
       localStorage.removeItem('access_token')
-      user.value   = null
+      user.value       = null
       menuOpen.value   = false
       mobileOpen.value = false
       router.push('/login')
     }
+
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
         menuOpen.value = false
@@ -142,21 +154,21 @@ export default defineComponent({
       loadUser()
       document.addEventListener('click', handleClickOutside)
       window.addEventListener('user-logged-in', loadUser)
-      window.addEventListener('storage', loadUser)
-      window.addEventListener('user-updated', loadUser)
+      window.addEventListener('storage',        loadUser)
+      window.addEventListener('user-updated',   loadUser)
     })
 
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)
       window.removeEventListener('user-logged-in', loadUser)
-      window.removeEventListener('storage', loadUser)
-      window.removeEventListener('user-updated', loadUser)
+      window.removeEventListener('storage',        loadUser)
+      window.removeEventListener('user-updated',   loadUser)
     })
 
     return {
       mobileOpen, menuOpen, menuRef,
       currentPath, user,
-      getInitials, handleLogout,
+      getInitials, getAvatarSrc, handleLogout,
     }
   },
 })
@@ -165,16 +177,13 @@ export default defineComponent({
 <style scoped>
 .navbar { background: #1a2340; height: 64px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
 .navbar-container { max-width: 1400px; margin: 0 auto; padding: 0 40px; height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-
 .navbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
 .logo-img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
 .logo-text { font-family: 'Cinzel', serif; font-size: 16px; font-weight: 700; color: #fff; white-space: nowrap; }
-
 .nav-links { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; flex: 1; justify-content: center; }
 .nav-link { display: flex; align-items: center; height: 64px; padding: 0 14px; color: rgba(255,255,255,0.65); text-decoration: none; font-size: 14px; font-family: 'DM Sans', sans-serif; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
 .nav-link:hover { color: #fff; }
 .nav-link.active { color: #fff; border-bottom-color: #C8922A; }
-
 .nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .btn-login { padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 6px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
 .btn-login:hover { background: rgba(255,255,255,0.1); color: #fff; }
@@ -196,7 +205,6 @@ export default defineComponent({
 .dd-item:hover { background: #F5F3EE; }
 .dd-logout { color: #AE2012; }
 .dd-logout:hover { background: #FFF0EF !important; }
-
 .drop-enter-active, .drop-leave-active { transition: opacity 0.15s, transform 0.15s; }
 .drop-enter-from, .drop-leave-to { opacity: 0; transform: translateY(-8px); }
 .hamburger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 8px; flex-shrink: 0; }
@@ -216,7 +224,6 @@ export default defineComponent({
 .mobile-dd-link { padding: 9px 0; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-family: 'DM Sans', sans-serif; border-bottom: 1px solid rgba(255,255,255,0.07); }
 .mobile-dd-link:hover { color: #fff; }
 .btn-logout-m { padding: 10px; background: transparent; border: 1px solid rgba(255,60,60,0.5); border-radius: 7px; color: #ff6b6b; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 4px; }
-
 @media (max-width: 1024px) { .nav-links { display: none; } .nav-actions { display: none; } .hamburger { display: flex; } }
 @media (max-width: 600px) { .navbar-container { padding: 0 20px; } .logo-text { font-size: 14px; } }
 </style>
