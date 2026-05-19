@@ -88,4 +88,24 @@ export class UsersService {
     )
     return { success: true, data: stories }
   }
+  async getNotifications(userId: string) {
+    const data = await this.repo.manager.query(
+      `SELECT * FROM notifications 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 20`,
+      [userId]
+    )
+    const unread = data.filter((n: any) => !n.is_read).length
+    return { success: true, data, unread }
+  }
+
+  async markNotificationsRead(userId: string) {
+    await this.repo.manager.query(
+      `UPDATE notifications SET is_read = true WHERE user_id = $1`,
+      [userId]
+    )
+    return { success: true }
+  }
+  
 }
