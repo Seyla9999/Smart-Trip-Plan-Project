@@ -37,6 +37,24 @@ export class UsersController {
     return { success: true, data: safe }
   }
 
+  @Get(':id/notifications')
+  async getNotifications(@Param('id') id: string) {
+    try {
+      return await this.service.getNotifications(id)
+    } catch (e: any) {
+      return { success: false, message: e.message }
+    }
+  }
+
+  @Put(':id/notifications/read')
+  async markAllRead(@Param('id') id: string) {
+    try {
+      return await this.service.markNotificationsRead(id)
+    } catch (e: any) {
+      return { success: false, message: e.message }
+    }
+  }
+
   // GET /users/:id/stories
   @Get(':id/stories')
   @HttpCode(HttpStatus.OK)
