@@ -1,19 +1,29 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, Min, Max } from 'class-validator'
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+  Max,
+  IsArray,
+  IsObject,
+} from 'class-validator'
 
 export class CreateAttractionDto {
-  @IsNumber()
-  province_id!: number
-
   @IsOptional()
+  @IsNumber()
+  province_id?: number
+
   @IsString()
-  name_en?: string
+  name_en!: string
 
   @IsOptional()
   @IsString()
   name_kh?: string
 
+  @IsOptional()
   @IsString()
-  category!: string
+  category?: string
 
   @IsOptional()
   @IsString()
@@ -32,4 +42,21 @@ export class CreateAttractionDto {
   @Min(0)
   @Max(5)
   average_rating?: number
+
+  @IsOptional()
+  @IsString()
+  hero_image?: string
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[]
+
+  @IsOptional()
+  @IsObject()
+  nearby_images?: object
+
+  @IsOptional()
+  @IsString()
+  image_url?: string
 }
