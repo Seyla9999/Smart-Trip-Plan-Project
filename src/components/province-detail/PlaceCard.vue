@@ -2,7 +2,7 @@
 import { ref } from "vue";
 
 type Place = {
-  id: number | string;
+  id: string | number;
   name: string;
   province: string;
   category: string;

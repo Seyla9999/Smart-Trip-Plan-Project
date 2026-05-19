@@ -25,7 +25,7 @@ export interface CommunityAuthor {
 }
 
 export interface CommunityStory {
-  id: number
+  id: string
   title: string
   excerpt: string
   image?: string
@@ -160,7 +160,7 @@ const authors: CommunityAuthor[] = [
 
 export const communityStories: CommunityStory[] = [
   {
-    id: 1,
+    id: 'local-1',
     title: 'Kayaking through Koh Kong mangroves before the tide changed',
     excerpt:
       'We left at sunrise with a local guide, found glassy water, and stopped at a floating platform for coffee while hornbills crossed overhead.',
@@ -175,7 +175,7 @@ export const communityStories: CommunityStory[] = [
     liked: false,
   },
   {
-    id: 2,
+    id: 'local-2',
     title: 'A full day on Koh Rong with no plan except finding the quietest beach',
     excerpt:
       'Long walks, clear water, and a sunset that made the entire west coast glow. The smaller coves were worth the extra hike.',
@@ -190,7 +190,7 @@ export const communityStories: CommunityStory[] = [
     liked: true,
   },
   {
-    id: 3,
+    id: 'local-3',
     title: 'Bou Sra waterfall was louder and wider than I expected',
     excerpt:
       'The second drop had fewer people in the afternoon, and the mist kept the whole trail cool even in the dry season.',
@@ -205,7 +205,7 @@ export const communityStories: CommunityStory[] = [
     liked: false,
   },
   {
-    id: 4,
+    id: 'local-4',
     title: 'Bokor viewpoints, abandoned buildings, and the best road trip fog',
     excerpt:
       'The mountain road felt cinematic all morning. Start early, stop often, and bring a jacket because the wind is real near the top.',
@@ -220,7 +220,7 @@ export const communityStories: CommunityStory[] = [
     liked: false,
   },
   {
-    id: 5,
+    id: 'local-5',
     title: 'Siem Reap after dark: temple stories, Apsara dance, and old market lanes',
     excerpt:
       'This was not a checklist day. We slowed down, talked to guides, and ended up learning more from the people than from the itinerary.',
@@ -235,7 +235,7 @@ export const communityStories: CommunityStory[] = [
     liked: true,
   },
   {
-    id: 6,
+    id: 'local-6',
     title: 'Kep crab market lunch guide for anyone who wants the fresh stuff',
     excerpt:
       'Go before the biggest lunch rush, order Kampot pepper crab first, and save room for grilled squid from the stalls near the pier.',
@@ -250,7 +250,7 @@ export const communityStories: CommunityStory[] = [
     liked: false,
   },
   {
-    id: 7,
+    id: 'local-7',
     title: 'Cardamom forest trail notes from a two-day eco camp',
     excerpt:
       'Leeches, rain, and one unforgettable night chorus. It was rough in the best way and still felt accessible with a guide.',
