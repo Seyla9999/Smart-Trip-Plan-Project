@@ -104,29 +104,29 @@ const router = createRouter({
       component: AboutView,
     },
     {
-      path: '/profile',
-      name: 'profile',
+      path: "/profile",
+      name: "profile",
       component: ProfileView,
     },
     {
-      path: '/profile/trips',
+      path: "/profile/trips",
       component: ProfileView,
     },
     {
-      path: '/profile/stories',
+      path: "/profile/stories",
       component: ProfileView,
     },
     {
-      path: '/profile/bookmarks',
+      path: "/profile/bookmarks",
       component: ProfileView,
     },
     {
-      path: '/profile/settings',
+      path: "/profile/settings",
       component: ProfileView,
     },
     {
-      path: '/:pathMatch(.*)*',
-      redirect: '/',
+      path: "/:pathMatch(.*)*",
+      redirect: "/",
     },
   ],
   scrollBehavior(_to, _from, savedPosition) {

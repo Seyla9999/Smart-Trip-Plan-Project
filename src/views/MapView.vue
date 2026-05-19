@@ -1,312 +1,323 @@
-<script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
-
-type Province = {
-  id: number;
-  nameEn: string;
-  nameKh?: string;
-  description?: string | null;
-  mainImageUrl?: string | null;
-};
-
-type Attraction = {
-  id: string;
-  provinceId: number;
-  nameEn: string;
-  nameKh?: string | null;
-  category?: string | null;
-  description?: string | null;
-  location?: string | null;
-  isHiddenGem?: boolean;
-  averageRating?: number | string;
-};
-
-const API_BASE = "http://localhost:3000";
-
-const route = useRoute();
-const router = useRouter();
-
-const provinceSlug = computed(() => String(route.query.province || ""));
-const provinceName = computed(() =>
-  provinceSlug.value
-    ? provinceSlug.value
-        .split("-")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ")
-    : "Map View",
-);
-
-const isLoading = ref(false);
-const errorMessage = ref("");
-const selectedProvince = ref<Province | null>(null);
-const attractions = ref<Attraction[]>([]);
-
-function toSlug(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-async function loadMapData() {
-  isLoading.value = true;
-  errorMessage.value = "";
-  selectedProvince.value = null;
-  attractions.value = [];
-
-  try {
-    const provincesResponse = await fetch(`${API_BASE}/provinces`);
-    if (!provincesResponse.ok) {
-      throw new Error("Failed to load provinces.");
-    }
-
-    const provincesData = await provincesResponse.json();
-    const provinces: Province[] = Array.isArray(provincesData)
-      ? provincesData
-      : provincesData?.provinces || provincesData?.data || [];
-
-    const matchedProvince = provinces.find(
-      (province) => toSlug(province.nameEn) === provinceSlug.value,
-    );
-
-    if (!matchedProvince) {
-      throw new Error("Province not found for map view.");
-    }
-
-    selectedProvince.value = matchedProvince;
-
-    const attractionsResponse = await fetch(
-      `${API_BASE}/attractions/province/${matchedProvince.id}`,
-    );
-
-    if (!attractionsResponse.ok) {
-      throw new Error("Failed to load attractions for map.");
-    }
-
-    const attractionsData = await attractionsResponse.json();
-    attractions.value = Array.isArray(attractionsData)
-      ? attractionsData
-      : attractionsData?.data || attractionsData?.attractions || [];
-  } catch (error) {
-    errorMessage.value =
-      error instanceof Error ? error.message : "Failed to load map data.";
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-function backToProvince() {
-  if (provinceSlug.value) {
-    router.push(`/province/${provinceSlug.value}`);
-    return;
-  }
-
-  router.push("/discover");
-}
-
-onMounted(() => {
-  if (provinceSlug.value) {
-    loadMapData();
-  } else {
-    errorMessage.value = "No province selected for map view.";
-  }
-});
-</script>
-
 <template>
-  <main class="map-page">
-    <div class="page-container">
-      <div class="map-header">
-        <div>
-          <p class="eyebrow">MAP VIEW</p>
-          <h1>{{ selectedProvince?.nameEn || provinceName }}</h1>
-          <p class="subtext">
-            {{ attractions.length }} places shown for this province
-          </p>
-        </div>
-
-        <button class="back-btn" @click="backToProvince">Back</button>
-      </div>
-
-      <div v-if="isLoading" class="status-box">Loading map data...</div>
-      <div v-else-if="errorMessage" class="status-box error-box">
-        {{ errorMessage }}
-      </div>
-      <div v-else class="map-layout">
-        <section class="map-placeholder">
-          <div class="map-box">
-            <p class="map-title">Map area</p>
-            <p class="map-note">
-              Replace this placeholder with your real map component later.
-            </p>
-          </div>
-        </section>
-
-        <aside class="place-list">
-          <h2>Places</h2>
-
-          <div v-if="!attractions.length" class="status-box">
-            No places found for this province.
-          </div>
-
-          <div v-for="place in attractions" :key="place.id" class="place-item">
-            <h3>{{ place.nameEn }}</h3>
-            <p>{{ place.category || "Uncategorized" }}</p>
-            <span>⭐ {{ place.averageRating || 0 }}</span>
-          </div>
-        </aside>
-      </div>
+  <div class="map-page">
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <button
+        v-for="cat in categories"
+        :key="cat"
+        :class="['filter-chip', { active: selectedCategory === cat }]"
+        @click="applyFilter(cat)"
+      >{{ cat }}</button>
     </div>
-  </main>
+
+    <!-- Body -->
+    <div class="map-body">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <p class="sidebar-count">
+          <span v-if="loading">Loading…</span>
+          <span v-else>{{ filteredAttractions.length }} attractions</span>
+        </p>
+        <div
+          v-for="a in filteredAttractions"
+          :key="a.id"
+          class="sidebar-card"
+          @click="panToAttraction(a)"
+        >
+          <img :src="a.hero_image || fallback" :alt="a.name_en" class="sidebar-img" />
+          <div class="sidebar-info">
+            <p class="sidebar-name">{{ a.name_en }}</p>
+            <p class="sidebar-cat">{{ a.category || 'Attraction' }}</p>
+            <p class="sidebar-rating">★ {{ Number(a.average_rating).toFixed(1) }}</p>
+          </div>
+        </div>
+        <p v-if="!loading && filteredAttractions.length === 0" class="sidebar-empty">
+          No attractions in this category.
+        </p>
+      </aside>
+
+      <!-- Map -->
+      <div ref="mapEl" class="map-container"></div>
+    </div>
+  </div>
 </template>
 
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import API from '@/api/axios'
+
+const fallback = 'https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg'
+
+const categories = [
+  'All', 'Nature', 'Culture', 'Adventure', 'Historical',
+  'Religious', 'Urban', 'Beach', 'Culinary', 'Eco-Tourism',
+]
+
+const attractions     = ref<any[]>([])
+const selectedCategory = ref('All')
+const loading         = ref(true)
+const mapEl           = ref<HTMLElement | null>(null)
+
+let leafletMap: any = null
+const activeMarkers = new Map<string, any>()
+
+const filteredAttractions = computed(() =>
+  selectedCategory.value === 'All'
+    ? attractions.value
+    : attractions.value.filter(a => a.category === selectedCategory.value)
+)
+
+function getCoords(a: any): { lat: number; lng: number } | null {
+  const loc = a.location
+  if (!loc) return null
+  if (loc.coordinates?.length >= 2) return { lng: loc.coordinates[0], lat: loc.coordinates[1] }
+  if (loc.x !== undefined && loc.y !== undefined) return { lng: loc.x, lat: loc.y }
+  return null
+}
+
+function slugOrId(a: any) {
+  return a.slug || a.name_en?.toLowerCase().replace(/\s+/g, '-') || a.id
+}
+
+function buildMarkers() {
+  if (!leafletMap) return
+  const L = (window as any).L
+
+  // Clear old markers
+  activeMarkers.forEach(m => leafletMap.removeLayer(m))
+  activeMarkers.clear()
+
+  for (const a of filteredAttractions.value) {
+    const coords = getCoords(a)
+    if (!coords) continue
+
+    const icon = L.divIcon({
+      html: `<div class="map-pin-main"><span style="transform:rotate(45deg);display:block">★</span></div>`,
+      className: 'map-icon-wrapper',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -34],
+    })
+
+    const marker = L.marker([coords.lat, coords.lng], { icon })
+      .addTo(leafletMap)
+      .bindPopup(`
+        <div style="min-width:160px">
+          <b style="font-size:14px">${a.name_en}</b><br>
+          <span style="color:#888;font-size:12px">${a.category || 'Attraction'}</span><br>
+          <span style="color:#C8922A;font-size:13px">★ ${Number(a.average_rating).toFixed(1)}</span><br>
+          <a href="/attraction/${slugOrId(a)}"
+             style="display:inline-block;margin-top:6px;color:#C8922A;font-weight:600;font-size:13px;text-decoration:none">
+            View Details →
+          </a>
+        </div>
+      `)
+
+    activeMarkers.set(a.id, marker)
+  }
+}
+
+async function loadLeaflet(): Promise<void> {
+  if ((window as any).L) return
+  return new Promise((resolve, reject) => {
+    const link = document.createElement('link')
+    link.rel  = 'stylesheet'
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    document.head.appendChild(link)
+
+    const script = document.createElement('script')
+    script.src   = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.onload  = () => resolve()
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+
+async function initMap() {
+  await loadLeaflet()
+  await nextTick()
+  if (!mapEl.value) return
+
+  const L = (window as any).L
+  if (leafletMap) { leafletMap.remove(); leafletMap = null }
+
+  leafletMap = L.map(mapEl.value).setView([12.5657, 104.9910], 7)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(leafletMap)
+
+  buildMarkers()
+}
+
+function applyFilter(cat: string) {
+  selectedCategory.value = cat
+  buildMarkers()
+}
+
+function panToAttraction(a: any) {
+  const coords = getCoords(a)
+  if (!coords || !leafletMap) return
+  leafletMap.flyTo([coords.lat, coords.lng], 13, { duration: 0.8 })
+  const marker = activeMarkers.get(a.id)
+  if (marker) setTimeout(() => marker.openPopup(), 850)
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await API.get('/attractions', { params: { limit: 200 } })
+    attractions.value = data.data ?? data
+  } catch (e) {
+    console.error('Failed to load attractions:', e)
+  } finally {
+    loading.value = false
+  }
+  await initMap()
+})
+
+onUnmounted(() => {
+  if (leafletMap) { leafletMap.remove(); leafletMap = null }
+})
+</script>
+
 <style scoped>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 .map-page {
-  min-height: 100vh;
-  background: #f7f5f0;
-  padding: 40px 0 60px;
-}
-
-.page-container {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.map-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 28px;
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  color: #566286;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-h1 {
-  margin: 0 0 8px;
-  color: #15543f;
-  font-size: 48px;
-  line-height: 1.1;
-  font-family: Georgia, "Times New Roman", serif;
-}
-
-.subtext {
-  margin: 0;
-  color: #6e7485;
-}
-
-.back-btn {
-  border: 1px solid #d9dfeb;
-  background: white;
-  color: #15543f;
-  border-radius: 10px;
-  padding: 12px 18px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.map-layout {
-  display: grid;
-  grid-template-columns: 1.4fr 0.8fr;
-  gap: 24px;
-}
-
-.map-box {
-  min-height: 520px;
-  border-radius: 20px;
-  border: 1px solid #d9dfeb;
-  background: linear-gradient(180deg, #dfe8f2 0%, #eef3f8 100%);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  height: calc(100vh - 64px);
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
   align-items: center;
-  color: #566286;
-  text-align: center;
-  padding: 24px;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
 }
+.filter-bar::-webkit-scrollbar { display: none; }
 
-.map-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.map-note {
-  max-width: 320px;
-  line-height: 1.6;
-}
-
-.place-list {
-  background: white;
-  border: 1px solid #e4e7ee;
+.filter-chip {
+  white-space: nowrap;
+  padding: 6px 16px;
   border-radius: 20px;
-  padding: 20px;
+  border: 1px solid #d0d0d0;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #444;
+  cursor: pointer;
+  transition: all 0.18s;
+  flex-shrink: 0;
+}
+.filter-chip:hover  { border-color: #C8922A; color: #C8922A; }
+.filter-chip.active { background: #C8922A; border-color: #C8922A; color: #fff; }
+
+/* Body */
+.map-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
-.place-list h2 {
-  margin: 0 0 16px;
-  color: #15543f;
+/* Sidebar */
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid #e8e8e8;
+  background: #fafafa;
 }
 
-.place-item {
-  padding: 14px 0;
-  border-bottom: 1px solid #eef1f5;
-}
-
-.place-item:last-child {
-  border-bottom: 0;
-}
-
-.place-item h3 {
-  margin: 0 0 6px;
-  color: #1f2430;
-}
-
-.place-item p {
-  margin: 0 0 6px;
-  color: #6e7485;
-}
-
-.place-item span {
-  color: #15543f;
+.sidebar-count {
+  padding: 12px 16px 8px;
+  font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #888;
+  text-transform: uppercase;
+  border-bottom: 1px solid #efefef;
 }
 
-.status-box {
-  padding: 18px 20px;
-  background: #ffffff;
-  border: 1px solid #e4e7ee;
-  border-radius: 16px;
-  color: #5f6678;
+.sidebar-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #efefef;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sidebar-card:hover { background: #fff3e0; }
+
+.sidebar-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
-.error-box {
-  color: #b42318;
-  border-color: #f0c7c3;
-  background: #fff7f6;
+.sidebar-info { flex: 1; min-width: 0; }
+.sidebar-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-cat  { font-size: 11px; color: #888; margin-bottom: 4px; }
+.sidebar-rating { font-size: 13px; color: #C8922A; font-weight: 600; }
+
+.sidebar-empty {
+  padding: 24px 16px;
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
 }
 
-@media (max-width: 1024px) {
-  .map-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .map-header {
-    flex-direction: column;
-  }
-
-  h1 {
-    font-size: 36px;
-  }
+/* Map */
+.map-container {
+  flex: 1;
+  height: 100%;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .map-page { height: auto; }
+  .map-body  { flex-direction: column; }
+  .sidebar   { width: 100%; height: 240px; border-right: none; border-bottom: 1px solid #e8e8e8; }
+  .map-container { height: 60vh; }
+}
+</style>
+
+<!-- Leaflet icon override must be global (not scoped) -->
+<style>
+.map-icon-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+.map-pin-main {
+  background: #C8922A;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+.map-pin-main span { transform: rotate(45deg); display: block; }
 </style>

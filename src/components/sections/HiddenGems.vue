@@ -5,7 +5,7 @@
         <h2 class="section-title">Hidden Gems</h2>
         <p class="section-sub">Off the beaten path secrets of Cambodia</p>
       </div>
-      <a href="/discover?filter=hidden-gems" class="see-all">See All →</a>
+      <a href="/discover?filter=hidden-gems" class="see-all">See All Ã¢â€ â€™</a>
     </div>
 
     <div v-if="loading" class="gems-grid">
@@ -27,7 +27,7 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">{{ gems[0].name_en }}</div>
-            <div class="gem-prov">📍 {{ gems[0].province?.name_en }}</div>
+            <div class="gem-prov">Ã°Å¸â€œÂ {{ gems[0].province?.name_en }}</div>
             <div class="gem-rating">{{ getStars(gems[0].average_rating) }}</div>
           </div>
         </div>
@@ -49,7 +49,7 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">{{ gem.name_en }}</div>
-            <div class="gem-prov">📍 {{ gem.province?.name_en }}</div>
+            <div class="gem-prov">Ã°Å¸â€œÂ {{ gem.province?.name_en }}</div>
           </div>
         </div>
       </div>
@@ -61,7 +61,7 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">Banteay Chhmar</div>
-            <div class="gem-prov">📍 Banteay Meanchey</div>
+            <div class="gem-prov">Ã°Å¸â€œÂ Banteay Meanchey</div>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@
           <div class="gem-content">
             <span class="gem-badge">Hidden Gem</span>
             <div class="gem-name">{{ g.name }}</div>
-            <div class="gem-prov">📍 {{ g.province }}</div>
+            <div class="gem-prov">Ã°Å¸â€œÂ {{ g.province }}</div>
           </div>
         </div>
       </div>
@@ -80,10 +80,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import type { Attraction } from '@/services/home.service'
 
-const STAR_MAP = ['','★☆☆☆☆','★★☆☆☆','★★★☆☆','★★★★☆','★★★★★']
+const STAR_MAP = ['','Ã¢Ëœâ€¦Ã¢Ëœâ€ Ã¢Ëœâ€ Ã¢Ëœâ€ Ã¢Ëœâ€ ','Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€ Ã¢Ëœâ€ Ã¢Ëœâ€ ','Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€ Ã¢Ëœâ€ ','Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€ ','Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦']
 
 export default defineComponent({
   name: 'HiddenGems',
@@ -100,7 +100,7 @@ export default defineComponent({
 
     function getStars(rating: number): string {
       const r = Math.min(Math.round(Number(rating) || 0), 5)
-      return STAR_MAP[r] || '★★★☆☆'
+      return STAR_MAP[r] || 'Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€¦Ã¢Ëœâ€ Ã¢Ëœâ€ '
     }
 
     const staticGems = [
