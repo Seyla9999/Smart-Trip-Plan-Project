@@ -167,8 +167,6 @@ export class AttractionsService {
       reviews,
       nearby,
     }
-    const nearbyPOIs = await this.findNearbyPointsOfInterest(attraction as any)
-    return { ...attraction, nearbyPOIs }
   }
 
   async findNearbyPointsOfInterest(attraction: any) {

@@ -11,6 +11,7 @@ import {
   UploadedFile,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
+import { File as MulterFile } from 'multer'
 import { diskStorage } from 'multer'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -97,7 +98,7 @@ export class UsersController {
   )
   async uploadAvatar(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
   ) {
     try {
       if (!file) return { success: false, message: 'No file uploaded' }
