@@ -12,40 +12,38 @@ export class BookmarksService {
   ) {}
 
   async create(userId: string, dto: CreateBookmarkDto) {
-    const existingBookmark = await this.bookmarkRepo.findOne({
-      where: { user_id: userId, place_id: dto.place_id },
-    })
+    const existing = await this.bookmarkRepo.manager.query(
+      `SELECT id, entity_type, entity_id, created_at
+       FROM bookmarks
+       WHERE user_id = $1 AND entity_id = $2
+       LIMIT 1`,
+      [userId, dto.entity_id],
+    )
+    if (existing.length > 0) return existing[0]
 
-    if (existingBookmark) {
-      throw new Error('Place already bookmarked')
-    }
-
-    const bookmark = this.bookmarkRepo.create({
-      user_id: userId,
-      ...dto,
-    })
-
-    return this.bookmarkRepo.save(bookmark)
+    const result = await this.bookmarkRepo.manager.query(
+      `INSERT INTO bookmarks (user_id, entity_type, entity_id)
+       VALUES ($1, $2, $3)
+       RETURNING id, entity_type, entity_id, created_at`,
+      [userId, dto.entity_type, dto.entity_id],
+    )
+    return result[0]
   }
 
-  async getUserBookmarks(userId: string, status: string = 'active') {
-    return this.bookmarkRepo.find({
-      where: { user_id: userId, status },
-      order: { created_at: 'DESC' },
-    })
+  async getUserBookmarks(userId: string) {
+    return this.bookmarkRepo.manager.query(
+      `SELECT id, entity_type, entity_id, created_at
+       FROM bookmarks
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId],
+    )
   }
 
   async removeBookmark(userId: string, bookmarkId: string) {
-    return this.bookmarkRepo.delete({
-      id: bookmarkId,
-      user_id: userId,
-    })
-  }
-
-  async archiveBookmark(userId: string, bookmarkId: string) {
-    return this.bookmarkRepo.update(
-      { id: bookmarkId, user_id: userId },
-      { status: 'archived' },
+    return this.bookmarkRepo.manager.query(
+      `DELETE FROM bookmarks WHERE id = $1 AND user_id = $2`,
+      [bookmarkId, userId],
     )
   }
 }

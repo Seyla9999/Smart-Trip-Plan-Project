@@ -36,6 +36,9 @@ export class Attraction {
   @Column({ nullable: true })
   category!: string
 
+  @Column({ type: 'text', nullable: true })
+  description?: string
+
   @Column({ type: 'geometry', spatialFeatureType: 'Point', srid: 4326, nullable: true })
   location?: any
 
