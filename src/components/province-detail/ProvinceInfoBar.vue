@@ -1,8 +1,15 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from "vue";
+import { RouterLink } from "vue-router";
+
+const props = defineProps<{
   provinceName: string;
   totalPlaces: number;
 }>();
+
+const provinceSlug = computed(() =>
+  props.provinceName.toLowerCase().trim().replace(/\s+/g, "-"),
+);
 </script>
 
 <template>
@@ -12,7 +19,9 @@ defineProps<{
         {{ totalPlaces }} attractions found in {{ provinceName }} — view them
         all on the map
       </p>
-      <a href="#" class="map-link">OPEN MAP VIEW →</a>
+      <RouterLink :to="`/map?province=${provinceSlug}`" class="map-link">
+        OPEN MAP VIEW →
+      </RouterLink>
     </div>
   </section>
 </template>
