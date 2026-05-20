@@ -64,7 +64,7 @@ function formatQueryDate(dateString: string) {
 
 const displayDateRange = computed(() => {
   if (fromDate.value && toDate.value) {
-    return `${formatQueryDate(fromDate.value)} â€“ ${formatQueryDate(toDate.value)}`;
+    return `${formatQueryDate(fromDate.value)} – ${formatQueryDate(toDate.value)}`;
   }
 
   if (fromDate.value) {
@@ -280,19 +280,6 @@ function openPlaceDetail(place: Place) {
           class="content-layout"
           :class="{ 'map-mode-layout': showMapView }"
         >
-        <div class="breadcrumb">
-          <RouterLink to="/" class="breadcrumb-link">HOME</RouterLink>
-          <span>â€º</span>
-          <RouterLink to="/discover" class="breadcrumb-link">
-            DISCOVER
-          </RouterLink>
-          <span>â€º</span>
-          <strong>{{
-            (backendProvince?.nameEn || provinceName).toUpperCase()
-          }}</strong>
-        </div>
-
-        <div class="content-layout">
           <ProvinceFilters
             v-if="!showMapView"
             :selected-travel-type="selectedTravelType"
@@ -322,76 +309,6 @@ function openPlaceDetail(place: Place) {
               <FeaturedPlaceCard
                 v-if="featuredPlace"
                 :place="featuredPlace"
-            <div class="content-top">
-              <div>
-                <h1>
-                  {{ backendProvince?.nameEn || provinceName }} attractions
-                </h1>
-                <p class="results-text">
-                  {{ totalResults }} results Â· {{ selectedTravelType }} trip Â·
-                  {{ displayDateRange }}
-                </p>
-
-                <div class="tag-row">
-                  <span class="filter-tag">{{ selectedTravelType }}</span>
-
-                  <span
-                    v-for="item in categoryFilters.filter((i) => i.checked)"
-                    :key="item.name"
-                    class="filter-tag"
-                  >
-                    {{ item.name }}
-                  </span>
-
-                  <span
-                    v-for="item in discoveryFilters.filter((i) => i.checked)"
-                    :key="item.name"
-                    class="filter-tag"
-                  >
-                    {{ item.name }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="top-actions">
-                <button
-                  class="view-btn"
-                  :class="{ active: viewMode === 'grid' }"
-                  @click="viewMode = 'grid'"
-                >
-                  â–¦
-                </button>
-
-                <button
-                  class="view-btn"
-                  :class="{ active: viewMode === 'list' }"
-                  @click="viewMode = 'list'"
-                >
-                  â˜°
-                </button>
-
-                <select v-model="sortOption" class="sort-select">
-                  <option value="recommended">Recommended</option>
-                  <option value="top-rated">Top Rated</option>
-                  <option value="most-popular">Most Popular</option>
-                </select>
-              </div>
-            </div>
-
-            <FeaturedPlaceCard
-              v-if="featuredPlace"
-              :place="featuredPlace"
-              @select="openPlaceDetail"
-            />
-
-            <div
-              class="cards-grid"
-              :class="{ 'cards-list': viewMode === 'list' }"
-            >
-              <PlaceCard
-                v-for="place in paginatedPlaces"
-                :key="place.id"
-                :place="place"
                 @select="openPlaceDetail"
               />
 

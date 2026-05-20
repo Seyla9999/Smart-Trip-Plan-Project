@@ -4,7 +4,6 @@ import { useRouter } from "vue-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import ProvinceMapEmptyState from "./ProvinceMapEmptyState.vue";
-import { provinceMapAreas } from "@/data/provinceMapAreas";
 
 type Place = {
   id: string | number;
@@ -99,6 +98,18 @@ function getCoordinates(
     }
   }
 
+  if (typeof location === "string") {
+    const match = location.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/i);
+    if (match) {
+      const parsedLng = Number(match[1]);
+      const parsedLat = Number(match[2]);
+
+      if (!Number.isNaN(parsedLat) && !Number.isNaN(parsedLng)) {
+        return { lat: parsedLat, lng: parsedLng };
+      }
+    }
+  }
+
   return null;
 }
 
@@ -117,15 +128,6 @@ const placesWithCoords = computed(() => {
     .filter(Boolean) as Array<Place & { lat: number; lng: number }>;
 });
 
-function getProvinceArea(slugValue: string) {
-  return (
-    provinceMapAreas[slugValue] || {
-      center: [12.5657, 104.991] as [number, number],
-      zoom: 7,
-    }
-  );
-}
-
 function normalizeName(value: string) {
   return value
     .toLowerCase()
@@ -134,19 +136,11 @@ function normalizeName(value: string) {
     .replace(/[^a-z0-9]/g, "");
 }
 
-/**
- * Match route slug to possible province names in GeoJSON.
- * We remove spaces and hyphens completely so:
- * - "siem-reap"
- * - "Siem Reap"
- * - "Siemreap"
- * all become the same kind of value.
- */
 const provinceGeoJsonNames: Record<string, string[]> = {
   "koh-kong": ["Koh Kong", "KohKong"],
   "siem-reap": ["Siem Reap", "Siemreap", "Siem Reab", "Siemreab"],
   kampot: ["Kampot"],
-  kratie: ["Kratie", "Kratié"],
+  kratie: ["Kratie", "Kratie"],
   kep: ["Kep"],
   "preah-sihanouk": ["Preah Sihanouk", "Sihanoukville", "PreahSihanouk"],
   ratanakiri: ["Ratanakiri", "Ratanak Kiri"],
@@ -154,7 +148,7 @@ const provinceGeoJsonNames: Record<string, string[]> = {
   battambang: ["Battambang"],
   "phnom-penh": ["Phnom Penh", "PhnomPenh"],
   "preah-vihear": ["Preah Vihear", "PreahVihear"],
-  takeo: ["Takeo", "Takéo"],
+  takeo: ["Takeo", "Takeo"],
   "kampong-speu": ["Kampong Speu", "KampongSpeu"],
 };
 
@@ -184,19 +178,10 @@ async function addProvinceBoundary(slug: string) {
   try {
     const geojson = await loadBoundaryGeoJson();
 
-    const allAdm1Names =
-      geojson?.features
-        ?.map((feature: any) => feature?.properties?.ADM1_EN)
-        .filter(Boolean) || [];
-
     const matchedFeatures =
       geojson?.features?.filter((feature: any) =>
         matchProvinceFeature(feature, slug),
       ) || [];
-
-    console.log("province slug:", slug);
-    console.log("available ADM1_EN:", allAdm1Names);
-    console.log("matched boundary count:", matchedFeatures.length);
 
     if (!matchedFeatures.length) {
       console.warn("No province boundary matched for slug:", slug);
@@ -212,10 +197,10 @@ async function addProvinceBoundary(slug: string) {
         pane: "boundaryPane",
         interactive: false,
         style: {
-          color: "#ff0000",
-          weight: 5,
+          color: "#d9534f",
+          weight: 4,
           opacity: 1,
-          fillColor: "#ff0000",
+          fillColor: "#d9534f",
           fillOpacity: 0.08,
         },
       },
@@ -236,6 +221,17 @@ async function addProvinceBoundary(slug: string) {
     console.error("Failed to draw province boundary:", error);
     return false;
   }
+}
+
+function getFallbackCenter() {
+  if (placesWithCoords.value.length > 0) {
+    return [placesWithCoords.value[0].lat, placesWithCoords.value[0].lng] as [
+      number,
+      number,
+    ];
+  }
+
+  return [12.5657, 104.991] as [number, number];
 }
 
 function destroyMap() {
@@ -278,11 +274,9 @@ async function renderProvinceMap() {
 
   destroyMap();
 
-  const provinceArea = getProvinceArea(props.provinceSlug);
-
   leafletMap = L.map(mapContainer.value, {
     zoomControl: true,
-  }).setView(provinceArea.center, provinceArea.zoom);
+  }).setView(getFallbackCenter(), 10);
 
   leafletMap.createPane("boundaryPane");
   const boundaryPane = leafletMap.getPane("boundaryPane");
@@ -332,11 +326,7 @@ async function renderProvinceMap() {
   });
 
   if (!boundaryLoaded) {
-    if (provinceArea.bounds) {
-      leafletMap.fitBounds(provinceArea.bounds, {
-        padding: [20, 20],
-      });
-    } else if (placesWithCoords.value.length > 1) {
+    if (placesWithCoords.value.length > 1) {
       const bounds = L.latLngBounds(
         placesWithCoords.value.map(
           (point) => [point.lat, point.lng] as [number, number],
@@ -346,10 +336,10 @@ async function renderProvinceMap() {
     } else if (placesWithCoords.value.length === 1) {
       leafletMap.setView(
         [placesWithCoords.value[0].lat, placesWithCoords.value[0].lng],
-        provinceArea.zoom,
+        13,
       );
     } else {
-      leafletMap.setView(provinceArea.center, provinceArea.zoom);
+      leafletMap.setView(getFallbackCenter(), 7);
     }
   }
 }
