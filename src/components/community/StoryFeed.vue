@@ -82,7 +82,7 @@ defineProps<{
 
 const emit = defineEmits<{
   submitStory: [payload: ComposerSubmission]
-  toggleLike: [id: number]
+  toggleLike: [id: string]
 }>()
 </script>
 

@@ -3,7 +3,7 @@ import { ref, onMounted, watch } from "vue";
 import axios from "axios";
 
 type Place = {
-  id: number | string;
+  id: string | number;
   name: string;
   province: string;
   category: string;
