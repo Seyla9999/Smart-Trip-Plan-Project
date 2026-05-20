@@ -161,7 +161,7 @@ export class AuthService {
     }
 
     // Generate JWT token
-    const token = this.jwtService.sign({ sub: user.id, email: user.email })
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, full_name: user.full_name })
 
     return {
         message: 'Login success',
@@ -170,6 +170,10 @@ export class AuthService {
         id: user.id,
         email: user.email,
         full_name: user.full_name,
+        username: user.username,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        role: user.role,
         },
     }
   }

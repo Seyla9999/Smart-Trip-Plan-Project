@@ -149,11 +149,13 @@ export class AttractionsService {
     if (isUuid) {
       attraction = await this.attractionRepo.findOne({
         where: { id: identifier, deleted_at: IsNull() } as any,
-      });
+        relations: ['province'],
+      })
     } else {
       const nameLike = `%${identifier.replace(/-/g, ' ')}%`;
       attraction = await this.attractionRepo
         .createQueryBuilder('attraction')
+        .leftJoinAndSelect('attraction.province', 'province')
         .where('attraction.deleted_at IS NULL')
         .andWhere(
           '(attraction.name_en ILIKE :nameLike OR attraction.name_kh ILIKE :nameLike)',
@@ -166,8 +168,40 @@ export class AttractionsService {
       throw new NotFoundException(`Attraction "${identifier}" not found`);
     }
 
-    const nearbyPOIs = await this.findNearbyPointsOfInterest(attraction as any);
-    return { ...attraction, nearbyPOIs };
+    const [nearbyPOIs, reviews, nearby] = await Promise.all([
+      this.findNearbyPointsOfInterest(attraction as any),
+      this.attractionRepo.manager.query(
+        `SELECT id, rating, comment, author_name, title, created_at
+         FROM reviews WHERE attraction_id = $1
+         ORDER BY created_at DESC LIMIT 20`,
+        [attraction.id],
+      ),
+      this.attractionRepo
+        .createQueryBuilder('a')
+        .leftJoinAndSelect('a.province', 'province')
+        .where('a.province_id = :pId', { pId: attraction.province_id })
+        .andWhere('a.id != :id', { id: attraction.id })
+        .andWhere('a.deleted_at IS NULL')
+        .orderBy('a.average_rating', 'DESC')
+        .take(5)
+        .getMany(),
+    ])
+
+    const avgRating = reviews.length > 0
+      ? Math.round(
+          (reviews.reduce((sum: number, r: any) => sum + Number(r.rating), 0) / reviews.length) * 10,
+        ) / 10
+      : Number(attraction.average_rating)
+
+    return {
+      ...attraction,
+      average_rating: avgRating,
+      nearbyPOIs,
+      reviews,
+      nearby,
+    }
+    const nearbyPOIs = await this.findNearbyPointsOfInterest(attraction as any)
+    return { ...attraction, nearbyPOIs }
   }
 
   async findNearbyPointsOfInterest(attraction: any) {
