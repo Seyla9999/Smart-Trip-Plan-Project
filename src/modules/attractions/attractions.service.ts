@@ -56,6 +56,7 @@ export class AttractionsService {
         a.is_hidden_gem,
         a.image_url,
         a.hero_image,
+        ST_AsGeoJSON(a.location)::json AS location,
         COUNT(r.id)::int AS review_count,
         json_build_object(
           'id',             p.id,
@@ -167,8 +168,6 @@ export class AttractionsService {
       reviews,
       nearby,
     }
-    const nearbyPOIs = await this.findNearbyPointsOfInterest(attraction as any)
-    return { ...attraction, nearbyPOIs }
   }
 
   async findNearbyPointsOfInterest(attraction: any) {
