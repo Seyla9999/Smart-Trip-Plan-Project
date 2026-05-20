@@ -39,7 +39,7 @@ export class StoriesService {
         ON att.entity_id::uuid = s.id
         AND att.entity_type = 'story'
       WHERE s.deleted_at IS NULL
-        AND s.status = 'published'
+        AND s.status = 'approved'
       GROUP BY s.id, u.id
       ORDER BY s.created_at DESC
       LIMIT $1 OFFSET $2
@@ -48,7 +48,7 @@ export class StoriesService {
     );
 
     const total = await this.storyRepo.count({
-      where: { status: 'published' },
+      where: { status: 'approved' },
     });
 
     return { success: true, data, meta: { total, page, limit } };
