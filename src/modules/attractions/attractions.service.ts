@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, IsNull, DataSource } from 'typeorm'
-import { Attraction } from './attraction.entity'
-import { FilterAttractionsDto } from './dto/filter-attractions.dto'
-import { CreateAttractionDto } from './dto/create-attraction.dto'
-import { UpdateAttractionDto } from './dto/update-attraction.dto'
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, IsNull, DataSource } from 'typeorm';
+import { Attraction } from './attraction.entity';
+import { FilterAttractionsDto } from './dto/filter-attractions.dto';
+import { CreateAttractionDto } from './dto/create-attraction.dto';
+import { UpdateAttractionDto } from './dto/update-attraction.dto';
 
 @Injectable()
 export class AttractionsService {
@@ -14,37 +14,57 @@ export class AttractionsService {
     private dataSource: DataSource,
   ) {}
 
-  async findAll(filters: FilterAttractionsDto & {
-    province?: string
-    province_id?: number
-    is_hidden_gem?: string
-    limit?: number
-    page?: number
-    offset?: number
-  }) {
-    const limit  = Number(filters.limit)  || 20
-    const page   = Number(filters.page)   || 1
-    const offset = Number(filters.offset) || (page - 1) * limit
-    const conditions: string[] = ['a.deleted_at IS NULL']
-    const params: any[]        = []
-    let   idx                  = 1
+  async findAll(
+    filters: FilterAttractionsDto & {
+      province?: string;
+      province_id?: number;
+      is_hidden_gem?: string;
+      limit?: number;
+      page?: number;
+      offset?: number;
+    },
+  ) {
+    const limit = Number(filters.limit) || 20;
+    const page = Number(filters.page) || 1;
+    const offset = Number(filters.offset) || (page - 1) * limit;
+    const conditions: string[] = ['a.deleted_at IS NULL'];
+    const params: any[] = [];
+    let idx = 1;
 
-    if (filters.category)    { conditions.push(`a.category = $${idx++}`);                                    params.push(filters.category) }
-    if (filters.province_id) { conditions.push(`a.province_id = $${idx++}`);                                 params.push(Number(filters.province_id)) }
-    if (filters.province)    { conditions.push(`p.name_en ILIKE $${idx++}`);                                 params.push(`%${filters.province}%`) }
-    if (filters.search)      { conditions.push(`(a.name_en ILIKE $${idx} OR a.name_kh ILIKE $${idx++})`);   params.push(`%${filters.search}%`) }
-    if (filters.is_hidden_gem === 'true') { conditions.push(`a.is_hidden_gem = true`) }
-    if (filters.minRating !== undefined) { conditions.push(`a.average_rating >= $${idx++}`); params.push(filters.minRating) }
+    if (filters.category) {
+      conditions.push(`a.category = $${idx++}`);
+      params.push(filters.category);
+    }
+    if (filters.province_id) {
+      conditions.push(`a.province_id = $${idx++}`);
+      params.push(Number(filters.province_id));
+    }
+    if (filters.province) {
+      conditions.push(`p.name_en ILIKE $${idx++}`);
+      params.push(`%${filters.province}%`);
+    }
+    if (filters.search) {
+      conditions.push(`(a.name_en ILIKE $${idx} OR a.name_kh ILIKE $${idx++})`);
+      params.push(`%${filters.search}%`);
+    }
+    if (filters.is_hidden_gem === 'true') {
+      conditions.push(`a.is_hidden_gem = true`);
+    }
+    if (filters.minRating !== undefined) {
+      conditions.push(`a.average_rating >= $${idx++}`);
+      params.push(filters.minRating);
+    }
 
-    const where = conditions.join(' AND ')
+    const where = conditions.join(' AND ');
 
     const countResult = await this.dataSource.query(
       `SELECT COUNT(DISTINCT a.id) FROM attractions a
        LEFT JOIN provinces p ON p.id = a.province_id
        WHERE ${where}`,
       params,
-    )
-    const total = parseInt(countResult[0].count, 10)
+    );
+    const total = parseInt(countResult[0].count, 10);
+
     const data = await this.dataSource.query(
       `SELECT
         a.id,
@@ -56,6 +76,9 @@ export class AttractionsService {
         a.is_hidden_gem,
         a.image_url,
         a.hero_image,
+        a.location,
+        ST_Y(a.location::geometry) AS latitude,
+        ST_X(a.location::geometry) AS longitude,
         COUNT(r.id)::int AS review_count,
         json_build_object(
           'id',             p.id,
@@ -65,20 +88,20 @@ export class AttractionsService {
         ) AS province
        FROM attractions a
        LEFT JOIN provinces p ON p.id = a.province_id
-       LEFT JOIN reviews   r ON r.attraction_id = a.id
+       LEFT JOIN reviews r ON r.attraction_id = a.id
        WHERE ${where}
        GROUP BY a.id, p.id
        ORDER BY a.average_rating DESC
        LIMIT $${idx++} OFFSET $${idx++}`,
       [...params, limit, offset],
-    )
+    );
 
     return {
       success: true,
       data,
-      meta:       { total, page, limit },
+      meta: { total, page, limit },
       pagination: { total, limit, offset, pages: Math.ceil(total / limit) },
-    }
+    };
   }
 
   async findHiddenGems(limit: number = 5) {
@@ -93,6 +116,9 @@ export class AttractionsService {
         a.is_hidden_gem,
         a.image_url,
         a.hero_image,
+        a.location,
+        ST_Y(a.location::geometry) AS latitude,
+        ST_X(a.location::geometry) AS longitude,
         COUNT(r.id)::int AS review_count,
         json_build_object(
           'id',             p.id,
@@ -102,21 +128,23 @@ export class AttractionsService {
         ) AS province
        FROM attractions a
        LEFT JOIN provinces p ON p.id = a.province_id
-       LEFT JOIN reviews   r ON r.attraction_id = a.id
+       LEFT JOIN reviews r ON r.attraction_id = a.id
        WHERE a.deleted_at IS NULL
          AND a.is_hidden_gem = true
        GROUP BY a.id, p.id
        ORDER BY a.average_rating DESC
        LIMIT $1`,
       [limit],
-    )
-    return { success: true, data }
+    );
+    return { success: true, data };
   }
 
   async findOne(identifier: string) {
-    const isUuid = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(identifier)
+    const isUuid = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(
+      identifier,
+    );
 
-    let attraction: Attraction | null = null
+    let attraction: Attraction | null = null;
 
     if (isUuid) {
       attraction = await this.attractionRepo.findOne({
@@ -124,16 +152,21 @@ export class AttractionsService {
         relations: ['province'],
       })
     } else {
-      const nameLike = `%${identifier.replace(/-/g, ' ')}%`
+      const nameLike = `%${identifier.replace(/-/g, ' ')}%`;
       attraction = await this.attractionRepo
         .createQueryBuilder('attraction')
         .leftJoinAndSelect('attraction.province', 'province')
         .where('attraction.deleted_at IS NULL')
-        .andWhere('(attraction.name_en ILIKE :nameLike OR attraction.name_kh ILIKE :nameLike)', { nameLike })
-        .getOne()
+        .andWhere(
+          '(attraction.name_en ILIKE :nameLike OR attraction.name_kh ILIKE :nameLike)',
+          { nameLike },
+        )
+        .getOne();
     }
 
-    if (!attraction) throw new NotFoundException(`Attraction "${identifier}" not found`)
+    if (!attraction) {
+      throw new NotFoundException(`Attraction "${identifier}" not found`);
+    }
 
     const [nearbyPOIs, reviews, nearby] = await Promise.all([
       this.findNearbyPointsOfInterest(attraction as any),
@@ -171,7 +204,14 @@ export class AttractionsService {
 
   async findNearbyPointsOfInterest(attraction: any) {
     if (!attraction?.location) {
-      return { hospitals: [], police: [], restaurants: [], atms: [], cafes: [], pharmacies: [] }
+      return {
+        hospitals: [],
+        police: [],
+        restaurants: [],
+        atms: [],
+        cafes: [],
+        pharmacies: [],
+      };
     }
 
     const query = `
@@ -184,46 +224,112 @@ export class AttractionsService {
       FROM points_of_interest
       WHERE ST_DWithin(location::geography,
               ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 5000)
-      ORDER BY distance_meters ASC`
+      ORDER BY distance_meters ASC`;
 
-    let lng: number | null = null
-    let lat: number | null = null
-    const loc = attraction.location as any
-    if (loc?.coordinates) { lng = loc.coordinates[0]; lat = loc.coordinates[1] }
-    else if (loc?.x !== undefined) { lng = loc.x; lat = loc.y }
+    let lng: number | null = null;
+    let lat: number | null = null;
+    const loc = attraction.location as any;
+
+    if (loc?.coordinates) {
+      lng = loc.coordinates[0];
+      lat = loc.coordinates[1];
+    } else if (loc?.x !== undefined) {
+      lng = loc.x;
+      lat = loc.y;
+    }
 
     if (!lng || !lat) {
-      return { hospitals: [], police: [], restaurants: [], atms: [], cafes: [], pharmacies: [] }
+      return {
+        hospitals: [],
+        police: [],
+        restaurants: [],
+        atms: [],
+        cafes: [],
+        pharmacies: [],
+      };
     }
 
-    const results = await this.attractionRepo.manager.query(query, [lng, lat])
+    const results = await this.attractionRepo.manager.query(query, [lng, lat]);
+
     return {
-      hospitals:   results.filter((p: any) => p.category === 'hospital'),
-      police:      results.filter((p: any) => p.category === 'police'),
+      hospitals: results.filter((p: any) => p.category === 'hospital'),
+      police: results.filter((p: any) => p.category === 'police'),
       restaurants: results.filter((p: any) => p.category === 'restaurant'),
-      atms:        results.filter((p: any) => p.category === 'atm'),
-      cafes:       results.filter((p: any) => p.category === 'cafe'),
-      pharmacies:  results.filter((p: any) => p.category === 'pharmacy'),
-      all:         results,
-    }
+      atms: results.filter((p: any) => p.category === 'atm'),
+      cafes: results.filter((p: any) => p.category === 'cafe'),
+      pharmacies: results.filter((p: any) => p.category === 'pharmacy'),
+      all: results,
+    };
   }
 
   async findByCategory(category: string, limit = 10, offset = 0) {
     const [data, total] = await this.attractionRepo.findAndCount({
       where: { category, deleted_at: IsNull() } as any,
       order: { average_rating: 'DESC' },
-      take: limit, skip: offset,
-    })
-    return { data, pagination: { total, limit, offset, pages: Math.ceil(total / limit) } }
+      take: limit,
+      skip: offset,
+    });
+
+    return {
+      data,
+      pagination: { total, limit, offset, pages: Math.ceil(total / limit) },
+    };
   }
 
   async findByProvince(province_id: string, limit = 10, offset = 0) {
-    const [data, total] = await this.attractionRepo.findAndCount({
-      where: { province_id: parseInt(province_id), deleted_at: IsNull() } as any,
-      order: { average_rating: 'DESC' },
-      take: limit, skip: offset,
-    })
-    return { data, pagination: { total, limit, offset, pages: Math.ceil(total / limit) } }
+    const provinceId = Number(province_id);
+
+    const countResult = await this.dataSource.query(
+      `SELECT COUNT(DISTINCT a.id) AS count
+       FROM attractions a
+       WHERE a.deleted_at IS NULL
+         AND a.province_id = $1`,
+      [provinceId],
+    );
+
+    const total = parseInt(countResult[0].count, 10);
+
+    const data = await this.dataSource.query(
+      `SELECT
+        a.id,
+        a.province_id,
+        a.name_en,
+        a.name_kh,
+        a.category,
+        a.description,
+        a.location,
+        a.is_hidden_gem,
+        a.average_rating,
+        a.image_url,
+        a.hero_image,
+        ST_Y(a.location::geometry) AS latitude,
+        ST_X(a.location::geometry) AS longitude,
+        COUNT(r.id)::int AS review_count
+       FROM attractions a
+       LEFT JOIN reviews r ON r.attraction_id = a.id
+       WHERE a.deleted_at IS NULL
+         AND a.province_id = $1
+       GROUP BY
+         a.id,
+         a.province_id,
+         a.name_en,
+         a.name_kh,
+         a.category,
+         a.description,
+         a.location,
+         a.is_hidden_gem,
+         a.average_rating,
+         a.image_url,
+         a.hero_image
+       ORDER BY a.average_rating DESC
+       LIMIT $2 OFFSET $3`,
+      [provinceId, limit, offset],
+    );
+
+    return {
+      data,
+      pagination: { total, limit, offset, pages: Math.ceil(total / limit) },
+    };
   }
 
   async findTopRated(limit = 10) {
@@ -231,29 +337,33 @@ export class AttractionsService {
       where: { deleted_at: IsNull() } as any,
       order: { average_rating: 'DESC' },
       take: limit,
-    })
+    });
   }
 
   async findById(id: string) {
-    return this.attractionRepo.findOne({ where: { id, deleted_at: IsNull() } as any })
+    return this.attractionRepo.findOne({
+      where: { id, deleted_at: IsNull() } as any,
+    });
   }
 
   async create(dto: CreateAttractionDto) {
-    const attraction = this.attractionRepo.create(dto)
-    return this.attractionRepo.save(attraction)
+    const attraction = this.attractionRepo.create(dto);
+    return this.attractionRepo.save(attraction);
   }
 
   async update(id: string, dto: Partial<CreateAttractionDto>) {
-    const updateData: any = { ...dto }
-    if (dto.province_id) updateData.province_id = parseInt(dto.province_id as any)
-    await this.attractionRepo.update({ id }, updateData)
-    return this.findById(id)
+    const updateData: any = { ...dto };
+    if (dto.province_id) {
+      updateData.province_id = parseInt(dto.province_id as any);
+    }
+    await this.attractionRepo.update({ id }, updateData);
+    return this.findById(id);
   }
 
   async delete(id: string) {
-    const attraction = await this.attractionRepo.findOne({ where: { id } })
-    if (attraction) return this.attractionRepo.softRemove(attraction)
-    return null
+    const attraction = await this.attractionRepo.findOne({ where: { id } });
+    if (attraction) return this.attractionRepo.softRemove(attraction);
+    return null;
   }
 
   async getCategories() {
@@ -262,8 +372,9 @@ export class AttractionsService {
       .select('DISTINCT attraction.category', 'category')
       .where('attraction.deleted_at IS NULL')
       .andWhere('attraction.category IS NOT NULL')
-      .getRawMany()
-    return result.map((r) => r.category).filter(Boolean)
+      .getRawMany();
+
+    return result.map((r) => r.category).filter(Boolean);
   }
 
   async getStatistics() {
@@ -279,24 +390,25 @@ export class AttractionsService {
         .select('AVG(attraction.average_rating)', 'average')
         .where('attraction.deleted_at IS NULL')
         .getRawOne(),
-    ])
+    ]);
+
     return {
       totalAttractions: attractions,
       averageRating: parseFloat(avgRating?.average || 0),
       topRated,
-    }
+    };
   }
 
   async seedTataiWaterfall() {
     const existing = await this.attractionRepo.findOne({
       where: { name_en: 'Tatai Waterfall', deleted_at: IsNull() } as any,
-    })
-    if (existing) return existing
+    });
+    if (existing) return existing;
 
     const province = await this.attractionRepo.manager.query(
       `SELECT id FROM provinces WHERE name_en ILIKE '%Koh Kong%' LIMIT 1`,
-    )
-    if (!province?.length) return null
+    );
+    if (!province?.length) return null;
 
     const attraction = this.attractionRepo.create({
       name_en: 'Tatai Waterfall',
@@ -306,8 +418,9 @@ export class AttractionsService {
       is_hidden_gem: true,
       average_rating: 4.9,
       location: { type: 'Point', coordinates: [103.2, 11.6] },
-    } as any)
-    return this.attractionRepo.save(attraction)
+    } as any);
+
+    return this.attractionRepo.save(attraction);
   }
 
   private getSortField(sortBy: string): string {
@@ -315,7 +428,7 @@ export class AttractionsService {
       rating: 'attraction.average_rating',
       name: 'attraction.name_en',
       createdAt: 'attraction.created_at',
-    }
-    return fieldMap[sortBy] || 'attraction.average_rating'
+    };
+    return fieldMap[sortBy] || 'attraction.average_rating';
   }
 }
