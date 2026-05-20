@@ -1,8 +1,15 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bookmark } from './bookmark.entity';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+
+type BookmarkRow = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  created_at: Date;
+};
 
 @Injectable()
 export class BookmarksService {
@@ -11,72 +18,43 @@ export class BookmarksService {
     private bookmarkRepo: Repository<Bookmark>,
   ) {}
 
-  async create(userId: string, dto: CreateBookmarkDto) {
-    const existingBookmark = await this.bookmarkRepo.findOne({
-      where: {
-        user_id: userId,
-        entity_type: dto.entity_type,
-        entity_id: dto.entity_id,
-      },
-    });
-
-    if (existingBookmark) {
-      throw new ConflictException('Already bookmarked');
-    }
-
-    const bookmark = this.bookmarkRepo.create({
-      user_id: userId,
-      entity_type: dto.entity_type,
-      entity_id: dto.entity_id,
-    });
-
-    return this.bookmarkRepo.save(bookmark);
-  }
-
-  async getUserBookmarks(userId: string) {
-    return this.bookmarkRepo.find({
-      where: { user_id: userId },
-      order: { created_at: 'DESC' },
-    });
-  }
-
-  async removeBookmark(userId: string, bookmarkId: string) {
-    return this.bookmarkRepo.delete({
-      id: bookmarkId,
-      user_id: userId,
-    });
-    const existing = await this.bookmarkRepo.manager.query(
+  async create(userId: string, dto: CreateBookmarkDto): Promise<BookmarkRow> {
+    const existing = (await this.bookmarkRepo.manager.query(
       `SELECT id, entity_type, entity_id, created_at
        FROM bookmarks
-       WHERE user_id = $1 AND entity_id = $2
+       WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3
        LIMIT 1`,
-      [userId, dto.entity_id],
-    )
-    if (existing.length > 0) return existing[0]
+      [userId, dto.entity_type, dto.entity_id],
+    )) as unknown as BookmarkRow[];
 
-    const result = await this.bookmarkRepo.manager.query(
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    const result = (await this.bookmarkRepo.manager.query(
       `INSERT INTO bookmarks (user_id, entity_type, entity_id)
        VALUES ($1, $2, $3)
        RETURNING id, entity_type, entity_id, created_at`,
       [userId, dto.entity_type, dto.entity_id],
-    )
-    return result[0]
+    )) as unknown as BookmarkRow[];
+
+    return result[0];
   }
 
-  async getUserBookmarks(userId: string) {
+  async getUserBookmarks(userId: string): Promise<BookmarkRow[]> {
     return this.bookmarkRepo.manager.query(
       `SELECT id, entity_type, entity_id, created_at
        FROM bookmarks
        WHERE user_id = $1
        ORDER BY created_at DESC`,
       [userId],
-    )
+    );
   }
 
-  async removeBookmark(userId: string, bookmarkId: string) {
-    return this.bookmarkRepo.manager.query(
+  async removeBookmark(userId: string, bookmarkId: string): Promise<void> {
+    await this.bookmarkRepo.manager.query(
       `DELETE FROM bookmarks WHERE id = $1 AND user_id = $2`,
       [bookmarkId, userId],
-    )
+    );
   }
 }
