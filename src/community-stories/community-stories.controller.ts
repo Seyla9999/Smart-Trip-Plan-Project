@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Query, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Delete,
+} from '@nestjs/common';
 import { CommunityStoriesService } from './community-stories.service';
 
 @Controller('community')
@@ -31,20 +39,23 @@ export class CommunityStoriesController {
 
   // POST /community
   @Post()
-  create(@Body() body: {
-    title: string;
-    content: string;
-    category: string;
-    location?: string;
-    rating?: number;
-    imageUrl?: string;
-    videoUrl?: string;
-    authorName: string;
-    authorHandle: string;
-    authorInitials: string;
-    authorAvatarColor?: string;
-    authorHomeBase?: string;
-  }) {
+  create(
+    @Body()
+    body: {
+      title: string;
+      content: string;
+      category: string;
+      location?: string;
+      rating?: number;
+      imageUrl?: string;
+      videoUrl?: string;
+      authorName: string;
+      authorHandle: string;
+      authorInitials: string;
+      authorAvatarColor?: string;
+      authorHomeBase?: string;
+    },
+  ) {
     return this.service.create(body);
   }
 

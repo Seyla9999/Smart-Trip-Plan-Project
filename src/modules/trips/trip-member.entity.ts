@@ -1,27 +1,33 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm'
-import { Trip } from './trip.entity'
-import { User } from '../users/user.entity'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
+import { Trip } from './trip.entity';
+import { User } from '../users/user.entity';
 
 @Entity('trip_members')
 export class TripMember {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
   @ManyToOne(() => Trip, (trip) => trip.members, { onDelete: 'CASCADE' })
-  trip!: Trip
+  trip!: Trip;
 
   @Column()
-  trip_id!: string
+  trip_id!: string;
 
   @ManyToOne(() => User, { nullable: false })
-  user!: User
+  user!: User;
 
   @Column()
-  user_id!: string
+  user_id!: string;
 
   @Column({ default: 'member' })
-  role!: string
+  role!: string;
 
   @CreateDateColumn()
-  joined_at!: Date
+  joined_at!: Date;
 }
