@@ -28,6 +28,7 @@ export class BookmarksController {
     return this.bookmarksService.getUserBookmarks(req.user.id);
   }
 
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async removeBookmark(@Request() req, @Param('id') bookmarkId: string) {

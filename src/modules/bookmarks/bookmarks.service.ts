@@ -4,6 +4,13 @@ import { Repository } from 'typeorm';
 import { Bookmark } from './bookmark.entity';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 
+type BookmarkRow = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  created_at: Date;
+};
+
 @Injectable()
 export class BookmarksService {
   constructor(
@@ -11,41 +18,43 @@ export class BookmarksService {
     private bookmarkRepo: Repository<Bookmark>,
   ) {}
 
-  async create(userId: string, dto: CreateBookmarkDto) {
-    const existingBookmark = await this.bookmarkRepo.findOne({
-      where: { user_id: userId, place_id: dto.place_id },
-    });
+  async create(userId: string, dto: CreateBookmarkDto): Promise<BookmarkRow> {
+    const existing = (await this.bookmarkRepo.manager.query(
+      `SELECT id, entity_type, entity_id, created_at
+       FROM bookmarks
+       WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3
+       LIMIT 1`,
+      [userId, dto.entity_type, dto.entity_id],
+    )) as unknown as BookmarkRow[];
 
-    if (existingBookmark) {
-      throw new Error('Place already bookmarked');
+    if (existing.length > 0) {
+      return existing[0];
     }
 
-    const bookmark = this.bookmarkRepo.create({
-      user_id: userId,
-      ...dto,
-    });
+    const result = (await this.bookmarkRepo.manager.query(
+      `INSERT INTO bookmarks (user_id, entity_type, entity_id)
+       VALUES ($1, $2, $3)
+       RETURNING id, entity_type, entity_id, created_at`,
+      [userId, dto.entity_type, dto.entity_id],
+    )) as unknown as BookmarkRow[];
 
-    return this.bookmarkRepo.save(bookmark);
+    return result[0];
   }
 
-  async getUserBookmarks(userId: string, status: string = 'active') {
-    return this.bookmarkRepo.find({
-      where: { user_id: userId, status },
-      order: { created_at: 'DESC' },
-    });
+  async getUserBookmarks(userId: string): Promise<BookmarkRow[]> {
+    return this.bookmarkRepo.manager.query(
+      `SELECT id, entity_type, entity_id, created_at
+       FROM bookmarks
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId],
+    );
   }
 
-  async removeBookmark(userId: string, bookmarkId: string) {
-    return this.bookmarkRepo.delete({
-      id: bookmarkId,
-      user_id: userId,
-    });
-  }
-
-  async archiveBookmark(userId: string, bookmarkId: string) {
-    return this.bookmarkRepo.update(
-      { id: bookmarkId, user_id: userId },
-      { status: 'archived' },
+  async removeBookmark(userId: string, bookmarkId: string): Promise<void> {
+    await this.bookmarkRepo.manager.query(
+      `DELETE FROM bookmarks WHERE id = $1 AND user_id = $2`,
+      [bookmarkId, userId],
     );
   }
 }

@@ -1,11 +1,5 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  CreateDateColumn,
-} from 'typeorm';
-import { User } from '../users/user.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm'
+import { User } from '../users/user.entity'
 
 @Entity('bookmarks')
 export class Bookmark {
@@ -15,7 +9,7 @@ export class Bookmark {
   @ManyToOne(() => User, (user) => user.bookmarks, { onDelete: 'CASCADE' })
   user!: User;
 
-  @Column()
+  @Column('uuid')
   user_id!: string;
 
   @Column()
@@ -38,4 +32,16 @@ export class Bookmark {
 
   @Column({ nullable: true })
   updated_at!: Date;
+
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
+
+  @Column({ name: 'entity_type', type: 'varchar' })
+  entity_type!: string;
+
+  @Column({ name: 'entity_id', type: 'uuid' })
+  entity_id!: string;
+
+  @CreateDateColumn({ name: 'created_at' })
+  created_at!: Date;
 }
