@@ -20,6 +20,6 @@ export class NearbyImagesService {
   async addImage(placeSlug: string, imageUrl: string): Promise<NearbyImage> {
     const data: DeepPartial<NearbyImage> = { placeSlug, imageUrl };
     const record = this.nearbyImageRepo.create(data);
-    return this.nearbyImageRepo.save(record) as Promise<NearbyImage>;
+    return this.nearbyImageRepo.save(record);
   }
 }

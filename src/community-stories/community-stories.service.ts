@@ -91,10 +91,13 @@ export class CommunityStoriesService {
     };
 
     const story = this.storyRepo.create(data);
-    return this.storyRepo.save(story) as Promise<Story>;
+    return this.storyRepo.save(story);
   }
 
-  async toggleLike(id: string, increment: boolean): Promise<{ likesCount: number }> {
+  async toggleLike(
+    id: string,
+    increment: boolean,
+  ): Promise<{ likesCount: number }> {
     const story = await this.storyRepo.findOne({ where: { id } });
     if (!story) throw new NotFoundException('Story not found');
 
@@ -125,7 +128,7 @@ export class CommunityStoriesService {
     };
 
     const comment = this.commentRepo.create(data);
-    const saved = await this.commentRepo.save(comment) as StoryComment;
+    const saved = await this.commentRepo.save(comment);
 
     story.commentsCount += 1;
     await this.storyRepo.save(story);

@@ -1,17 +1,17 @@
-import { Injectable } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { Trip } from './trip.entity'
-import { TripMember } from './trip-member.entity'
-import { ItineraryItem } from './itinerary-item.entity'
-import { PackingListItem } from './packing-list-item.entity'
-import { CreateTripDto } from './dto/create-trip.dto'
-import { randomBytes } from 'crypto'
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Trip } from './trip.entity';
+import { TripMember } from './trip-member.entity';
+import { ItineraryItem } from './itinerary-item.entity';
+import { PackingListItem } from './packing-list-item.entity';
+import { CreateTripDto } from './dto/create-trip.dto';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class TripsService {
   findAll() {
-    throw new Error('Method not implemented.')
+    throw new Error('Method not implemented.');
   }
   constructor(
     @InjectRepository(Trip)
@@ -25,7 +25,7 @@ export class TripsService {
   ) {}
 
   async create(userId: string, dto: CreateTripDto) {
-    const token = randomBytes(16).toString('hex')
+    const token = randomBytes(16).toString('hex');
 
     const trip = this.tripRepo.create({
       title: dto.title,
@@ -35,17 +35,17 @@ export class TripsService {
       end_date: dto.end_date ? new Date(dto.end_date) : null,
       owner_id: userId,
       invite_token: token,
-    } as Partial<Trip>)
+    } as Partial<Trip>);
 
-    const saved = await this.tripRepo.save(trip)
+    const saved = await this.tripRepo.save(trip);
 
     const member = this.memberRepo.create({
       trip_id: saved.id,
       user_id: userId,
       role: 'owner',
-    } as Partial<TripMember>)
+    } as Partial<TripMember>);
 
-    await this.memberRepo.save(member)
+    await this.memberRepo.save(member);
 
     if (dto.locations && dto.locations.length > 0) {
       const itineraryItems = dto.locations.map((loc) => {
@@ -61,9 +61,9 @@ export class TripsService {
       await this.itineraryRepo.save(itineraryItems);
     }
 
-    return this.tripRepo.findOne({ 
-        where: { id: saved.id },
+    return this.tripRepo.findOne({
+      where: { id: saved.id },
       relations: ['members', 'itinerary_items'],
-    })
+    });
   }
 }

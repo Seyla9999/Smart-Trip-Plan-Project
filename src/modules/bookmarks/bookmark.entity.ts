@@ -1,35 +1,42 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm'
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm'
 import { User } from '../users/user.entity'
 
 @Entity('bookmarks')
 export class Bookmark {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
-  @ManyToOne(() => User, (user) => user.bookmarks, { onDelete: 'CASCADE' })
-  user!: User
-
-  @Column()
-  user_id!: string
+  @Column('uuid')
+  user_id!: string;
 
   @Column()
-  place_id!: string
+  place_id!: string;
 
   @Column({ nullable: true })
-  place_name!: string
+  place_name!: string;
 
   @Column({ nullable: true })
-  place_type!: string
+  place_type!: string;
 
   @Column({ nullable: true })
-  place_image_url!: string
+  place_image_url!: string;
 
   @Column({ default: 'active' })
-  status!: string
-
-  @CreateDateColumn()
-  created_at!: Date
+  status!: string;
 
   @Column({ nullable: true })
-  updated_at!: Date
+  updated_at!: Date;
+
+  @ManyToOne(() => User, (user) => user.bookmarks, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
+
+  @Column({ name: 'entity_type', type: 'varchar' })
+  entity_type!: string;
+
+  @Column({ name: 'entity_id', type: 'uuid' })
+  entity_id!: string;
+
+  @CreateDateColumn({ name: 'created_at' })
+  created_at!: Date;
 }

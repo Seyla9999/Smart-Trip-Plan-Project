@@ -24,7 +24,12 @@ export class StoryComment {
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId: string;
 
-  @Column({ name: 'author_name', type: 'varchar', length: 100, default: 'Traveler' })
+  @Column({
+    name: 'author_name',
+    type: 'varchar',
+    length: 100,
+    default: 'Traveler',
+  })
   authorName: string;
 
   @Column({ type: 'text' })

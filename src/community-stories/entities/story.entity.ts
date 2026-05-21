@@ -48,19 +48,39 @@ export class Story {
   @Column({ name: 'comments_count', type: 'integer', default: 0 })
   commentsCount: number;
 
-  @Column({ name: 'author_name', type: 'varchar', length: 100, default: 'Traveler' })
+  @Column({
+    name: 'author_name',
+    type: 'varchar',
+    length: 100,
+    default: 'Traveler',
+  })
   authorName: string;
 
-  @Column({ name: 'author_handle', type: 'varchar', length: 100, default: '@traveler' })
+  @Column({
+    name: 'author_handle',
+    type: 'varchar',
+    length: 100,
+    default: '@traveler',
+  })
   authorHandle: string;
 
   @Column({ name: 'author_initials', type: 'varchar', length: 5, default: 'T' })
   authorInitials: string;
 
-  @Column({ name: 'author_avatar_color', type: 'varchar', length: 20, default: '#1a2340' })
+  @Column({
+    name: 'author_avatar_color',
+    type: 'varchar',
+    length: 20,
+    default: '#1a2340',
+  })
   authorAvatarColor: string;
 
-  @Column({ name: 'author_home_base', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'author_home_base',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   authorHomeBase: string;
 
   @Column({ name: 'published_at', type: 'timestamptz', default: () => 'NOW()' })

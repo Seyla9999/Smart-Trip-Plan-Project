@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Param, Body, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  BadRequestException,
+} from '@nestjs/common';
 import { NearbyImagesService } from './nearby-images.service';
 
 @Controller('nearby-images')

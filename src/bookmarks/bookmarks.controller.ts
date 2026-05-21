@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Param,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { BookmarksService } from './bookmarks.service';
 
 @Controller('bookmarks')
