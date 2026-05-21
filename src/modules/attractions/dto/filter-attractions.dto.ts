@@ -1,77 +1,105 @@
-import { IsOptional, IsString, IsNumber, Min, Max, IsIn, IsArray } from 'class-validator'
-import { Type } from 'class-transformer'
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  Min,
+  Max,
+  IsIn,
+  IsArray,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class FilterAttractionsDto {
   @IsOptional()
   @IsString()
-  search?: string 
+  search?: string;
 
   @IsOptional()
   @IsString()
-  category?: string
+  category?: string;
 
   @IsOptional()
   @IsArray()
   @Type(() => String)
-  categories?: string[] 
+  categories?: string[];
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(5)
-  minRating?: number 
+  minRating?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(5)
-  maxRating?: number 
+  maxRating?: number;
 
   @IsOptional()
   @IsString()
-  province_id?: string 
+  province_id?: string;
 
   @IsOptional()
   @IsString()
-  @IsIn(['Nature', 'Culture', 'Adventure', 'Historical', 'Religious', 'Urban', 'Beach', 'Culinary', 'Eco-Tourism'])
-  mainCategory?: string
+  @IsIn([
+    'Nature',
+    'Culture',
+    'Adventure',
+    'Historical',
+    'Religious',
+    'Urban',
+    'Beach',
+    'Culinary',
+    'Eco-Tourism',
+  ])
+  mainCategory?: string;
 
   @IsOptional()
   @IsArray()
   @Type(() => String)
-  amenities?: string[] 
+  amenities?: string[];
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  maxEntryFee?: number 
+  maxEntryFee?: number;
 
   @IsOptional()
   @Type(() => Boolean)
-  isOpen?: boolean 
+  isOpen?: boolean;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  limit?: number
+  limit?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  offset?: number
+  offset?: number;
 
   @IsOptional()
   @IsString()
-  @IsIn(['rating', 'average_rating', 'name', 'name_en', 'name_kh', 'createdAt', 'created_at', 'reviewCount', 'visitCount'])
-  sortBy?: string
+  @IsIn([
+    'rating',
+    'average_rating',
+    'name',
+    'name_en',
+    'name_kh',
+    'createdAt',
+    'created_at',
+    'reviewCount',
+    'visitCount',
+  ])
+  sortBy?: string;
 
   @IsOptional()
   @IsString()
   @IsIn(['DESC', 'ASC'])
-  sortOrder?: 'DESC' | 'ASC'
+  sortOrder?: 'DESC' | 'ASC';
 }

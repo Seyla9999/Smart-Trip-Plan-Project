@@ -1,6 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne } from 'typeorm'
-import { Bookmark } from '../bookmarks/bookmark.entity'
-import { UserPreferences } from './user-preferences.entity'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
+import { Bookmark } from '../bookmarks/bookmark.entity';
+import { UserPreferences } from './user-preferences.entity';
 
 @Entity('users')
 export class User {
@@ -43,12 +49,15 @@ export class User {
   @Column({ type: 'boolean', default: false })
   is_verified!: boolean;
 
+  @Column({ type: 'text', nullable: true })
+  status!: string | null;
+
   @Column({ type: 'varchar', nullable: true })
-  verification_code!: string | null
+  verification_code!: string | null;
 
   @OneToMany(() => Bookmark, (bookmark) => bookmark.user)
-  bookmarks!: Bookmark[]
+  bookmarks!: Bookmark[];
 
   @OneToOne(() => UserPreferences, (prefs) => prefs.user, { nullable: true })
-  preferences?: UserPreferences
+  preferences?: UserPreferences;
 }

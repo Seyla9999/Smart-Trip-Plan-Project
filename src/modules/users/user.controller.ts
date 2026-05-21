@@ -3,6 +3,7 @@ import {
   Get,
   Put,
   Post,
+  Patch,
   Param,
   Body,
   HttpCode,
@@ -11,6 +12,7 @@ import {
   UploadedFile,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
+import { File as MulterFile } from 'multer'
 import { diskStorage } from 'multer'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -20,11 +22,31 @@ import { UsersService } from './users.service'
 export class UsersController {
   constructor(private readonly service: UsersService) {}
 
-  // GET /users/count
+  @Get()
+  async findAll() {
+    const data = await this.service.findAllForAdmin();
+    return { success: true, data };
+  }
+
+  @Post()
+  async create(@Body() body: any) {
+    const data = await this.service.createWithPassword(body);
+    return { success: true, data };
+  }
+
+  @Patch(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string },
+  ) {
+    const data = await this.service.updateStatus(id, body.status);
+    return { success: true, data };
+  }
+
   @Get('count')
   async count() {
-    const count = await this.service.countAll()
-    return { success: true, count }
+    const count = await this.service.countAll();
+    return { success: true, count };
   }
 
   // GET /users/:id
@@ -115,7 +137,7 @@ export class UsersController {
   )
   async uploadAvatar(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
   ) {
     try {
       if (!file) return { success: false, message: 'No file uploaded' }

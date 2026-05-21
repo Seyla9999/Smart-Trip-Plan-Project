@@ -43,10 +43,13 @@ export class BookmarksService {
     };
 
     const bookmark = this.bookmarkRepo.create(data);
-    return this.bookmarkRepo.save(bookmark) as Promise<Bookmark>;
+    return this.bookmarkRepo.save(bookmark);
   }
 
-  async remove(bookmarkId: string, userId: string): Promise<{ success: boolean }> {
+  async remove(
+    bookmarkId: string,
+    userId: string,
+  ): Promise<{ success: boolean }> {
     await this.bookmarkRepo.delete({ id: bookmarkId, userId });
     return { success: true };
   }

@@ -22,18 +22,10 @@ import { WeatherModule } from './modules/weather/weather.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 
-// Entities
-import { Attraction } from './modules/attractions/attraction.entity';
-import { Province } from './modules/provinces/province.entity';
-import { Bookmark } from './modules/bookmarks/bookmark.entity';
-import { NearbyImage } from './modules/nearby-images/nearby-image.entity';
-import { UserPreferences } from './modules/users/user-preferences.entity';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      
     }),
 
     TypeOrmModule.forRoot({
@@ -45,7 +37,6 @@ import { UserPreferences } from './modules/users/user-preferences.entity';
       database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: false,
-      entities: [Attraction, Province, Bookmark, NearbyImage],
 
       ssl: {
         rejectUnauthorized: false,
@@ -60,8 +51,8 @@ import { UserPreferences } from './modules/users/user-preferences.entity';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         transport: {
-          host:   config.get('SMTP_HOST'),
-          port:   parseInt(config.get('SMTP_PORT') || '587', 10),
+          host: config.get('SMTP_HOST'),
+          port: parseInt(config.get('SMTP_PORT') || '587', 10),
           secure: config.get('SMTP_PORT') === '465',
           auth: {
             user: config.get('SMTP_USER'),
@@ -87,6 +78,7 @@ import { UserPreferences } from './modules/users/user-preferences.entity';
     BookmarksModule,
     ReviewsModule,
     TripsModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
