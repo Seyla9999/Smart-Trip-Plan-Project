@@ -50,7 +50,7 @@ import type { CommunityAuthor } from '@/data/community'
 
 const props = withDefaults(
   defineProps<{
-    id: number
+    id: string
     title: string
     image?: string
     category: string
@@ -75,7 +75,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  toggleLike: [id: number]
+  toggleLike: [id: string]
 }>()
 
 const mediaStyle = computed(() => {

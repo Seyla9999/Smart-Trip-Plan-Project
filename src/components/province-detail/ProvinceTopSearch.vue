@@ -254,10 +254,19 @@ function handleOutsideClick(e: MouseEvent) {
 
 onMounted(() => document.addEventListener("click", handleOutsideClick));
 onUnmounted(() => document.removeEventListener("click", handleOutsideClick));
+
+const shouldShowSearchBar = computed(() => {
+  return (
+    isEditing.value ||
+    !!props.provinceName ||
+    !!props.fromDate ||
+    !!props.toDate
+  );
+});
 </script>
 
 <template>
-  <section class="search-strip">
+  <section v-if="shouldShowSearchBar" class="search-strip">
     <div class="page-container">
       <div class="search-box">
         <div class="search-item">
@@ -336,10 +345,10 @@ onUnmounted(() => document.removeEventListener("click", handleOutsideClick));
             <div class="cal-footer">
               <span v-if="!startDate">Click to select check-in date</span>
               <span v-else-if="!endDate">Now select check-out date</span>
-              <span v-else
-                >{{ formatDisplayDate(startDate) }} →
-                {{ formatDisplayDate(endDate) }}</span
-              >
+              <span v-else>
+                {{ formatDisplayDate(startDate) }} →
+                {{ formatDisplayDate(endDate) }}
+              </span>
               <button
                 v-if="startDate || endDate"
                 class="cal-reset"

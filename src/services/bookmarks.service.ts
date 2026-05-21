@@ -9,41 +9,55 @@ export interface BookmarkData {
 
 export interface BookmarkResponse {
   id: string
-  user_id: string
-  place_id: string
-  place_name: string
-  place_type: string
-  place_image_url: string
+  userId: string
+  placeId: string
+  placeName: string
+  placeType: string
+  placeImageUrl: string
   status: string
-  created_at: Date
+  createdAt: string
 }
 
-// Create a bookmark
+function getCurrentUserId(): string | null {
+  try {
+    const raw = localStorage.getItem('user_data')
+    return raw ? JSON.parse(raw)?.id ?? null : null
+  } catch {
+    return null
+  }
+}
+
 export const createBookmark = (data: BookmarkData) => {
-  return API.post<BookmarkResponse>('/bookmarks', data)
+  const userId = getCurrentUserId()
+  return API.post<BookmarkResponse>('/bookmarks', {
+    userId,
+    place_id: data.place_id,
+    place_name: data.place_name,
+    place_type: data.place_type,
+    place_image_url: data.place_image_url,
+  })
 }
 
-// Get user's bookmarks
 export const getUserBookmarks = () => {
-  return API.get<{ data: BookmarkResponse[] }>('/bookmarks')
+  const userId = getCurrentUserId()
+  return API.get<{ data: BookmarkResponse[] }>('/bookmarks', { params: { userId } })
 }
 
-// Remove a bookmark
 export const removeBookmark = (bookmarkId: string) => {
-  return API.delete(`/bookmarks/${bookmarkId}`)
+  const userId = getCurrentUserId()
+  return API.delete(`/bookmarks/${bookmarkId}`, { params: { userId } })
 }
 
-// Archive a bookmark
 export const archiveBookmark = (bookmarkId: string) => {
   return API.patch(`/bookmarks/${bookmarkId}/archive`)
 }
 
-// Check if a place is bookmarked (get from bookmarks list)
-export const checkIfBookmarked = async (placeId: string) => {
+export const checkIfBookmarked = async (placeId: string): Promise<{ bookmarked: boolean; bookmarkId: string | null }> => {
   try {
     const response = await getUserBookmarks()
-    return response.data.data.some((b) => b.place_id === placeId)
+    const match = response.data.data.find((b) => b.placeId === placeId)
+    return { bookmarked: !!match, bookmarkId: match?.id ?? null }
   } catch {
-    return false
+    return { bookmarked: false, bookmarkId: null }
   }
 }

@@ -7,7 +7,7 @@
           Drop a quick recap, tag the place, and show people what made the trip memorable.
         </p>
       </div>
-      <span class="composer__badge">UI ready for backend posting later</span>
+      <span class="composer__badge">Connected to Supabase</span>
     </div>
 
     <div class="composer__fields">
@@ -54,9 +54,9 @@
 
       <div class="composer__actions">
         <label class="composer__upload">
-          <input type="file" accept="image/*" @change="handlePhotoChange" />
+          <input type="file" accept="image/*" :disabled="uploading" @change="handlePhotoChange" />
           <span>Photo</span>
-          <small>{{ photoName || 'Add cover image' }}</small>
+          <small>{{ uploading ? 'Uploading…' : photoName || 'Add cover image' }}</small>
         </label>
 
         <label class="composer__upload">
@@ -79,8 +79,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { ComposerSubmission, StoryCategory } from '@/data/community'
+import { uploadImage } from '@/lib/supabase'
 
 const props = defineProps<{
   categories: StoryCategory[]
@@ -98,36 +99,39 @@ const category = ref<StoryCategory>(props.categories[0] ?? 'Natural')
 const photoName = ref('')
 const photoUrl = ref<string | undefined>()
 const videoName = ref('')
+const uploading = ref(false)
 
-const canSubmit = computed(() => title.value.trim().length > 0 && body.value.trim().length > 0)
+const canSubmit = computed(
+  () => title.value.trim().length > 0 && body.value.trim().length > 0 && !uploading.value,
+)
 
-function handlePhotoChange(event: Event) {
+async function handlePhotoChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) {
-    return
-  }
-
-  if (photoUrl.value) {
-    URL.revokeObjectURL(photoUrl.value)
-  }
+  if (!file) return
 
   photoName.value = file.name
-  photoUrl.value = URL.createObjectURL(file)
+  uploading.value = true
+
+  try {
+    // Upload directly to Supabase Storage and get back the public URL
+    const url = await uploadImage(file, 'story-images')
+    photoUrl.value = url ?? undefined
+  } catch {
+    // Fallback: use a local object URL if Supabase Storage is unavailable
+    photoUrl.value = URL.createObjectURL(file)
+  } finally {
+    uploading.value = false
+  }
 }
 
 function handleVideoChange(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) {
-    return
-  }
-
+  if (!file) return
   videoName.value = file.name
 }
 
 function submitStory() {
-  if (!canSubmit.value) {
-    return
-  }
+  if (!canSubmit.value) return
 
   emit('submit', {
     title: title.value.trim(),
@@ -146,18 +150,9 @@ function submitStory() {
   rating.value = 5
   category.value = props.categories[0] ?? 'Natural'
   photoName.value = ''
-  if (photoUrl.value) {
-    URL.revokeObjectURL(photoUrl.value)
-  }
   photoUrl.value = undefined
   videoName.value = ''
 }
-
-onBeforeUnmount(() => {
-  if (photoUrl.value) {
-    URL.revokeObjectURL(photoUrl.value)
-  }
-})
 </script>
 
 <style scoped>
