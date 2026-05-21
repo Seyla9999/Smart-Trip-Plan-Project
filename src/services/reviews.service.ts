@@ -1,14 +1,5 @@
 import API from '@/api/axios'
 
-export const getReviews = () => API.get('/reviews')
-
-export const getReviewsByAttraction = (attractionId: string) =>
-  API.get(`/reviews/attraction/${attractionId}`)
-
-export const createReview = (reviewData: any) =>
-  API.post('/reviews', reviewData)
-import api from '@/api/axios'
-
 export interface Review {
   id: string
   attractionId: string
@@ -27,17 +18,22 @@ export interface CreateReviewPayload {
   title?: string
 }
 
-export async function getReviewsBySlug(attractionSlug: string): Promise<Review[]> {
-  const { data } = await api.get(`/reviews/attraction/${attractionSlug}`)
+export async function getReviews(): Promise<Review[]> {
+  const { data } = await API.get('/reviews')
+  return data as Review[]
+}
+
+export async function getReviewsByAttraction(attractionId: string): Promise<Review[]> {
+  const { data } = await API.get(`/reviews/attraction/${attractionId}`)
   return data as Review[]
 }
 
 export async function createReview(payload: CreateReviewPayload): Promise<Review> {
-  const { data } = await api.post('/reviews', payload)
+  const { data } = await API.post('/reviews', payload)
   return data as Review
 }
 
 export function averageRating(reviews: Review[]): number {
-  if (!reviews.length) return 0
+  if (!reviews || reviews.length === 0) return 0
   return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
 }

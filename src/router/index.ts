@@ -149,6 +149,31 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("auth_token");
+  const rawUser = localStorage.getItem('user_data') || localStorage.getItem('user') || localStorage.getItem('currentUser')
+  let isAdminUser = false
+
+  if (rawUser) {
+    try {
+      const user = JSON.parse(rawUser)
+      const role = String(user?.role || user?.user_role || '').trim().toLowerCase()
+      isAdminUser = role === 'admin'
+    } catch {
+      isAdminUser = false
+    }
+  }
+
+  if (to.path.startsWith('/admin')) {
+    if (!token) {
+      next('/login')
+      return
+    }
+
+    if (!isAdminUser) {
+      next('/')
+      return
+    }
+  }
+
   const publicRoutes = [
     "home",
     "login",
