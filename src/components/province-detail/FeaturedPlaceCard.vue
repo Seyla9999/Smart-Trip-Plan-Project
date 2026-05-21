@@ -47,7 +47,9 @@ function shortDescription(text: string, max = 180) {
 
     <div class="featured-content">
       <div class="featured-meta">
-        <span class="rating">★★★★★ {{ place.reviews }} REVIEWS</span>
+        <span class="rating"
+          >★ {{ place.rating }} · {{ place.reviews }} REVIEWS</span
+        >
       </div>
 
       <h2 class="featured-title" @click="handleSelect">
