@@ -64,7 +64,6 @@ export class AttractionsService {
       params,
     );
     const total = parseInt(countResult[0].count, 10);
-
     const data = await this.dataSource.query(
       `SELECT
         a.id,
@@ -72,6 +71,7 @@ export class AttractionsService {
         a.name_en,
         a.name_kh,
         a.category,
+        a.description,
         a.average_rating,
         a.is_hidden_gem,
         a.image_url,
@@ -112,6 +112,7 @@ export class AttractionsService {
         a.name_en,
         a.name_kh,
         a.category,
+        a.description,
         a.average_rating,
         a.is_hidden_gem,
         a.image_url,
@@ -264,12 +265,11 @@ export class AttractionsService {
 
   async findByCategory(category: string, limit = 10, offset = 0) {
     const [data, total] = await this.attractionRepo.findAndCount({
-      where: { category, deleted_at: IsNull() } as any,
+      where: { category, deleted_at: IsNull() },
       order: { average_rating: 'DESC' },
       take: limit,
       skip: offset,
     });
-
     return {
       data,
       pagination: { total, limit, offset, pages: Math.ceil(total / limit) },
@@ -334,7 +334,7 @@ export class AttractionsService {
 
   async findTopRated(limit = 10) {
     return this.attractionRepo.find({
-      where: { deleted_at: IsNull() } as any,
+      where: { deleted_at: IsNull() },
       order: { average_rating: 'DESC' },
       take: limit,
     });
@@ -351,11 +351,68 @@ export class AttractionsService {
     return this.attractionRepo.save(attraction);
   }
 
-  async update(id: string, dto: Partial<CreateAttractionDto>) {
-    const updateData: any = { ...dto };
-    if (dto.province_id) {
-      updateData.province_id = parseInt(dto.province_id as any);
+  async update(
+    id: string,
+    dto: Partial<CreateAttractionDto> & {
+      name?: string;
+      name_en?: string;
+      name_kh?: string;
+      description?: string;
+      rating?: number;
+      average_rating?: number;
+      hero_image?: string;
+      image_url?: string;
+      is_hidden_gem?: boolean;
+      province_id?: number | string;
+      photos?: string[];
+      nearby_images?: object;
+    },
+  ) {
+    const updateData: Partial<Attraction> = {};
+
+    if (dto.name_en || dto.name) {
+      updateData.name_en = (dto.name_en || dto.name)!.toString();
     }
+    if (dto.name_kh !== undefined) {
+      updateData.name_kh = dto.name_kh?.toString() || undefined;
+    }
+    if (dto.description !== undefined) {
+      updateData.description = dto.description?.toString() || undefined;
+    }
+    if (dto.category !== undefined) {
+      updateData.category = dto.category || undefined;
+    }
+    if (dto.average_rating !== undefined || dto.rating !== undefined) {
+      const ratingValue = dto.average_rating ?? dto.rating;
+      const parsed = Number(ratingValue);
+      if (!Number.isNaN(parsed)) {
+        updateData.average_rating = parsed;
+      }
+    }
+    if (dto.hero_image !== undefined) {
+      updateData.hero_image = dto.hero_image || undefined;
+    }
+    if (dto.image_url !== undefined) {
+      updateData.image_url = dto.image_url || undefined;
+    }
+    if (dto.is_hidden_gem !== undefined) {
+      updateData.is_hidden_gem = Boolean(dto.is_hidden_gem);
+    }
+    if (dto.province_id) {
+      const parsed = parseInt(dto.province_id as any, 10);
+      if (!Number.isNaN(parsed)) updateData.province_id = parsed;
+    }
+    if (dto.photos !== undefined) {
+      updateData.photos = dto.photos;
+    }
+    if (dto.nearby_images !== undefined) {
+      updateData.nearby_images = dto.nearby_images;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return this.findById(id);
+    }
+
     await this.attractionRepo.update({ id }, updateData);
     return this.findById(id);
   }
@@ -373,7 +430,6 @@ export class AttractionsService {
       .where('attraction.deleted_at IS NULL')
       .andWhere('attraction.category IS NOT NULL')
       .getRawMany();
-
     return result.map((r) => r.category).filter(Boolean);
   }
 
@@ -391,7 +447,6 @@ export class AttractionsService {
         .where('attraction.deleted_at IS NULL')
         .getRawOne(),
     ]);
-
     return {
       totalAttractions: attractions,
       averageRating: parseFloat(avgRating?.average || 0),
@@ -419,7 +474,6 @@ export class AttractionsService {
       average_rating: 4.9,
       location: { type: 'Point', coordinates: [103.2, 11.6] },
     } as any);
-
     return this.attractionRepo.save(attraction);
   }
 

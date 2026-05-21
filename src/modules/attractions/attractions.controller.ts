@@ -10,10 +10,10 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
-} from '@nestjs/common'
-import { AttractionsService } from './attractions.service'
-import { CreateAttractionDto } from './dto/create-attraction.dto'
-import { UpdateAttractionDto } from './dto/update-attraction.dto'
+} from '@nestjs/common';
+import { AttractionsService } from './attractions.service';
+import { CreateAttractionDto } from './dto/create-attraction.dto';
+import { UpdateAttractionDto } from './dto/update-attraction.dto';
 
 @Controller('attractions')
 export class AttractionsController {
@@ -22,14 +22,14 @@ export class AttractionsController {
   @Get('categories')
   @HttpCode(HttpStatus.OK)
   async getCategories() {
-    const categories = await this.attractionsService.getCategories()
-    return { categories }
+    const categories = await this.attractionsService.getCategories();
+    return { categories };
   }
 
   @Get('statistics')
   @HttpCode(HttpStatus.OK)
   async getStatistics() {
-    return this.attractionsService.getStatistics()
+    return this.attractionsService.getStatistics();
   }
 
   @Get('category/:category')
@@ -43,7 +43,7 @@ export class AttractionsController {
       category,
       limit ? parseInt(limit) : 10,
       offset ? parseInt(offset) : 0,
-    )
+    );
   }
 
   @Get('province/:province_id')
@@ -57,59 +57,56 @@ export class AttractionsController {
       province_id,
       limit ? parseInt(limit) : 10,
       offset ? parseInt(offset) : 0,
-    )
+    );
   }
 
   @Get('top-rated')
   @HttpCode(HttpStatus.OK)
   async getTopRated(@Query('limit') limit?: string) {
-    return this.attractionsService.findTopRated(limit ? parseInt(limit) : 10)
+    return this.attractionsService.findTopRated(limit ? parseInt(limit) : 10);
   }
 
   @Get('hidden-gems')
   @HttpCode(HttpStatus.OK)
   async getHiddenGems(@Query('limit') limit?: string) {
-    return this.attractionsService.findHiddenGems(limit ? parseInt(limit) : 5)
+    return this.attractionsService.findHiddenGems(limit ? parseInt(limit) : 5);
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async getById(@Param('id') id: string) {
-    return this.attractionsService.findOne(id)
+    return this.attractionsService.findOne(id);
   }
 
   @Get('')
   @HttpCode(HttpStatus.OK)
   async getAttractions(@Query() filters?: any) {
-    return this.attractionsService.findAll(filters || {})
+    return this.attractionsService.findAll(filters || {});
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: any) {
-    return this.attractionsService.create(dto)
+    return this.attractionsService.create(dto);
   }
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateAttractionDto,
-  ) {
-    return this.attractionsService.update(id, dto)
+  async update(@Param('id') id: string, @Body() dto: UpdateAttractionDto) {
+    return this.attractionsService.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string) {
-    return this.attractionsService.delete(id)
+    return this.attractionsService.delete(id);
   }
 
   // Development/testing helper: seed a sample attraction
   @Get('seed/tatai')
   @HttpCode(HttpStatus.OK)
   async seedTatai() {
-    const attraction = await this.attractionsService.seedTataiWaterfall()
-    return { success: true, data: attraction }
+    const attraction = await this.attractionsService.seedTataiWaterfall();
+    return { success: true, data: attraction };
   }
 }

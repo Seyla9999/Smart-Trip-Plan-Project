@@ -26,6 +26,9 @@ export class Attraction {
   @Column({ nullable: true })
   name_kh!: string;
 
+  @Column({ type: 'text', nullable: true })
+  description!: string;
+
   @Column()
   province_id!: number;
 
@@ -36,14 +39,19 @@ export class Attraction {
   @Column({ nullable: true })
   category!: string;
 
-  @Column({ type: 'text', nullable: true })
-  description?: string
-
-  @Column({ type: 'geometry', spatialFeatureType: 'Point', srid: 4326, nullable: true })
-  location?: any
+  @Column({
+    type: 'geometry',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true,
+  })
+  location?: any;
 
   @Column({ name: 'hero_image', type: 'text', nullable: true })
   hero_image?: string;
+
+  @Column({ name: 'image_url', type: 'text', nullable: true })
+  image_url?: string;
 
   @Column({ name: 'photos', type: 'text', array: true, nullable: true })
   photos?: string[];

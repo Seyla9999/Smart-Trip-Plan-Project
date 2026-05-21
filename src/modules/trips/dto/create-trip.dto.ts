@@ -11,10 +11,10 @@ import { Type } from 'class-transformer';
 class LocationDto {
   @IsNotEmpty()
   lat: number;
-  
+
   @IsNotEmpty()
   lng: number;
-  
+
   @IsString()
   name: string;
 }

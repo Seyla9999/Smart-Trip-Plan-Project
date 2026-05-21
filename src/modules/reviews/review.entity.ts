@@ -22,7 +22,12 @@ export class Review {
   @Column({ type: 'text', nullable: true })
   comment: string;
 
-  @Column({ name: 'author_name', type: 'varchar', length: 100, default: 'Anonymous' })
+  @Column({
+    name: 'author_name',
+    type: 'varchar',
+    length: 100,
+    default: 'Anonymous',
+  })
   authorName: string;
 
   @Column({ type: 'varchar', length: 200, nullable: true })

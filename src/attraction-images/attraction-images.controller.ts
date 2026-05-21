@@ -21,7 +21,8 @@ export class AttractionImagesController {
   // POST /attraction-images  (save Supabase Storage URL to DB)
   @Post()
   addImage(
-    @Body() body: {
+    @Body()
+    body: {
       attractionSlug?: string;
       attractionId?: string;
       url: string;

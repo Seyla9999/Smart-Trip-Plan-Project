@@ -8,7 +8,28 @@ import { CreateReviewDto } from './dto/create-review.dto'
 export class ReviewsService {
   constructor(
     @InjectRepository(Review)
-    private reviewRepo: Repository<Review>,
+    private readonly repo: Repository<Review>,
+  ) {}
+
+  findAll() {
+    return this.repo.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  findByAttraction(attractionId: string) {
+    return this.repo.find({
+      where: { attractionId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  create(data: Partial<Review>) {
+    const review = this.repo.create(data);
+    return this.repo.save(review);
+  }
+  
+      private reviewRepo: Repository<Review>,
   ) {}
 
   async create(dto: CreateReviewDto, userId?: string) {

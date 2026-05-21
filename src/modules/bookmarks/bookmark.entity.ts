@@ -7,11 +7,34 @@ export class Bookmark {
   id!: string;
 
   @ManyToOne(() => User, (user) => user.bookmarks, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
   user!: User;
 
   @Column('uuid')
   user_id!: string;
+
+  @Column()
+  place_id!: string;
+
+  @Column({ nullable: true })
+  place_name!: string;
+
+  @Column({ nullable: true })
+  place_type!: string;
+
+  @Column({ nullable: true })
+  place_image_url!: string;
+
+  @Column({ default: 'active' })
+  status!: string;
+
+  @CreateDateColumn()
+  created_at!: Date;
+
+  @Column({ nullable: true })
+  updated_at!: Date;
+
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
 
   @Column({ name: 'entity_type', type: 'varchar' })
   entity_type!: string;
