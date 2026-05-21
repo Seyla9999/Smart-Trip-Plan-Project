@@ -22,15 +22,6 @@ import { WeatherModule } from './modules/weather/weather.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 
-// Entities
-import { Attraction } from './modules/attractions/attraction.entity';
-import { Province } from './modules/provinces/province.entity';
-import { Bookmark } from './modules/bookmarks/bookmark.entity';
-import { NearbyImage } from './modules/nearby-images/nearby-image.entity';
-import { UserPreferences } from './modules/users/user-preferences.entity';
-import { Review } from './modules/reviews/review.entity';
-
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -46,15 +37,6 @@ import { Review } from './modules/reviews/review.entity';
       database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: false,
-      entities: [
-        Attraction,
-        Province,
-        Story,
-        StoryComment,
-        Bookmark,
-        NearbyImage,
-        Review,
-      ],
 
       ssl: {
         rejectUnauthorized: false,
