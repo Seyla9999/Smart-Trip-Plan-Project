@@ -216,11 +216,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import API from '@/api/axios'
+import { mockAttractions } from '@/data/mockAttractions'
+import { getProvinces } from '@/services/home.service'
 
 // Local nearby images (if you have local images for nearby places)
 // import tataiResortImg from '@/assets/images/nearby/tatai-resort.jpg'
@@ -234,6 +234,7 @@ const attraction = ref<any>(null)
 const nearbyPOIs = ref<any>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const provinceNameById = ref<Record<number, string>>({})
 
 const heroImage = computed(() =>
   attraction.value?.heroImage ||
@@ -261,6 +262,119 @@ const toSlug = (value: string) =>
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
+
+function toProvinceObject(province: any) {
+  if (!province) {
+    return { nameEn: 'Unknown Province', name_en: 'Unknown Province' }
+  }
+
+  if (typeof province === 'string') {
+    return { nameEn: province, name_en: province }
+  }
+
+  const name = province.nameEn ?? province.name_en ?? province.name ?? 'Unknown Province'
+  return { ...province, nameEn: name, name_en: name }
+}
+
+function normalizeNearbyPlaces(nearbyPlaces: any, provinceName: string) {
+  if (!Array.isArray(nearbyPlaces)) return []
+
+  return nearbyPlaces
+    .map((item: any, index: number) => {
+      const name = item?.name ?? item?.title ?? `Nearby Place ${index + 1}`
+      return {
+        name,
+        slug: item?.slug ?? toSlug(name),
+        location: item?.location ?? provinceName.toUpperCase(),
+        image: item?.image ?? item?.image_url ?? item?.url ?? '',
+      }
+    })
+    .filter((item: any) => Boolean(item.name))
+}
+
+function normalizeAttractionData(rawAttraction: any, attractionId: string) {
+  const provinceId = Number(rawAttraction?.province_id ?? rawAttraction?.province?.id)
+  const provinceNameFromId = Number.isFinite(provinceId)
+    ? provinceNameById.value[provinceId]
+    : undefined
+
+  const province = toProvinceObject(
+    rawAttraction?.province ??
+      rawAttraction?.province_name_en ??
+      rawAttraction?.province_name ??
+      rawAttraction?.provinceName ??
+      provinceNameFromId,
+  )
+  const provinceName = province.nameEn
+  const attractionName =
+    rawAttraction?.name ?? rawAttraction?.name_en ?? rawAttraction?.name_kh ?? 'Attraction'
+  const primaryImage =
+    rawAttraction?.heroImage ??
+    rawAttraction?.hero_image ??
+    rawAttraction?.image_url ??
+    rawAttraction?.image ??
+    'https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg'
+
+  const nearbyFromAttraction = normalizeNearbyPlaces(rawAttraction?.nearby, provinceName)
+  const nearbyFromImages = normalizeNearbyPlaces(rawAttraction?.nearby_images, provinceName)
+  const normalizedNearby = nearbyFromAttraction.length ? nearbyFromAttraction : nearbyFromImages
+  const normalizedPhotos =
+    Array.isArray(rawAttraction?.photos) && rawAttraction.photos.length
+      ? rawAttraction.photos
+      : [primaryImage, primaryImage, primaryImage]
+
+  return {
+    id: rawAttraction?.id ?? attractionId,
+    name: attractionName,
+    province,
+    provinceSlug: rawAttraction?.provinceSlug ?? toSlug(provinceName),
+    rating: Number(rawAttraction?.rating ?? rawAttraction?.average_rating ?? 0),
+    reviews: Number(rawAttraction?.reviews ?? rawAttraction?.review_count ?? 0),
+    heroImage: primaryImage,
+    badges:
+      Array.isArray(rawAttraction?.badges) && rawAttraction.badges.length
+        ? rawAttraction.badges
+        : [
+            rawAttraction?.is_hidden_gem ? 'HIDDEN GEM' : 'ATTRACTION',
+            String(rawAttraction?.category ?? 'Attraction').toUpperCase(),
+            'TOP RATED',
+          ],
+    tags:
+      Array.isArray(rawAttraction?.tags) && rawAttraction.tags.length
+        ? rawAttraction.tags
+        : [rawAttraction?.category ?? 'Attraction'],
+    about:
+      Array.isArray(rawAttraction?.about) && rawAttraction.about.length
+        ? rawAttraction.about
+        : [
+            rawAttraction?.description ??
+              `${attractionName} is one of the notable places to visit in ${provinceName}.`,
+            `Explore more of ${provinceName} through nearby attractions and local experiences.`,
+          ],
+    photos: normalizedPhotos,
+    info: {
+      bestTime: rawAttraction?.info?.bestTime ?? 'Year-round',
+      duration: rawAttraction?.info?.duration ?? '2-3 hours',
+      difficulty: rawAttraction?.info?.difficulty ?? 'Moderate',
+      bestFor: rawAttraction?.info?.bestFor ?? 'All travelers',
+      province: provinceName,
+    },
+    nearby: normalizedNearby,
+  }
+}
+
+async function loadProvinceNames() {
+  if (Object.keys(provinceNameById.value).length > 0) return
+
+  try {
+    const provinces = await getProvinces()
+    provinceNameById.value = Object.fromEntries(
+      provinces.map((province) => [Number(province.id), province.name_en]),
+    )
+  } catch (err) {
+    console.error('Failed to load provinces for attraction detail:', err)
+  }
+}
 
 const provincePlaceMap: Record<string, PlaceSummary[]> = {
   'koh-kong': [
@@ -403,6 +517,7 @@ function loadAttraction() {
   if (!route.params.placeSlug && route.params.id) {
     attraction.value = null
     nearbyPOIs.value = null
+    void fetchAttraction()
     return
   }
 
@@ -433,14 +548,6 @@ function loadAttraction() {
   }, 1200)
 }
 
-watch(
-  () => [route.params.slug, route.params.placeSlug, route.params.id],
-  () => {
-    loadAttraction()
-  },
-  { immediate: true },
-)
-
 // Computed: check if there are nearby POIs
 const hasNearbyPOIs = computed(() => {
   return nearbyPOIs.value && (
@@ -464,19 +571,28 @@ const fetchAttraction = async () => {
     if (!attractionId) {
       return
     }
+
+    await loadProvinceNames()
+
+    const response = await API.get(`/attractions/${attractionId}`)
+    const attractionPayload = response.data?.data ?? response.data
     
-    console.log(`Fetching attraction: ${attractionId}`)
-    
-    const response = await axios.get(`${API_BASE_URL}/attractions/${attractionId}`)
-    
-    if (response.data) {
-      attraction.value = response.data
-      nearbyPOIs.value = response.data.nearbyPOIs || null
-      
-      console.log('Attraction loaded:', attraction.value.name)
+    if (attractionPayload) {
+      attraction.value = normalizeAttractionData(attractionPayload, attractionId)
+      nearbyPOIs.value = attractionPayload.nearbyPOIs || null
     }
   } catch (err: any) {
     console.error('API Error:', err)
+
+    const fallbackAttraction = mockAttractions.find(
+      (item) => String(item.id) === String(route.params.id),
+    )
+    if (fallbackAttraction) {
+      attraction.value = normalizeAttractionData(fallbackAttraction, String(route.params.id || ''))
+      nearbyPOIs.value = null
+      error.value = null
+      return
+    }
     
     if (err.response?.status === 404) {
       error.value = `Attraction "${route.params.id}" not found`
@@ -496,11 +612,13 @@ const fetchAttraction = async () => {
   }
 }
 
-onMounted(() => {
-  if (route.params.id) {
-    fetchAttraction()
-  }
-})
+watch(
+  () => [route.params.slug, route.params.placeSlug, route.params.id],
+  () => {
+    loadAttraction()
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>

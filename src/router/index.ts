@@ -6,6 +6,10 @@ import RegisterView from '../views/auth/RegisterView.vue'
 import VerifyView from '../views/auth/VerifyView.vue'
 import AdminView from '../views/AdminView.vue'
 import Admin_Dashboard from '../views/Admin_Dashboard.vue'
+import Admin_Destination from '../views/Admin_Destination.vue'
+import Admin_Moderation from '../views/Admin_Moderation.vue'
+import Admin_User from '../views/Admin_User.vue'
+import Admin_Setting from '../views/Admin_Setting.vue'
 import UserView from '../views/UserView.vue'
 import User_Discover from '../views/User_Discover.vue'
 import CommunityView from '../views/CommunityView.vue'
@@ -44,6 +48,10 @@ const router = createRouter({
       component: AdminView,
       children: [
         { path: '', name: 'admin-dashboard', component: Admin_Dashboard },
+        { path: 'destination', name: 'admin-destination', component: Admin_Destination },
+        { path: 'moderation', name: 'admin-moderation', component: Admin_Moderation },
+        { path: 'user', name: 'admin-user', component: Admin_User },
+        { path: 'setting', name: 'admin-setting', component: Admin_Setting },
       ],
     },
     {

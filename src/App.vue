@@ -14,5 +14,9 @@ import Footer from './components/Footer.vue'
 
 const route = useRoute()
 const authPaths = ['/login', '/register', '/verify']
-const showGlobalLayout = computed(() => !authPaths.includes(route.path))
+const showGlobalLayout = computed(() => {
+  const isAuthRoute = authPaths.includes(route.path)
+  const isAdminRoute = route.path.startsWith('/admin')
+  return !isAuthRoute && !isAdminRoute
+})
 </script>

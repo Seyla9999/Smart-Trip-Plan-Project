@@ -63,6 +63,11 @@ export async function getProvinces(): Promise<Province[]> {
   return res.data.data
 }
 
+export async function createProvince(data: any): Promise<any> {
+  const res = await API.post('/provinces', data)
+  return res.data.data
+}
+
 export async function getAttractionsByCategory(
   category: string,
   province?: string,
@@ -80,7 +85,9 @@ export async function getHiddenGems(limit = 5): Promise<Attraction[]> {
 }
 
 export async function getStories(limit = 5): Promise<Story[]> {
-  const res = await API.get('/stories', { params: { limit } })
+  const res = await API.get('/stories', {
+    params: { limit, status: 'published,approved' },
+  })
   return res.data.data
 }
 
