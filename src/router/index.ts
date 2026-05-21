@@ -1,21 +1,26 @@
-import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
-import LoginView from "../views/auth/LoginView.vue";
-import RegisterView from "../views/auth/RegisterView.vue";
-import VerifyView from "../views/auth/VerifyView.vue";
-import AdminView from "../views/AdminView.vue";
-import Admin_Dashboard from "../views/Admin_Dashboard.vue";
-import UserView from "../views/UserView.vue";
-import User_Discover from "../views/User_Discover.vue";
-import CommunityView from "../views/CommunityView.vue";
-import ProvinceDetailView from "../views/ProvinceDetailView.vue";
-import AboutView from "../views/AboutView.vue";
-import AttractionDetail from "../components/AttractionDetail.vue";
-import TripPlannerView from "../views/TripPlannerView.vue";
-import TripFormView from "../views/TripFormView.vue";
-import TripResultsView from "../views/TripResultsView.vue";
-import MapView from "../views/MapView.vue";
-import ProfileView from "../views/ProfileView.vue";
+import { createRouter, createWebHistory } from 'vue-router'
+
+import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/auth/LoginView.vue'
+import RegisterView from '../views/auth/RegisterView.vue'
+import VerifyView from '../views/auth/VerifyView.vue'
+import AdminView from '../views/AdminView.vue'
+import Admin_Dashboard from '../views/Admin_Dashboard.vue'
+import Admin_Destination from '../views/Admin_Destination.vue'
+import Admin_Moderation from '../views/Admin_Moderation.vue'
+import Admin_User from '../views/Admin_User.vue'
+import Admin_Setting from '../views/Admin_Setting.vue'
+import UserView from '../views/UserView.vue'
+import User_Discover from '../views/User_Discover.vue'
+import CommunityView from '../views/CommunityView.vue'
+import ProvinceDetailView from '../views/ProvinceDetailView.vue'
+import AboutView from '../views/AboutView.vue'
+import AttractionDetail from '../components/AttractionDetail.vue'
+import TripPlannerView from '../views/TripPlannerView.vue'
+import TripFormView from '../views/TripFormView.vue'
+import TripResultsView from '../views/TripResultsView.vue'
+import MapView from '../views/MapView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,7 +49,11 @@ const router = createRouter({
       path: "/admin",
       component: AdminView,
       children: [
-        { path: "", name: "admin-dashboard", component: Admin_Dashboard },
+        { path: '', name: 'admin-dashboard', component: Admin_Dashboard },
+        { path: 'destination', name: 'admin-destination', component: Admin_Destination },
+        { path: 'moderation', name: 'admin-moderation', component: Admin_Moderation },
+        { path: 'user', name: 'admin-user', component: Admin_User },
+        { path: 'setting', name: 'admin-setting', component: Admin_Setting },
       ],
     },
     {
