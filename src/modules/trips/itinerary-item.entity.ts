@@ -17,6 +17,10 @@ export class ItineraryItem {
   @Column({ type: 'int', default: 0 })
   day_index!: number;
 
+  // Sort order within a day (for drag-and-drop reordering later)
+  @Column({ type: 'int', default: 0 })
+  sort_order!: number;
+
   @Column()
   title!: string;
 
@@ -31,4 +35,8 @@ export class ItineraryItem {
 
   @Column({ nullable: true })
   end_time!: string;
+
+  // Google place_id — stored so you can fetch fresh details later
+  @Column({ nullable: true })
+  place_id!: string;
 }
