@@ -3,7 +3,7 @@
 
     <!-- Loading -->
     <div v-if="isPageLoading" class="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-      <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+      <div class="w-12 h-12 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
       <p class="text-gray-500 font-medium">Loading your trip...</p>
     </div>
 
@@ -18,7 +18,7 @@
     </div>
 
     <template v-else>
-      <!-- ── Page header ──────────────────────────────────────────────────── -->
+      <!-- Page header -->
       <div class="max-w-7xl mx-auto mb-10 flex flex-wrap justify-between items-start gap-5">
         <div>
           <h1 class="text-3xl font-extrabold text-green-800 mb-2">Your Trip Plan</h1>
@@ -28,10 +28,11 @@
           </p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <button @click="saveTrip" :disabled="tripSaved"
+          <button @click="savePlan" :disabled="isSaving"
             class="px-4 py-2.5 bg-green-700 text-white rounded-lg text-sm font-semibold
-                   hover:bg-green-800 disabled:opacity-70 disabled:cursor-not-allowed transition shadow-sm">
-            {{ tripSaved ? '✓ Saved' : '💾 Save Trip' }}
+                   hover:bg-green-800 disabled:opacity-70 disabled:cursor-not-allowed transition shadow-sm flex items-center gap-2">
+            <span v-if="isSaving" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            {{ saveLabel }}
           </button>
           <button @click="showShareModal = true"
             class="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition shadow-sm">
@@ -45,7 +46,18 @@
         </div>
       </div>
 
-      <!-- ── Share Modal ──────────────────────────────────────────────────── -->
+      <!-- Save notification -->
+      <Teleport to="body">
+        <transition name="toast">
+          <div v-if="toastMsg"
+            class="fixed bottom-6 right-6 z-[9999] px-5 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2"
+            :class="toastType === 'success' ? 'bg-green-700 text-white' : 'bg-red-500 text-white'">
+            {{ toastMsg }}
+          </div>
+        </transition>
+      </Teleport>
+
+      <!-- Share Modal -->
       <Teleport to="body">
         <div v-if="showShareModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           @click.self="showShareModal = false">
@@ -74,10 +86,10 @@
         </div>
       </Teleport>
 
-      <!-- ── Main grid ────────────────────────────────────────────────────── -->
+      <!-- Main grid -->
       <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-7 items-start">
 
-        <!-- Sidebar -->
+        <!-- ─── Sidebar ─────────────────────────────────────────────────────── -->
         <aside class="flex flex-col gap-5 lg:sticky lg:top-5">
 
           <!-- Trip details -->
@@ -88,29 +100,60 @@
               <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">To</span><span class="font-semibold text-gray-700">{{ destinationName }}</span></div>
               <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">Duration</span><span class="font-semibold text-gray-700">{{ daysCount }} days</span></div>
               <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">Travel Type</span><span class="font-semibold text-gray-700 capitalize">{{ travelType }}</span></div>
-              <div v-if="tripData?.members?.length" class="flex justify-between py-2.5 text-sm">
-                <span class="text-gray-400">Members</span>
-                <span class="font-semibold text-gray-700">{{ tripData.members.length }}</span>
-              </div>
             </div>
           </div>
 
-          <!-- Weather -->
+          <!-- ── Per-Day Weather ─────────────────────────────────────────────── -->
           <div class="bg-white rounded-xl p-5 shadow-sm">
-            <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide mb-4">Weather</h3>
-            <div class="flex items-center gap-4">
-              <span class="text-5xl">{{ weatherIcon }}</span>
-              <div>
-                <div class="text-2xl font-bold text-green-800">{{ weather.temperature }}°C</div>
-                <div class="text-sm text-gray-500">{{ weather.condition }}</div>
-                <div class="text-xs text-gray-400 mt-0.5">💧 {{ weather.humidity }}%</div>
-              </div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide">Weather Forecast</h3>
+              <span v-if="weatherLoading" class="w-4 h-4 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
             </div>
+
+            <!-- Day tabs -->
+            <div class="flex gap-1.5 flex-wrap mb-4">
+              <button v-for="(day, idx) in weatherForecast" :key="idx"
+                @click="selectedWeatherDay = idx"
+                :class="selectedWeatherDay === idx
+                  ? 'bg-green-700 text-white border-green-700'
+                  : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-green-400'"
+                class="px-2.5 py-1 rounded-full border text-xs font-semibold transition">
+                Day {{ idx + 1 }}
+              </button>
+            </div>
+
+            <!-- Weather card for selected day -->
+            <template v-if="weatherForecast.length">
+              <div class="flex items-center gap-4 mb-3">
+                <span class="text-4xl">{{ weatherForecast[selectedWeatherDay]?.icon }}</span>
+                <div>
+                  <div class="text-xs text-gray-400 mb-0.5">{{ weatherForecast[selectedWeatherDay]?.dateLabel }}</div>
+                  <div class="text-2xl font-bold text-green-800">
+                    {{ weatherForecast[selectedWeatherDay]?.tempMax }}° / {{ weatherForecast[selectedWeatherDay]?.tempMin }}°C
+                  </div>
+                  <div class="text-sm text-gray-500">{{ weatherForecast[selectedWeatherDay]?.condition }}</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                <div class="bg-gray-50 rounded-lg px-3 py-2">💧 Rain: {{ weatherForecast[selectedWeatherDay]?.rain }} mm</div>
+                <div class="bg-gray-50 rounded-lg px-3 py-2">💨 Wind: {{ weatherForecast[selectedWeatherDay]?.wind }} km/h</div>
+                <div class="bg-gray-50 rounded-lg px-3 py-2">☀️ UV: {{ weatherForecast[selectedWeatherDay]?.uv }}</div>
+                <div class="bg-gray-50 rounded-lg px-3 py-2">🌅 Sunrise: {{ weatherForecast[selectedWeatherDay]?.sunrise }}</div>
+              </div>
+            </template>
+            <div v-else-if="!weatherLoading" class="text-xs text-gray-400 text-center py-4">Weather unavailable</div>
           </div>
 
-          <!-- Daily schedule -->
+          <!-- ── Daily Schedule (editable) ──────────────────────────────────── -->
           <div class="bg-white rounded-xl p-5 shadow-sm">
-            <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide mb-4">Daily Schedule</h3>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide">Daily Schedule</h3>
+              <button v-if="schedule[selectedDay]?.length"
+                @click="clearDay(selectedDay)"
+                class="text-xs text-red-400 hover:text-red-600 transition">Clear</button>
+            </div>
+
+            <!-- Day selector -->
             <div class="flex flex-wrap gap-2 mb-4">
               <button v-for="day in daysCount" :key="day" @click="selectedDay = day"
                 :class="selectedDay === day ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-500 border-gray-200 hover:border-green-400'"
@@ -118,23 +161,27 @@
                 Day {{ day }}
               </button>
             </div>
-            <div class="flex flex-col gap-2">
-              <template v-if="dayItinerary.length">
-                <div v-for="item in dayItinerary" :key="item.id" class="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <div class="text-xs font-bold text-green-700 mb-1">{{ item.start_time || '🕐' }} {{ item.title }}</div>
-                  <p v-if="item.description" class="text-xs text-gray-500">{{ item.description }}</p>
-                  <p v-if="item.location"    class="text-xs text-gray-400 mt-1">📍 {{ item.location }}</p>
+
+            <!-- Schedule items -->
+            <div class="flex flex-col gap-2 min-h-[80px]">
+              <div v-if="!schedule[selectedDay]?.length" class="flex flex-col items-center justify-center h-20 text-gray-300 text-xs text-center border-2 border-dashed border-gray-200 rounded-xl">
+                <span class="text-2xl mb-1">📋</span>
+                Click "+ Add to Day {{ selectedDay }}" on any attraction
+              </div>
+              <div v-for="(item, i) in schedule[selectedDay]" :key="item.placeId"
+                class="p-3 bg-green-50 rounded-lg border border-green-100 flex items-start gap-2">
+                <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-bold text-green-800 truncate">{{ item.name }}</div>
+                  <div class="text-xs text-gray-400 truncate">{{ item.vicinity }}</div>
                 </div>
-              </template>
-              <template v-else>
-                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100"><div class="text-xs font-bold text-green-700 mb-1">🌅 Morning</div><p class="text-xs text-gray-500">Arrival and check-in</p></div>
-                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100"><div class="text-xs font-bold text-green-700 mb-1">☀️ Afternoon</div><p class="text-xs text-gray-500">Explore local attractions</p></div>
-                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100"><div class="text-xs font-bold text-green-700 mb-1">🌙 Evening</div><p class="text-xs text-gray-500">Dinner and local experiences</p></div>
-              </template>
+                <button @click="removeFromSchedule(selectedDay, i)"
+                  class="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-lg leading-none">×</button>
+              </div>
             </div>
           </div>
 
-          <!-- Packing list (API data) -->
+          <!-- Packing list -->
           <div v-if="tripData?.packing_list?.length" class="bg-white rounded-xl p-5 shadow-sm">
             <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide mb-4">Packing List</h3>
             <div class="flex flex-col gap-2">
@@ -153,7 +200,7 @@
 
         </aside>
 
-        <!-- Right column -->
+        <!-- ─── Right column ──────────────────────────────────────────────────── -->
         <main class="flex flex-col gap-7">
 
           <!-- Map -->
@@ -178,7 +225,6 @@
             </div>
 
             <div class="flex flex-col md:flex-row gap-5">
-              <!-- Leaflet canvas -->
               <div class="relative flex-1 rounded-xl overflow-hidden border border-gray-200 min-h-[460px]">
                 <div ref="mapContainer" class="w-full h-full min-h-[460px]"></div>
                 <div v-if="isLoadingRoute"
@@ -187,7 +233,6 @@
                   <span class="text-sm font-semibold text-green-800">Loading route...</span>
                 </div>
               </div>
-              <!-- Legend -->
               <div class="w-full md:w-44 flex-shrink-0">
                 <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Services</p>
                 <div class="flex flex-col gap-1.5 mb-4">
@@ -198,7 +243,7 @@
                 </div>
                 <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Map Key</p>
                 <div class="flex flex-col gap-2 text-xs text-gray-600">
-                  <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-700 ring-2 ring-green-700 ring-offset-1 flex-shrink-0"></span>Starting Point</div>
+                  <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-700 ring-2 ring-green-700 ring-offset-1 flex-shrink-0"></span>Start</div>
                   <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-500 ring-offset-1 flex-shrink-0"></span>Destination</div>
                   <div class="flex items-center gap-2"><span class="inline-block w-6 h-1 bg-blue-500 rounded flex-shrink-0"></span>Route</div>
                 </div>
@@ -206,52 +251,113 @@
             </div>
           </div>
 
-          <!-- POI section -->
+          <!-- ── Real Attractions from Google Places ────────────────────────── -->
           <div class="bg-white rounded-xl p-6 shadow-sm">
-            <h2 class="text-2xl font-bold text-green-800 mb-5">Nearby Services & Attractions</h2>
-            <div v-if="filteredPOIs.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              <div v-for="poi in filteredPOIs" :key="poi.id"
-                class="bg-gray-50 border border-gray-200 rounded-xl p-4 hover:border-green-600 hover:shadow-md transition">
-                <div class="flex items-center gap-2 mb-3">
-                  <span class="text-2xl">{{ poi.icon }}</span>
-                  <span class="text-xs bg-green-50 text-green-700 font-semibold px-2 py-0.5 rounded">{{ poi.type }}</span>
-                </div>
-                <h3 class="text-sm font-bold text-green-800 mb-1">{{ poi.name }}</h3>
-                <p class="text-xs text-gray-500 mb-3">{{ poi.description }}</p>
-                <div class="flex justify-between items-center">
-                  <span class="text-xs text-gray-400">{{ poi.distance }}</span>
-                  <button class="px-3 py-1.5 bg-green-700 text-white text-xs font-bold rounded-lg hover:bg-green-800 transition">Details</button>
-                </div>
-              </div>
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-2xl font-bold text-green-800">Attractions Along Route</h2>
+              <span v-if="attractionsLoading" class="w-5 h-5 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
             </div>
-            <div v-else class="py-12 text-center text-gray-400 text-sm">Select a filter above to see nearby services</div>
-          </div>
+            <p class="text-sm text-gray-400 mb-5">Click "+ Add" to add attractions to your daily schedule</p>
 
-          <!-- Attractions -->
-          <div class="bg-white rounded-xl p-6 shadow-sm">
-            <h2 class="text-2xl font-bold text-green-800 mb-1">Recommended Attractions</h2>
-            <p class="text-sm text-gray-400 mb-6">Must-see places based on your travel preferences</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              <div v-for="a in attractions" :key="a.id"
-                class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-md transition-all duration-200">
-                <div class="relative h-44 overflow-hidden">
-                  <img :src="a.image" :alt="a.name" class="w-full h-full object-cover" />
-                  <span class="absolute top-3 right-3 bg-green-800/90 text-white text-xs font-bold px-3 py-1 rounded-full">{{ a.category }}</span>
-                  <span :class="a.attractionType === 'destination' ? 'bg-green-800/90 text-white' : 'bg-yellow-400/90 text-gray-800'"
-                    class="absolute bottom-3 left-3 text-xs font-bold px-3 py-1 rounded-full">
-                    {{ a.attractionType === 'destination' ? '📍 Destination' : '🛣️ Along Route' }}
+            <!-- Category filter tabs -->
+            <div class="flex gap-2 flex-wrap mb-5">
+              <button v-for="cat in attractionCategories" :key="cat.type"
+                @click="selectedAttractionCategory = cat.type"
+                :class="selectedAttractionCategory === cat.type
+                  ? 'bg-green-700 text-white border-green-700'
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-green-400'"
+                class="px-3 py-1 rounded-full border text-xs font-semibold transition">
+                {{ cat.icon }} {{ cat.label }}
+              </button>
+            </div>
+
+            <div v-if="attractionsLoading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div v-for="n in 6" :key="n" class="animate-pulse bg-gray-100 rounded-xl h-56"></div>
+            </div>
+
+            <div v-else-if="filteredAttractions.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div v-for="place in filteredAttractions" :key="place.id"
+                class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-md transition-all duration-200 flex flex-col">
+
+                <!-- Photo -->
+                <div class="relative h-40 overflow-hidden bg-gray-100">
+                  <img v-if="place.image_url || place.images?.[0]?.url"
+                    :src="place.image_url ?? place.images?.[0]?.url" :alt="place.name"
+                    class="w-full h-full object-cover" />
+                  <div v-else class="w-full h-full flex items-center justify-center text-4xl">
+                    {{ attractionCategories.find(c => c.type.toLowerCase() === (place.category ?? '').toLowerCase())?.icon ?? '🏛️' }}
+                  </div>
+                  <span class="absolute top-3 right-3 bg-green-800/90 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                    {{ place.category ?? 'Attraction' }}
+                  </span>
+                  <span v-if="isAddedToAnyDay(String(place.id))"
+                    class="absolute top-3 left-3 bg-yellow-400 text-gray-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                    ✓ Added
                   </span>
                 </div>
-                <div class="p-4">
-                  <h3 class="font-bold text-green-800 mb-0.5">{{ a.name }}</h3>
-                  <p class="text-xs text-gray-400 mb-2 capitalize">{{ provinceNames[a.locationProvince] || a.locationProvince }}</p>
-                  <p class="text-xs text-gray-500 leading-relaxed mb-3">{{ a.description }}</p>
-                  <div class="flex justify-between items-center">
-                    <span class="text-sm font-bold text-green-800">⭐ {{ a.rating }}</span>
-                    <button class="px-3 py-1.5 bg-green-700 text-white text-xs font-bold rounded-lg hover:bg-green-800 transition">+ Add</button>
+
+                <!-- Info -->
+                <div class="p-4 flex flex-col flex-1">
+                  <h3 class="font-bold text-green-800 mb-0.5 leading-tight">{{ place.name }}</h3>
+                  <p class="text-xs text-gray-400 mb-1">📍 {{ place.province ?? '' }}</p>
+                  <p v-if="place.description" class="text-xs text-gray-500 leading-relaxed mb-2 line-clamp-2">{{ place.description }}</p>
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class="text-sm font-bold text-amber-500">⭐ {{ place.rating?.toFixed(1) ?? 'N/A' }}</span>
+                  </div>
+
+                  <!-- Add to Day selector -->
+                  <div class="mt-auto flex items-center gap-2">
+                    <select v-model="addToDayMap[String(place.id)]"
+                      class="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
+                      <option v-for="d in daysCount" :key="d" :value="d">Day {{ d }}</option>
+                    </select>
+                    <button @click="addToSchedule(place)"
+                      class="px-3 py-1.5 bg-green-700 text-white text-xs font-bold rounded-lg hover:bg-green-800 transition whitespace-nowrap">
+                      + Add
+                    </button>
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div v-else class="py-12 text-center text-gray-400 text-sm">
+              No attractions found for this area.
+            </div>
+          </div>
+
+          <!-- Nearby POIs (Services) -->
+          <div class="bg-white rounded-xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-5">
+              <h2 class="text-2xl font-bold text-green-800">Nearby Services</h2>
+              <span v-if="poisLoading" class="w-5 h-5 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
+            </div>
+
+            <!-- Skeleton while loading -->
+            <div v-if="poisLoading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div v-for="n in 6" :key="n" class="animate-pulse bg-gray-100 rounded-xl h-32"></div>
+            </div>
+
+            <div v-else-if="filteredPOIs.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div v-for="poi in filteredPOIs" :key="poi.id"
+                class="bg-gray-50 border border-gray-200 rounded-xl p-4 hover:border-green-600 hover:shadow-md transition">
+                <div class="flex items-center gap-2 mb-3">
+                  <span class="text-2xl">
+                    {{ filters.find(f => (poi.type ?? '').toLowerCase().includes(f.id))?.icon ?? '📍' }}
+                  </span>
+                  <span class="text-xs bg-green-50 text-green-700 font-semibold px-2 py-0.5 rounded capitalize">
+                    {{ poi.type }}
+                  </span>
+                </div>
+                <h3 class="text-sm font-bold text-green-800 mb-1">{{ poi.name }}</h3>
+                <p v-if="poi.description" class="text-xs text-gray-500 mb-3">{{ poi.description }}</p>
+                <span v-if="poi.distance" class="text-xs text-gray-400">📍 {{ poi.distance }}</span>
+              </div>
+            </div>
+
+            <div v-else-if="!poisLoading" class="py-12 text-center text-gray-400 text-sm">
+              <div class="text-3xl mb-3">🔍</div>
+              <p v-if="allPOIs.length === 0">No services data available for this destination yet.</p>
+              <p v-else>Toggle the filters above to show nearby services</p>
             </div>
           </div>
 
@@ -262,7 +368,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from 'vue'
 import { useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -275,26 +381,29 @@ L.Icon.Default.mergeOptions({
 })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface ItineraryItem { id: string; title: string; description: string; location: string; start_time: string; day_index: number }
-interface PackingItem   { id: string; name: string; quantity: number; packed: boolean }
-interface TripMember    { id: string; user_id: string; role: string }
-interface TripData      { id: string; title: string; destination: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
-interface Attraction    { id: number; name: string; category: string; description: string; image: string; rating: number; locationProvince: string; attractionType: 'destination' | 'route' }
-interface POI           { id: number; name: string; type: string; icon: string; description: string; distance: string }
+interface ItineraryItem  { id: string; title: string; description: string; location: string; start_time: string; day_index: number }
+interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
+interface TripMember     { id: string; user_id: string; role: string }
+interface TripData       { id: string; title: string; destination: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
-interface Weather       { temperature: number; condition: string; humidity: number }
+interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
+// Matches your NestJS /api/attractions response
+interface Attraction   { id: string | number; name: string; description?: string; province?: string; province_id?: string; image_url?: string; images?: { url: string }[]; rating?: number; category?: string; latitude?: number; longitude?: number }
+// Matches your NestJS /api/points-of-interest response
+interface POI          { id: string | number; name: string; type: string; icon?: string; description?: string; distance?: string; latitude?: number; longitude?: number }
+interface ScheduleItem { placeId: string; name: string; vicinity: string; icon: string }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+// ─── Province data ────────────────────────────────────────────────────────────
 const provinceCoords: Record<string, [number, number]> = {
-  'phnom-penh': [11.5564, 104.9282], 'siem-reap': [13.3671, 103.8448],
-  'koh-kong': [11.6144, 103.0066],   'kampot': [10.6089, 104.1812],
-  'kep': [10.4843, 104.2993],        'battambang': [13.1022, 103.1987],
-  'mondulkiri': [12.4573, 107.1883], 'kompong-thom': [12.6861, 104.8888],
-  'kratie': [12.4889, 106.0186],     'pursat': [12.5387, 103.9188],
+  'phnom-penh':      [11.5564, 104.9282], 'siem-reap':       [13.3671, 103.8448],
+  'koh-kong':        [11.6144, 103.0066], 'kampot':          [10.6089, 104.1812],
+  'kep':             [10.4843, 104.2993], 'battambang':      [13.1022, 103.1987],
+  'mondulkiri':      [12.4573, 107.1883], 'kompong-thom':    [12.6861, 104.8888],
+  'kratie':          [12.4889, 106.0186], 'pursat':          [12.5387, 103.9188],
   'kompong-chhnang': [12.2503, 104.6644],
 }
-
 const provinceNames: Record<string, string> = {
   'phnom-penh': 'Phnom Penh', 'siem-reap': 'Siem Reap', 'koh-kong': 'Koh Kong',
   'kampot': 'Kampot', 'kep': 'Kep', 'battambang': 'Battambang', 'mondulkiri': 'Mondulkiri',
@@ -303,24 +412,45 @@ const provinceNames: Record<string, string> = {
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
-const vueRoute       = useRoute()
-const tripData       = ref<TripData | null>(null)
-const isPageLoading  = ref(false)
-const apiError       = ref<string | null>(null)
-const isLoadingRoute = ref(false)
-const showShareModal = ref(false)
-const tripSaved      = ref(false)
-const copiedText     = ref('📋 Copy')
-const selectedDay    = ref(1)
-const mapContainer   = ref<HTMLElement | null>(null)
+const vueRoute          = useRoute()
+const tripData          = ref<TripData | null>(null)
+const isPageLoading     = ref(false)
+const apiError          = ref<string | null>(null)
+const isLoadingRoute    = ref(false)
+const showShareModal    = ref(false)
+const isSaving          = ref(false)
+const saveLabel         = ref('💾 Save Plan')
+const copiedText        = ref('📋 Copy')
+const selectedDay       = ref(1)
+const mapContainer      = ref<HTMLElement | null>(null)
+const toastMsg          = ref('')
+const toastType         = ref<'success' | 'error'>('success')
+
+// Weather
+const weatherForecast   = ref<DayWeather[]>([])
+const weatherLoading    = ref(false)
+const selectedWeatherDay = ref(0)
+
+// Attractions — fetched from your backend /api/attractions
+const allAttractions             = ref<Attraction[]>([])
+const attractionsLoading         = ref(false)
+const selectedAttractionCategory = ref('all')
+const addToDayMap                = reactive<Record<string, number>>({})
+
+// POIs — fetched from your backend /api/points-of-interest
+const allPOIs      = ref<POI[]>([])
+const poisLoading  = ref(false)
+
+// Schedule: day → list of ScheduleItems
+const schedule = ref<Record<number, ScheduleItem[]>>({})
 
 let leafletMap:    L.Map        | null = null
 let poiLayerGroup: L.LayerGroup | null = null
 
-// ─── Derived values ───────────────────────────────────────────────────────────
+// ─── Derived ──────────────────────────────────────────────────────────────────
 const tripId      = computed(() => vueRoute.params.id      as string || '')
 const qOrigin     = computed(() => vueRoute.query.origin   as string || '')
-const qDest       = computed(() => vueRoute.query.destination as string || '')
+const qDest = computed(() => (vueRoute.query.dest as string) || (vueRoute.query.destination as string) || '')
 const qStart      = computed(() => vueRoute.query.from     as string || '')
 const qEnd        = computed(() => vueRoute.query.to       as string || '')
 const travelType  = computed(() => vueRoute.query.type     as string || 'friends')
@@ -345,11 +475,220 @@ const daysCount = computed(() => {
   return Math.max(1, Math.ceil((new Date(endDate.value).getTime() - new Date(startDate.value).getTime()) / 86_400_000))
 })
 
-const dayItinerary = computed(() =>
-  (tripData.value?.itinerary_items ?? []).filter(i => i.day_index === selectedDay.value - 1)
-)
+// ─── Weather — Open-Meteo (free, no key needed) ───────────────────────────────
+const WMO_CODES: Record<number, { label: string; icon: string }> = {
+  0:  { label: 'Clear Sky',        icon: '☀️' },
+  1:  { label: 'Mainly Clear',     icon: '🌤️' },
+  2:  { label: 'Partly Cloudy',    icon: '⛅' },
+  3:  { label: 'Overcast',         icon: '☁️' },
+  45: { label: 'Foggy',            icon: '🌫️' },
+  48: { label: 'Icy Fog',          icon: '🌫️' },
+  51: { label: 'Light Drizzle',    icon: '🌦️' },
+  61: { label: 'Slight Rain',      icon: '🌧️' },
+  63: { label: 'Moderate Rain',    icon: '🌧️' },
+  65: { label: 'Heavy Rain',       icon: '🌧️' },
+  80: { label: 'Showers',          icon: '🌦️' },
+  95: { label: 'Thunderstorm',     icon: '⛈️' },
+}
 
-// ─── API ──────────────────────────────────────────────────────────────────────
+const fetchWeather = async () => {
+  const coords = provinceCoords[destination.value]
+  if (!coords || !startDate.value) return
+  weatherLoading.value = true
+  try {
+    const [lat, lon] = coords
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,uv_index_max,sunrise`
+      + `&timezone=Asia%2FPhnom_Penh&forecast_days=14`
+    const res  = await fetch(url)
+    const data = await res.json()
+
+    const { daily } = data
+    const start = new Date(startDate.value)
+
+    // Match forecast dates to trip days
+    const days: DayWeather[] = []
+    for (let d = 0; d < daysCount.value; d++) {
+      const tripDate = new Date(start)
+      tripDate.setDate(start.getDate() + d)
+      const iso = tripDate.toISOString().split('T')[0]
+      const idx = daily.time.indexOf(iso)
+
+      if (idx === -1) {
+        // Date outside 14-day forecast window — use a seasonal estimate
+        days.push({
+          dateLabel: tripDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          icon: '🌤️', condition: 'Forecast unavailable',
+          tempMax: 32, tempMin: 25, rain: 0, wind: 12, uv: 8, sunrise: '06:00',
+        })
+      } else {
+        const code = daily.weathercode[idx] as number
+        const meta = WMO_CODES[code] ?? { label: 'Unknown', icon: '🌤️' }
+        const sunriseRaw: string = daily.sunrise?.[idx] ?? ''
+        const sunriseTime = sunriseRaw ? sunriseRaw.split('T')[1]?.slice(0, 5) : 'N/A'
+        days.push({
+          dateLabel: tripDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          icon: meta.icon,
+          condition: meta.label,
+          tempMax: Math.round(daily.temperature_2m_max[idx]),
+          tempMin: Math.round(daily.temperature_2m_min[idx]),
+          rain:    Math.round((daily.precipitation_sum[idx] ?? 0) * 10) / 10,
+          wind:    Math.round(daily.windspeed_10m_max[idx] ?? 0),
+          uv:      Math.round(daily.uv_index_max[idx] ?? 0),
+          sunrise: sunriseTime,
+        })
+      }
+    }
+    weatherForecast.value = days
+  } catch (e) {
+    console.error('Weather fetch failed', e)
+  } finally {
+    weatherLoading.value = false
+  }
+}
+
+// ─── Attractions — fetched from YOUR backend ──────────────────────────────────
+const attractionCategories = [
+  { type: 'all',       label: 'All',        icon: '🗺️' },
+  { type: 'Cultural',  label: 'Cultural',   icon: '🏛️' },
+  { type: 'Nature',    label: 'Nature',     icon: '🌿' },
+  { type: 'Adventure', label: 'Adventure',  icon: '🧗' },
+  { type: 'Food',      label: 'Food',       icon: '🍽️' },
+  { type: 'History',   label: 'History',    icon: '🏺' },
+]
+
+const fetchAttractions = async () => {
+  if (!destination.value) return
+  attractionsLoading.value = true
+  allAttractions.value = []
+  try {
+    const token = localStorage.getItem('access_token')
+    // Call your existing attractions endpoint, filtered by destination province
+    const res = await fetch(
+      `${API_BASE}/api/attractions?province=${destination.value}&limit=20`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (!res.ok) throw new Error(`Attractions API error ${res.status}`)
+    const data = await res.json()
+    // Handle both { data: [] } and plain [] response shapes
+    allAttractions.value = Array.isArray(data) ? data : (data.data ?? data.attractions ?? [])
+  } catch (e) {
+    console.error('fetchAttractions failed:', e)
+  } finally {
+    attractionsLoading.value = false
+  }
+}
+
+const filteredAttractions = computed(() => {
+  if (selectedAttractionCategory.value === 'all') return allAttractions.value
+  return allAttractions.value.filter(a =>
+    (a.category ?? '').toLowerCase() === selectedAttractionCategory.value.toLowerCase()
+  )
+})
+
+// ─── Schedule management ──────────────────────────────────────────────────────
+const addToSchedule = (attraction: Attraction) => {
+  const key = String(attraction.id)
+  const day = addToDayMap[key] ?? selectedDay.value
+  if (!schedule.value[day]) schedule.value[day] = []
+
+  if (schedule.value[day].find(s => s.placeId === key)) {
+    showToast('Already added to Day ' + day, 'error')
+    return
+  }
+  const categoryIcon = attractionCategories.find(c =>
+    c.type.toLowerCase() === (attraction.category ?? '').toLowerCase()
+  )?.icon ?? '📍'
+
+  schedule.value[day].push({
+    placeId:  key,
+    name:     attraction.name,
+    vicinity: attraction.province ?? '',
+    icon:     categoryIcon,
+  })
+  selectedDay.value = day
+  showToast(`Added to Day ${day}: ${attraction.name}`, 'success')
+}
+
+const removeFromSchedule = (day: number, idx: number) => {
+  schedule.value[day]?.splice(idx, 1)
+}
+
+const clearDay = (day: number) => {
+  schedule.value[day] = []
+}
+
+const isAddedToAnyDay = (id: string) =>
+  Object.values(schedule.value).some(items => items.some(i => i.placeId === id))
+
+// ─── Save plan to backend ─────────────────────────────────────────────────────
+// Backend endpoint: POST /api/trips/:id/itinerary   (or POST /api/trips if new)
+// Payload: { origin, destination, startDate, endDate, travelType, schedule }
+const savePlan = async () => {
+  isSaving.value = true
+  try {
+    const token = localStorage.getItem('access_token')
+
+    // Build itinerary items from schedule
+    const itineraryItems = Object.entries(schedule.value).flatMap(([day, items]) =>
+      items.map((item, idx) => ({
+        day_index:   parseInt(day) - 1,
+        title:       item.name,
+        location:    item.vicinity,
+        description: '',
+        start_time:  '',
+        sort_order:  idx,
+        place_id:    item.placeId,
+      }))
+    )
+
+    const payload = {
+      origin:        origin.value,
+      destination:   destination.value,
+      start_date:    startDate.value,
+      end_date:      endDate.value,
+      travel_type:   travelType.value,
+      itinerary_items: itineraryItems,
+    }
+
+    // If we have a tripId, update; otherwise create new
+    const endpoint = tripId.value
+      ? `${API_BASE}/api/trips/${tripId.value}/itinerary`
+      : `${API_BASE}/api/trips`
+    const method = tripId.value ? 'PUT' : 'POST'
+
+    const res = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || `Error ${res.status}`)
+    }
+
+    saveLabel.value = '✓ Saved!'
+    showToast('Trip plan saved successfully!', 'success')
+    setTimeout(() => { saveLabel.value = '💾 Save Plan' }, 3000)
+  } catch (err: any) {
+    showToast(err.message || 'Failed to save. Please try again.', 'error')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// ─── Toast helper ──────────────────────────────────────────────────────────────
+const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+  toastMsg.value  = msg
+  toastType.value = type
+  setTimeout(() => { toastMsg.value = '' }, 3000)
+}
+
+// ─── Trip API fetch ────────────────────────────────────────────────────────────
 const fetchTrip = async () => {
   if (!tripId.value) return
   isPageLoading.value = true
@@ -361,6 +700,17 @@ const fetchTrip = async () => {
     })
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`) }
     tripData.value = await res.json()
+
+    // Restore schedule from existing itinerary items
+    if (tripData.value?.itinerary_items?.length) {
+      const restored: Record<number, ScheduleItem[]> = {}
+      for (const item of tripData.value.itinerary_items) {
+        const day = (item.day_index ?? 0) + 1
+        if (!restored[day]) restored[day] = []
+        restored[day].push({ placeId: item.id, name: item.title, vicinity: item.location ?? '', icon: '📍' })
+      }
+      schedule.value = restored
+    }
   } catch (err: any) {
     apiError.value = err.message || 'Failed to load trip'
   } finally {
@@ -378,66 +728,49 @@ const togglePacking = async (itemId: string) => {
   if (item) item.packed = !item.packed
 }
 
-// ─── Weather ──────────────────────────────────────────────────────────────────
-const weatherData: Record<string, Weather> = {
-  'phnom-penh': { temperature: 32, condition: 'Sunny',         humidity: 70 },
-  'siem-reap':  { temperature: 30, condition: 'Partly Cloudy', humidity: 65 },
-  'koh-kong':   { temperature: 28, condition: 'Sunny',         humidity: 75 },
-  'kampot':     { temperature: 29, condition: 'Sunny',         humidity: 72 },
-  'kep':        { temperature: 27, condition: 'Partly Cloudy', humidity: 68 },
-  'battambang': { temperature: 31, condition: 'Sunny',         humidity: 60 },
-  'mondulkiri': { temperature: 25, condition: 'Cloudy',        humidity: 80 },
-}
-const weather     = computed<Weather>(() => weatherData[destination.value] ?? { temperature: 28, condition: 'Sunny', humidity: 65 })
-const weatherIcon = computed(() => {
-  const c = weather.value.condition.toLowerCase()
-  return c.includes('sunny') ? '☀️' : c.includes('rain') ? '🌧️' : c.includes('cloud') ? '☁️' : c.includes('storm') ? '⛈️' : '🌤️'
-})
-
-// ─── Filters / POIs ───────────────────────────────────────────────────────────
+// ─── Filters / POIs — fetched from YOUR backend ───────────────────────────────
 const filters = ref<Filter[]>([
-  { id: 'hospital',   label: 'Hospital',   icon: '🏥', active: false },
-  { id: 'police',     label: 'Police',     icon: '🚔', active: false },
-  { id: 'atm',        label: 'ATM',        icon: '💰', active: false },
+  { id: 'hospital',   label: 'Hospital',   icon: '🏥', active: false  },
+  { id: 'police',     label: 'Police',     icon: '🚔', active: false  },
+  { id: 'atm',        label: 'ATM',        icon: '💰', active: false  },
   { id: 'restaurant', label: 'Restaurant', icon: '🍽️', active: false },
 ])
-const pois: POI[] = [
-  { id: 1, name: 'Central Hospital',    type: 'hospital',   icon: '🏥', description: 'Modern medical facility',  distance: '2.3 km' },
-  { id: 2, name: 'City Police Station', type: 'police',     icon: '🚔', description: 'Main police office',       distance: '1.8 km' },
-  { id: 3, name: 'ATM Bank Center',     type: 'atm',        icon: '💰', description: 'Multiple ATM machines',    distance: '0.5 km' },
-  { id: 4, name: 'Khmer Restaurant',    type: 'restaurant', icon: '🍽️', description: 'Traditional cuisine',     distance: '1.2 km' },
-  { id: 5, name: 'Italian Trattoria',   type: 'restaurant', icon: '🍽️', description: 'International dining',    distance: '2.1 km' },
-  { id: 6, name: 'Regional Hospital',   type: 'hospital',   icon: '🏥', description: 'Emergency services',      distance: '3.5 km' },
-  { id: 7, name: 'Community Police',    type: 'police',     icon: '🚔', description: 'Local station',           distance: '2.8 km' },
-  { id: 8, name: 'Quick ATM',           type: 'atm',        icon: '💰', description: 'Convenient location',     distance: '1.5 km' },
-]
-const filteredPOIs   = computed(() => { const a = filters.value.filter(f => f.active).map(f => f.id); return a.length ? pois.filter(p => a.includes(p.type)) : [] })
-const getCountByType = (type: string) => pois.filter(p => p.type === type).length
-const toggleFilter   = (id: string) => { const f = filters.value.find(f => f.id === id); if (f) f.active = !f.active }
 
-// ─── Attractions ──────────────────────────────────────────────────────────────
-const routeMappings: Record<string, string[]> = {
-  'phnom-penh-to-siem-reap': ['kompong-thom'], 'phnom-penh-to-koh-kong': ['kampot', 'kep'],
-  'phnom-penh-to-battambang': ['pursat', 'kompong-chhnang'], 'siem-reap-to-koh-kong': ['battambang', 'pursat'],
+const fetchPOIs = async () => {
+  if (!destination.value) return
+  poisLoading.value = true
+  allPOIs.value = []
+  try {
+    const token = localStorage.getItem('access_token')
+    const res = await fetch(
+      `${API_BASE}/api/points-of-interest?province=${destination.value}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (!res.ok) throw new Error(`POI API error ${res.status}`)
+    const data = await res.json()
+    allPOIs.value = Array.isArray(data) ? data : (data.data ?? data.pois ?? [])
+  } catch (e) {
+    console.error('fetchPOIs failed:', e)
+  } finally {
+    poisLoading.value = false
+  }
 }
-const attractionDB: Attraction[] = [
-  { id: 1,  name: 'Angkor Wat',              category: 'Cultural',  description: 'Iconic UNESCO temple complex.',          image: '/hero/hero1.jpg', rating: 4.9, locationProvince: 'siem-reap',  attractionType: 'destination' },
-  { id: 2,  name: 'Angkor Thom',             category: 'Cultural',  description: 'Ancient walled city with Bayon temple.', image: '/hero/hero1.jpg', rating: 4.8, locationProvince: 'siem-reap',  attractionType: 'destination' },
-  { id: 3,  name: 'Tatai Waterfall',         category: 'Nature',    description: 'Stunning multi-tiered jungle waterfall.',image: '/hero/hero1.jpg', rating: 4.8, locationProvince: 'koh-kong',   attractionType: 'destination' },
-  { id: 4,  name: 'Royal Palace',            category: 'Cultural',  description: 'Stunning royal residence.',              image: '/hero/hero1.jpg', rating: 4.7, locationProvince: 'phnom-penh', attractionType: 'destination' },
-  { id: 5,  name: 'Wat Phnom',              category: 'Cultural',  description: 'Historic hilltop temple.',               image: '/hero/hero1.jpg', rating: 4.5, locationProvince: 'phnom-penh', attractionType: 'destination' },
-  { id: 6,  name: 'Bokor National Park',     category: 'Nature',    description: 'Mountain landscapes & abandoned ruins.', image: '/hero/hero1.jpg', rating: 4.6, locationProvince: 'kampot',     attractionType: 'route' },
-  { id: 7,  name: 'Bamboo Train',            category: 'Adventure', description: 'Unique bamboo train ride.',              image: '/hero/hero1.jpg', rating: 4.6, locationProvince: 'battambang', attractionType: 'route' },
-  { id: 8,  name: 'Elephant Valley Project', category: 'Nature',    description: 'Sanctuary for rescued elephants.',       image: '/hero/hero1.jpg', rating: 4.8, locationProvince: 'mondulkiri', attractionType: 'destination' },
-]
-const attractions = computed<Attraction[]>(() => {
-  const dest = destination.value, orig = origin.value
-  const provinces = routeMappings[`${orig}-to-${dest}`] || routeMappings[`${dest}-to-${orig}`] || []
-  return [
-    ...attractionDB.filter(a => a.locationProvince === dest  && a.attractionType === 'destination').slice(0, 4),
-    ...attractionDB.filter(a => provinces.includes(a.locationProvince) && a.attractionType === 'route').slice(0, 4),
-  ].slice(0, 8)
+
+const filteredPOIs = computed(() => {
+  const activeTypes = filters.value.filter(f => f.active).map(f => f.id)
+  if (!activeTypes.length) return []
+  return allPOIs.value.filter(p =>
+    activeTypes.some(t => (p.type ?? '').toLowerCase().includes(t))
+  )
 })
+
+const getCountByType = (type: string) =>
+  allPOIs.value.filter(p => (p.type ?? '').toLowerCase().includes(type)).length
+
+const toggleFilter = (id: string) => {
+  const f = filters.value.find(f => f.id === id)
+  if (f) f.active = !f.active
+}
 
 // ─── Map ──────────────────────────────────────────────────────────────────────
 const fetchRoadRoute = async (o: [number, number], d: [number, number]): Promise<[number, number][]> => {
@@ -462,7 +795,7 @@ const initMap = async () => {
   const mkIcon = (html: string) => L.divIcon({ html, className: '', iconSize: [0,0], iconAnchor: [0,0] })
   L.marker(oC, { icon: mkIcon(`<div class="lf-marker lf-origin"><div class="lf-pin lf-pin-green"></div><div class="lf-label">${originName.value}</div></div>`) }).addTo(leafletMap)
   L.marker(dC, { icon: mkIcon(`<div class="lf-marker lf-dest"><div class="lf-pin lf-pin-blue"></div><div class="lf-label">${destinationName.value}</div></div>`) }).addTo(leafletMap)
-  leafletMap.fitBounds(L.latLngBounds([oC, dC]), { padding: [60,60] })
+  leafletMap.fitBounds(L.latLngBounds([oC, dC]), { padding: [60, 60] })
 
   poiLayerGroup = L.layerGroup().addTo(leafletMap)
 
@@ -473,7 +806,7 @@ const initMap = async () => {
 
   const line = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.9, lineJoin: 'round', lineCap: 'round' }).addTo(leafletMap)
   L.polyline(coords, { color: '#fff', weight: 2, opacity: 0.45, dashArray: '8 14', lineJoin: 'round' }).addTo(leafletMap)
-  leafletMap.fitBounds(line.getBounds(), { padding: [60,60] })
+  leafletMap.fitBounds(line.getBounds(), { padding: [60, 60] })
 }
 
 const updatePoiMarkers = () => {
@@ -489,26 +822,50 @@ const updatePoiMarkers = () => {
   })
 }
 
+// Pin attraction markers on map when loaded
+watch(allAttractions, (places) => {
+  if (!leafletMap || !poiLayerGroup) return
+  places.slice(0, 10).forEach(p => {
+    if (!p.latitude || !p.longitude) return
+    const catIcon = attractionCategories.find(c =>
+      c.type.toLowerCase() === (p.category ?? '').toLowerCase()
+    )?.icon ?? '📍'
+    L.marker([p.latitude, p.longitude], {
+      icon: L.divIcon({ html: `<div class="lf-poi">${catIcon}</div>`, className: '', iconSize: [36,36], iconAnchor: [18,18] })
+    }).bindPopup(
+      `<div class="lf-popup"><b>${catIcon} ${p.name}</b><br/>
+       <span style="color:#666;font-size:12px">⭐ ${p.rating?.toFixed(1) ?? 'N/A'}</span><br/>
+       <span style="color:#999;font-size:11px">📍 ${p.province ?? ''}</span></div>`,
+      { maxWidth: 200 }
+    ).addTo(poiLayerGroup!)
+  })
+})
+
 watch(filteredPOIs, updatePoiMarkers, { deep: true })
 
-onMounted(async () => { await fetchTrip(); await nextTick(); await initMap() })
-onUnmounted(() => { leafletMap?.remove(); leafletMap = null })
-
-// ─── Share / Save ─────────────────────────────────────────────────────────────
+// ─── Share ────────────────────────────────────────────────────────────────────
 const shareLink = computed(() =>
   tripData.value?.invite_token
     ? `${window.location.origin}/trip/join/${tripData.value.invite_token}`
     : `${window.location.origin}/trip/results?origin=${origin.value}&destination=${destination.value}&from=${startDate.value}&to=${endDate.value}&type=${travelType.value}`
 )
-const saveTrip       = async () => { tripSaved.value = true; setTimeout(() => { tripSaved.value = false }, 2000) }
 const copyToClipboard = async () => { await navigator.clipboard.writeText(shareLink.value).catch(()=>{}); copiedText.value = '✓ Copied!'; setTimeout(() => { copiedText.value = '📋 Copy' }, 2000) }
 const shareToWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(`My trip: ${originName.value} → ${destinationName.value} — ${shareLink.value}`)}`, '_blank')
 const shareToEmail    = () => window.open(`mailto:?subject=${encodeURIComponent(`Trip: ${originName.value} → ${destinationName.value}`)}&body=${encodeURIComponent(shareLink.value)}`)
 const shareToFacebook = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink.value)}`, '_blank')
+
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
+onMounted(async () => {
+  await fetchTrip()
+  await nextTick()
+  await initMap()
+  await Promise.all([fetchWeather(), fetchAttractions(), fetchPOIs()])
+})
+onUnmounted(() => { leafletMap?.remove(); leafletMap = null })
 </script>
 
-<!-- Only Leaflet marker styles — must be global (injected outside Vue scope) -->
 <style>
+/* Leaflet markers — must be global */
 .lf-marker     { display:flex; align-items:center; gap:7px; pointer-events:none; }
 .lf-pin        { width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,.35); flex-shrink:0; }
 .lf-pin-green  { background:#15803d; }
@@ -520,4 +877,8 @@ const shareToFacebook = () => window.open(`https://www.facebook.com/sharer/share
 .lf-poi:hover  { transform:scale(1.15); }
 .lf-popup      { font-size:13px; line-height:1.5; }
 .leaflet-control-attribution { font-size:10px !important; }
+
+/* Toast transition */
+.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(12px); }
 </style>
