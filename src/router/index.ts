@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { clearAuthSession, isAuthSessionExpired } from '@/services/auth-session.service'
 
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/auth/LoginView.vue'
@@ -149,6 +150,12 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("auth_token");
+  if (token && isAuthSessionExpired()) {
+    clearAuthSession()
+    next('/login')
+    return
+  }
+
   const rawUser = localStorage.getItem('user_data') || localStorage.getItem('user') || localStorage.getItem('currentUser')
   let isAdminUser = false
 
@@ -162,7 +169,15 @@ router.beforeEach((to, _from, next) => {
     }
   }
 
-  if (to.path.startsWith('/admin')) {
+  const isAdminRoute = to.path.startsWith('/admin')
+  const authRoutes = ['/login', '/register', '/verify']
+
+  if (isAdminUser && !isAdminRoute) {
+    next('/admin')
+    return
+  }
+
+  if (isAdminRoute) {
     if (!token) {
       next('/login')
       return
@@ -189,7 +204,7 @@ router.beforeEach((to, _from, next) => {
   ];
   const routeName = typeof to.name === "string" ? to.name : "";
 
-  if (!token && !publicRoutes.includes(routeName)) {
+  if (!token && !publicRoutes.includes(routeName) && !authRoutes.includes(to.path)) {
     next("/login");
   } else {
     next();
