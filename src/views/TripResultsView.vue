@@ -69,7 +69,7 @@
             <div class="p-6 flex flex-col gap-5">
               <p class="text-sm text-gray-500">Share this trip with your friends</p>
               <div class="flex gap-2">
-                <input :value="shareLink" readonly @focus="($event.target as HTMLInputElement).select()"
+                <input :value="shareLink" readonly @focus="selectInput($event)"
                   class="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-500 bg-gray-50" />
                 <button @click="copyToClipboard"
                   class="px-4 py-2.5 bg-green-700 text-white rounded-lg text-sm font-semibold hover:bg-green-800 transition whitespace-nowrap">
@@ -372,6 +372,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from
 import { useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import router from '@/router'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -557,6 +558,10 @@ const fetchWeather = async () => {
   }
 }
 
+function selectInput(e: Event) {
+  try { (e.target as HTMLInputElement).select() } catch {}
+}
+
 // ─── Attractions — fetched from YOUR backend ──────────────────────────────────
 const attractionCategories = [
   { type: 'all',       label: 'All',        icon: '🗺️' },
@@ -718,7 +723,7 @@ const savePlan = async () => {
 
     saveLabel.value = '✓ Saved!'
     showToast('Trip plan saved successfully!', 'success')
-    setTimeout(() => { saveLabel.value = '💾 Save Plan' }, 3000)
+    setTimeout(() => router.push({ name: 'my-trips' }), 1500)
   } catch (err: any) {
     showToast(err.message || 'Failed to save. Please try again.', 'error')
   } finally {

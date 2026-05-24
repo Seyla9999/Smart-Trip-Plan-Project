@@ -22,6 +22,7 @@ import TripFormView from '../views/TripFormView.vue'
 import TripResultsView from '../views/TripResultsView.vue'
 import MapView from '../views/MapView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import MyTripsView from '../views/MyTripsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -91,6 +92,11 @@ const router = createRouter({
     {
       path: "/plan-trip",
       redirect: "/trip",
+    },
+    {
+      path: "/my-trips",
+      name: "my-trips",
+      component: MyTripsView,
     },
     {
       path: "/province/:slug",
@@ -201,6 +207,7 @@ router.beforeEach((to, _from, next) => {
     "province-detail",
     "place-detail",
     "AttractionDetail",
+
   ];
   const routeName = typeof to.name === "string" ? to.name : "";
 
