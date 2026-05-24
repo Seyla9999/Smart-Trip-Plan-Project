@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Trip } from './trip.entity';
 
 @Entity('packing_list_items')
@@ -7,6 +13,7 @@ export class PackingListItem {
   id!: string;
 
   @ManyToOne(() => Trip, (trip) => trip.packing_list, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'trip_id' })
   trip!: Trip;
 
   @Column()

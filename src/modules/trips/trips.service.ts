@@ -5,12 +5,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { randomBytes } from 'crypto';
+import { randomUUID } from 'crypto';
 
 import { Trip } from './trip.entity';
 import { TripMember } from './trip-member.entity';
 import { ItineraryItem } from './itinerary-item.entity';
 import { PackingListItem } from './packing-list-item.entity';
+import { Province } from '../provinces/province.entity';
 
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
@@ -37,11 +38,31 @@ export class TripsService {
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
+  private attachDerivedProvince(trip: Trip | null): Trip | null {
+    if (!trip) return null;
+
+    const derivedProvince =
+      trip.itinerary_items
+        ?.map((item) => item.attraction?.province)
+        .find((province): province is Province => Boolean(province)) ?? null;
+
+    trip.province = derivedProvince ?? undefined;
+    return trip;
+  }
+
   /** Verify that the user is a member of the trip. Throws 404 or 403. */
   private async assertMember(tripId: string, userId: string): Promise<Trip> {
     const trip = await this.tripRepo.findOne({
       where: { id: tripId },
-      relations: ['members', 'itinerary_items', 'packing_list'],
+      relations: {
+        members: true,
+        itinerary_items: {
+          attraction: {
+            province: true,
+          },
+        },
+        packing_list: true,
+      },
     });
     if (!trip) throw new NotFoundException('Trip not found');
 
@@ -63,16 +84,41 @@ export class TripsService {
 
   // ─── Create ───────────────────────────────────────────────────────────────
 
+  private buildItineraryItemPayload(
+    tripId: string,
+    item: NonNullable<CreateTripDto['itinerary_items']>[number],
+    fallbackSortOrder: number,
+  ) {
+    const normalizeTime = (value?: string) => {
+      if (value === undefined || value === null) return undefined;
+      const trimmed = String(value).trim();
+      return trimmed === '' ? undefined : trimmed;
+    };
+
+    return {
+      trip_id: tripId,
+      day_index: item.day_number ?? item.day_index ?? 0,
+      attraction_id: item.attraction_id ?? undefined,
+      sort_order: item.sort_order ?? fallbackSortOrder,
+      start_time: normalizeTime(item.start_time),
+      end_time: normalizeTime(item.end_time),
+      notes: item.notes ?? item.description ?? item.title ?? undefined,
+    };
+  }
+
   async create(userId: string, dto: CreateTripDto): Promise<Trip | null> {
-    const token = randomBytes(16).toString('hex');
+    const token = randomUUID();
 
     const trip = this.tripRepo.create({
-      title:        dto.title,
-      description:  dto.description,
-      destination:  dto.destination,
-      start_date:   dto.start_date ? new Date(dto.start_date) : null,
-      end_date:     dto.end_date   ? new Date(dto.end_date)   : null,
-      owner_id:     userId,
+      title: dto.title,
+      description: dto.description,
+      destination: dto.destination,
+      origin: dto.origin,
+      travel_type: dto.travel_type,
+      ai_summary: dto.ai_summary,
+      start_date: dto.start_date ? new Date(dto.start_date) : null,
+      end_date: dto.end_date ? new Date(dto.end_date) : null,
+      owner_id: userId,
       invite_token: token,
     } as Partial<Trip>);
 
@@ -90,34 +136,25 @@ export class TripsService {
     // Save itinerary items if provided (from attraction schedule)
     if (dto.itinerary_items?.length) {
       const items = dto.itinerary_items.map((item, idx) =>
-        this.itineraryRepo.create({
-          trip_id:     saved.id,
-          trip:        saved,
-          day_index:   item.day_index  ?? 0,
-          title:       item.title      ?? '',
-          location:    item.location   ?? '',
-          description: item.description ?? '',
-          start_time:  item.start_time ?? '',
-        } as Partial<ItineraryItem>),
-      );
-      await this.itineraryRepo.save(items);
-    }
-
-    // Legacy: locations array (keep backward compat)
-    if (!dto.itinerary_items?.length && dto.locations?.length) {
-      const items = dto.locations.map((loc) =>
-        this.itineraryRepo.create({
-          trip: saved,
-          title: loc.name,
-        } as Partial<ItineraryItem>),
+        this.itineraryRepo.create(
+          this.buildItineraryItemPayload(saved.id, item, idx),
+        ),
       );
       await this.itineraryRepo.save(items);
     }
 
     return this.tripRepo.findOne({
       where: { id: saved.id },
-      relations: ['members', 'itinerary_items', 'packing_list'],
-    });
+      relations: {
+        members: true,
+        itinerary_items: {
+          attraction: {
+            province: true,
+          },
+        },
+        packing_list: true,
+      },
+    }).then((trip) => this.attachDerivedProvince(trip));
   }
 
   // ─── Find All (for current user) ─────────────────────────────────────────
@@ -128,10 +165,13 @@ export class TripsService {
       .innerJoin('trip.members', 'member', 'member.user_id = :userId', { userId })
       .leftJoinAndSelect('trip.members', 'allMembers')
       .leftJoinAndSelect('trip.itinerary_items', 'items')
+      .leftJoinAndSelect('items.attraction', 'attraction')
+      .leftJoinAndSelect('attraction.province', 'attractionProvince')
       .leftJoinAndSelect('trip.packing_list', 'packing')
       .orderBy('trip.created_at', 'DESC')
       .addOrderBy('items.day_index', 'ASC')
-      .getMany();
+      .getMany()
+      .then((trips) => trips.map((trip) => this.attachDerivedProvince(trip) as Trip));
   }
 
   async findOne(tripId: string, userId: string): Promise<Trip> {
@@ -149,31 +189,40 @@ export class TripsService {
       await manager.delete(ItineraryItem, { trip_id: tripId });
 
       if (dto.itinerary_items?.length) {
-        const items = dto.itinerary_items.map((item) =>
-          manager.create(ItineraryItem, {
-            trip_id:     tripId,
-            day_index:   item.day_index  ?? 0,
-            title:       item.title      ?? '',
-            location:    item.location   ?? '',
-            description: item.description ?? '',
-            start_time:  item.start_time ?? '',
-          } as Partial<ItineraryItem>),
+        const items = dto.itinerary_items.map((item, idx) =>
+          manager.create(
+            ItineraryItem,
+            this.buildItineraryItemPayload(tripId, item, idx),
+          ),
         );
         await manager.save(ItineraryItem, items);
       }
 
       const patch: Partial<Trip> = { updated_at: new Date() };
+      if (dto.title !== undefined) patch.title = dto.title;
+      if (dto.description !== undefined) patch.description = dto.description;
       if (dto.start_date)  patch.start_date  = new Date(dto.start_date);
       if (dto.end_date)    patch.end_date    = new Date(dto.end_date);
       if (dto.destination) patch.destination = dto.destination;
+      if (dto.origin !== undefined) patch.origin = dto.origin;
+      if (dto.travel_type !== undefined) patch.travel_type = dto.travel_type;
+      if (dto.ai_summary !== undefined) patch.ai_summary = dto.ai_summary;
       await manager.update(Trip, tripId, patch);
     });
 
     return this.tripRepo.findOne({
       where: { id: tripId },
-      relations: ['members', 'itinerary_items', 'packing_list'],
+      relations: {
+        members: true,
+        itinerary_items: {
+          attraction: {
+            province: true,
+          },
+        },
+        packing_list: true,
+      },
       order: { itinerary_items: { day_index: 'ASC' } },
-    });
+    }).then((trip) => this.attachDerivedProvince(trip));
   }
 
   async joinByToken(token: string, userId: string): Promise<Trip | null> {
@@ -195,8 +244,16 @@ export class TripsService {
     }
     return this.tripRepo.findOne({
       where: { id: trip.id },
-      relations: ['members', 'itinerary_items', 'packing_list'],
-    });
+      relations: {
+        members: true,
+        itinerary_items: {
+          attraction: {
+            province: true,
+          },
+        },
+        packing_list: true,
+      },
+    }).then((trip) => this.attachDerivedProvince(trip));
   }
 
   async togglePacking(

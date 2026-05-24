@@ -3,12 +3,14 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   OneToMany,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { TripMember } from './trip-member.entity';
 import { ItineraryItem } from './itinerary-item.entity';
 import { PackingListItem } from './packing-list-item.entity';
+import { Province } from '../provinces/province.entity';
 
 @Entity('trips')
 export class Trip {
@@ -18,11 +20,22 @@ export class Trip {
   @Column()
   title!: string;
 
-  @Column()
+  @Column({ nullable: true })
+  origin?: string;
+
+  province?: Province;
+
+  @Column({ nullable: true })
   destination?: string;
 
   @Column({ nullable: true })
   description!: string;
+
+  @Column({ nullable: true })
+  travel_type?: string;
+
+  @Column({ type: 'text', nullable: true })
+  ai_summary?: string;
 
   @Column({ nullable: true })
   start_date!: Date;
@@ -31,12 +44,13 @@ export class Trip {
   end_date!: Date;
 
   @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'owner_id' })
   owner!: User;
 
   @Column()
   owner_id!: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'uuid', unique: true })
   invite_token!: string;
 
   @Column({ default: 'active' })
@@ -59,7 +73,4 @@ export class Trip {
 
   @OneToMany(() => PackingListItem, (p) => p.trip)
   packing_list!: PackingListItem[];
-
-  @Column('json', { nullable: true })
-  locations?: { lat: number; lng: number; name: string }[];
 }
