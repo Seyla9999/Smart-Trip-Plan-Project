@@ -381,7 +381,17 @@ L.Icon.Default.mergeOptions({
 })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface ItineraryItem  { id: string; title: string; description: string; location: string; start_time: string; day_index: number }
+interface ItineraryItem  {
+  id: string
+  title: string
+  description: string
+  location?: string
+  attraction_id?: string
+  start_time?: string
+  end_time?: string
+  day_number?: number
+  day_index: number
+}
 interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
 interface TripMember     { id: string; user_id: string; role: string }
 interface TripData       { id: string; title: string; destination: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
@@ -391,7 +401,7 @@ interface DayWeather   { dateLabel: string; icon: string; condition: string; tem
 interface Attraction   { id: string | number; name: string; description?: string; province?: string; province_id?: string; image_url?: string; images?: { url: string }[]; rating?: number; category?: string; latitude?: number; longitude?: number }
 // Matches your NestJS /api/points-of-interest response
 interface POI          { id: string | number; name: string; type: string; icon?: string; description?: string; distance?: string; latitude?: number; longitude?: number }
-interface ScheduleItem { placeId: string; name: string; vicinity: string; icon: string }
+interface ScheduleItem { placeId: string; name: string; vicinity: string; icon: string; startTime?: string; endTime?: string }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -562,15 +572,15 @@ const fetchAttractions = async () => {
   attractionsLoading.value = true
   allAttractions.value = []
   try {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('auth_token')
     // Call your existing attractions endpoint, filtered by destination province
     const res = await fetch(
-      `${API_BASE}/api/attractions?province=${destination.value}&limit=20`,
+      //`${API_BASE}/api/attractions?province=${destination.value}&limit=20`,
+      `${API_BASE}/attractions?province=${encodeURIComponent(destinationName.value)}&limit=20`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     if (!res.ok) throw new Error(`Attractions API error ${res.status}`)
     const data = await res.json()
-    // Handle both { data: [] } and plain [] response shapes
     allAttractions.value = Array.isArray(data) ? data : (data.data ?? data.attractions ?? [])
   } catch (e) {
     console.error('fetchAttractions failed:', e)
@@ -627,22 +637,49 @@ const isAddedToAnyDay = (id: string) =>
 const savePlan = async () => {
   isSaving.value = true
   try {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      showToast('Your session expired. Please log in again.', 'error')
+      isSaving.value = false
+      return
+    }
 
-    // Build itinerary items from schedule
-    const itineraryItems = Object.entries(schedule.value).flatMap(([day, items]) =>
-      items.map((item, idx) => ({
-        day_index:   parseInt(day) - 1,
-        title:       item.name,
-        location:    item.vicinity,
-        description: '',
-        start_time:  '',
-        sort_order:  idx,
-        place_id:    item.placeId,
-      }))
-    )
+    const itineraryItems = Object.entries(schedule.value).reduce((acc, [day, items]) => {
+      items.forEach((item, idx) => {
+        const itineraryItem: {
+          day_number: number
+          attraction_id: string
+          title: string
+          description: string
+          sort_order: number
+          start_time?: string
+          end_time?: string
+        } = {
+          day_number:    parseInt(day),
+          title:         item.name,
+          description:   '',
+          sort_order:    idx,
+          attraction_id: item.placeId,
+        }
+
+        if (item.startTime) itineraryItem.start_time = item.startTime
+        if (item.endTime) itineraryItem.end_time = item.endTime
+
+        acc.push(itineraryItem)
+      })
+      return acc
+    }, [] as Array<{
+      day_number: number
+      attraction_id: string
+      title: string
+      description: string
+      sort_order: number
+      start_time?: string
+      end_time?: string
+    }>)
 
     const payload = {
+      title:         `Trip to ${destinationName.value}`,
       origin:        origin.value,
       destination:   destination.value,
       start_date:    startDate.value,
@@ -651,7 +688,7 @@ const savePlan = async () => {
       itinerary_items: itineraryItems,
     }
 
-    // If we have a tripId, update; otherwise create new
+// If we have a tripId, update; otherwise create new
     const endpoint = tripId.value
       ? `${API_BASE}/api/trips/${tripId.value}/itinerary`
       : `${API_BASE}/api/trips`
@@ -667,8 +704,16 @@ const savePlan = async () => {
     })
 
     if (!res.ok) {
+      if (res.status === 401) {
+          throw new Error('Your session expired. Please log in again.')
+      }
       const err = await res.json().catch(() => ({}))
       throw new Error(err.message || `Error ${res.status}`)
+    }
+
+    const data = await res.json()
+    if (!tripId.value && data.id) {
+       window.history.replaceState({}, '', `/trip/results/${data.id}`)
     }
 
     saveLabel.value = '✓ Saved!'
@@ -694,7 +739,7 @@ const fetchTrip = async () => {
   isPageLoading.value = true
   apiError.value = null
   try {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('auth_token')
     const res = await fetch(`${API_BASE}/trips/${tripId.value}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -705,9 +750,16 @@ const fetchTrip = async () => {
     if (tripData.value?.itinerary_items?.length) {
       const restored: Record<number, ScheduleItem[]> = {}
       for (const item of tripData.value.itinerary_items) {
-        const day = (item.day_index ?? 0) + 1
+        const day = item.day_number ?? (item.day_index ?? 0) + 1
         if (!restored[day]) restored[day] = []
-        restored[day].push({ placeId: item.id, name: item.title, vicinity: item.location ?? '', icon: '📍' })
+        restored[day].push({
+          placeId: String(item.attraction_id ?? item.id),
+          name: item.title,
+          vicinity: item.location ?? '',
+          icon: '📍',
+          startTime: item.start_time,
+          endTime: item.end_time,
+        })
       }
       schedule.value = restored
     }
@@ -720,9 +772,11 @@ const fetchTrip = async () => {
 
 const togglePacking = async (itemId: string) => {
   if (!tripId.value) return
-  const token = localStorage.getItem('access_token')
-  await fetch(`${API_BASE}/trips/${tripId.value}/packing/${itemId}/toggle`, {
-    method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
+  const token = localStorage.getItem('auth_token')
+  
+  await fetch(`${API_BASE}/api/trips/${tripId.value}/packing/${itemId}/toggle`, {
+    method: 'PATCH', 
+    headers: { Authorization: `Bearer ${token}` },
   })
   const item = tripData.value?.packing_list.find(p => p.id === itemId)
   if (item) item.packed = !item.packed
@@ -741,9 +795,10 @@ const fetchPOIs = async () => {
   poisLoading.value = true
   allPOIs.value = []
   try {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('auth_token')
     const res = await fetch(
-      `${API_BASE}/api/points-of-interest?province=${destination.value}`,
+      //`${API_BASE}/api/points-of-interest?province=${destination.value}`,
+      `${API_BASE}/points-of-interest?province=${encodeURIComponent(destinationName.value)}`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     if (!res.ok) throw new Error(`POI API error ${res.status}`)
@@ -758,7 +813,8 @@ const fetchPOIs = async () => {
 
 const filteredPOIs = computed(() => {
   const activeTypes = filters.value.filter(f => f.active).map(f => f.id)
-  if (!activeTypes.length) return []
+  if (!activeTypes.length) return allPOIs.value
+
   return allPOIs.value.filter(p =>
     activeTypes.some(t => (p.type ?? '').toLowerCase().includes(t))
   )
