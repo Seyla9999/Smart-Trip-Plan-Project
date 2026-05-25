@@ -70,10 +70,10 @@
             <div ref="mapEl" class="map-iframe"></div>
             <a
               :href="`https://www.openstreetmap.org/?mlat=${mapCoords.lat}&mlon=${mapCoords.lng}#map=14/${mapCoords.lat}/${mapCoords.lng}`"
-              target="_blank"
-              rel="noopener"
-              class="map-link"
-            >Open in OpenStreetMap Ã¢â€ â€”</a>
+                target="_blank"
+                rel="noopener"
+                class="map-link"
+              >Open in OpenStreetMap —</a>
           </div>
           <div v-else class="map-placeholder">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="#C8922A" stroke="white" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="white" stroke="#C8922A"/></svg>
@@ -102,14 +102,14 @@
             </div>
             <p class="review-author-name">Reviewing as <strong>{{ currentUserName }}</strong></p>
             <input v-model="newReview.title" class="review-input" placeholder="Title (optional)" maxlength="200" />
-            <textarea v-model="newReview.comment" class="review-textarea" placeholder="Share your experienceÃ¢â‚¬Â¦" rows="4" maxlength="2000"></textarea>
+            <textarea v-model="newReview.comment" class="review-textarea" placeholder="Share your experience…" rows="4" maxlength="2000"></textarea>
             <div class="review-form-footer">
-              <span v-if="reviewSuccess" class="review-success">Ã¢Å“â€œ Review submitted!</span>
+              <span v-if="reviewSuccess" class="review-success">✓ Review submitted!</span>
               <button
                 class="btn-submit-review"
                 :disabled="submittingReview || !newReview.comment.trim()"
                 @click="submitReview"
-              >{{ submittingReview ? 'SubmittingÃ¢â‚¬Â¦' : 'Submit Review' }}</button>
+              >{{ submittingReview ? 'Submitting…' : 'Submit Review' }}</button>
             </div>
           </div>
           <div v-else class="review-login-prompt">
@@ -188,7 +188,7 @@
             >
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            {{ savingFavorite ? 'SavingÃ¢â‚¬Â¦' : isFavorited ? 'Favorited' : 'Save to favorites' }}
+            {{ savingFavorite ? 'Saving…' : isFavorited ? 'Favorited' : 'Save to favorites' }}
           </button>
 
           <div class="info-list">
@@ -203,7 +203,7 @@
               <div class="info-icon duration"></div>
               <div>
                 <p class="info-label">VISIT DURATION</p>
-                <p class="info-value">{{ attraction.info?.duration || '2Ã¢â‚¬â€œ4 hours' }}</p>
+                <p class="info-value">{{ attraction.info?.duration || '2–4 hours' }}</p>
               </div>
             </div>
             <div class="info-row">
@@ -231,7 +231,7 @@
 
           <div class="cta-box" v-if="!isLoggedIn">
             <p>Sign up free to save this to a trip and invite friends to join you.</p>
-            <button class="btn-cta" @click="$router.push('/register')">Sign up to save Ã¢â€ â€™</button>
+            <button class="btn-cta" @click="$router.push('/register')">Sign up to save</button>
           </div>
         </div>
       </aside>
@@ -301,12 +301,13 @@ function normalizeAttraction(data: any) {
     .replace(/[^a-z0-9-]/g, '')
 
   const badges: string[] = []
+  // Removed garbled comment block
   if (data.is_hidden_gem) badges.push('HIDDEN GEM')
   if (data.category)      badges.push(data.category.toUpperCase())
   if (Number(data.average_rating) >= 4.5) badges.push('TOP RATED')
 
   // Prefer curated nearby_images JSONB over the generic province query
-  const nearby = data.nearby_images?.length
+  const nearbyList = data.nearby_images?.length
     ? data.nearby_images.map((n: any) => ({
         name:     n.name,
         slug:     n.slug || (n.name || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
@@ -347,12 +348,12 @@ function normalizeAttraction(data: any) {
     location:    data.location,
     info: {
       bestTime:   'Year-round',
-      duration:   '2Ã¢â‚¬â€œ4 hours',
+      duration:   '2–4 hours',
       difficulty: 'Moderate',
       bestFor:    'All travelers',
       province:   data.province?.name_en || '',
     },
-    nearby,
+    nearby: nearbyList,
   }
 }
 
@@ -410,7 +411,7 @@ async function checkBookmark(attractionId: string) {
       bookmarkId.value  = found.id
     }
   } catch {
-    // silently ignore Ã¢â‚¬â€ user may not be authenticated
+    // silently ignore — user may not be authenticated
   }
 }
 
@@ -418,7 +419,7 @@ async function toggleFavorite() {
   if (savingFavorite.value) return
   if (!isLoggedIn.value) { router.push('/login'); return }
 
-  // Optimistic update Ã¢â‚¬â€ flip state immediately so UI responds instantly
+  // Optimistic update — flip state immediately so UI responds instantly
   const prevFavorited  = isFavorited.value
   const prevBookmarkId = bookmarkId.value
   isFavorited.value = !prevFavorited
@@ -445,7 +446,6 @@ async function toggleFavorite() {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Reviews Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function submitReview() {
   if (!newReview.value.comment.trim() || !newReview.value.rating) return
@@ -469,7 +469,6 @@ async function submitReview() {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Leaflet map Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function loadLeaflet(): Promise<void> {
   return new Promise((resolve) => {
@@ -502,7 +501,7 @@ async function initMap() {
 
   leafletMap = L.map(mapEl.value).setView([mapCoords.value.lat, mapCoords.value.lng], 14)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'Ã‚Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(leafletMap)
 
   // Main attraction pin
@@ -546,7 +545,7 @@ async function initMap() {
         L.marker([Number(poi.latitude), Number(poi.longitude)], { icon: poiIcon })
           .addTo(leafletMap)
           .bindPopup(
-            `<b>${poi.name}</b><br><i>${cfg.title}</i><br>${Math.round(poi.distance_meters)}m away${poi.isOpen24h ? ' Ã‚Â· Open 24h' : ''}`,
+            `<b>${poi.name}</b><br><i>${cfg.title}</i><br>${Math.round(poi.distance_meters)}m away${poi.isOpen24h ? ' · Open 24h' : ''}`,
           )
       }
     }
@@ -787,14 +786,6 @@ watch(
 .nearby-name { font-size: 13px; font-weight: 600; color: #222; margin: 8px 4px 2px; }
 .nearby-location { font-size: 11px; color: #888; margin: 0 4px 8px; }
 
-/* Nearby */
-.nearby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.nearby-card { cursor: pointer; border-radius: 10px; overflow: hidden; transition: transform 0.2s; }
-.nearby-card:hover { transform: translateY(-4px); }
-.nearby-img { aspect-ratio: 4/3; overflow: hidden; }
-.nearby-img img { width: 100%; height: 100%; object-fit: cover; }
-.nearby-name { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-top: 6px; padding: 0 4px; }
-.nearby-location { font-size: 10px; color: #888; padding: 0 4px; letter-spacing: 0.05em; }
 
 /* Sidebar */
 .sidebar { position: sticky; top: 76px; }

@@ -1,17 +1,18 @@
 <template>
-    <div class="flex h-screen">
-        <div class="h-full">
-            <AdminSideBar />
-        </div>
-        <main class="admin-content w-full">
-            <router-view />
-        </main>
-    </div>
+  <div class="flex min-h-screen bg-slate-100">
+    <AdminSideBar />
+    <main class="admin-content flex-1 p-6 md:p-8 overflow-auto">
+      <router-view />
+    </main>
+  </div>
 </template>
             
             
 <script lang="ts">
-    import { defineComponent } from 'vue'
-    import AdminSideBar from '../components/Admin_SideBar.vue'
-    export default defineComponent({ components: { AdminSideBar } }) 
+import { defineComponent } from 'vue'
+import AdminSideBar from '../components/Admin_SideBar.vue'
+
+export default defineComponent({
+  components: { AdminSideBar },
+})
 </script>

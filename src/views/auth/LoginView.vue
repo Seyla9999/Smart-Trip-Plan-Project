@@ -73,6 +73,11 @@ const dialogType = ref('success')
 
 const router = useRouter()
 
+const getNormalizedRole = (user) => {
+  const role = user?.role || user?.user_role || ''
+  return String(role).trim().toLowerCase()
+}
+
 const emailError = computed(() => {
   if (!submitted.value) return '' 
   if (!email.value) return 'Email is required'
@@ -111,7 +116,8 @@ const handleLogin = async () => {
     success.value = res.data.message
 
     setTimeout(() => {
-      router.push('/')
+      const nextRoute = getNormalizedRole(res.data.user) === 'admin' ? '/admin' : '/'
+      router.replace(nextRoute)
     }, 1200)
 
   } catch (err) {

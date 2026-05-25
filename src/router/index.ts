@@ -1,21 +1,28 @@
-import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
-import LoginView from "../views/auth/LoginView.vue";
-import RegisterView from "../views/auth/RegisterView.vue";
-import VerifyView from "../views/auth/VerifyView.vue";
-import AdminView from "../views/AdminView.vue";
-import Admin_Dashboard from "../views/Admin_Dashboard.vue";
-import UserView from "../views/UserView.vue";
-import User_Discover from "../views/User_Discover.vue";
-import CommunityView from "../views/CommunityView.vue";
-import ProvinceDetailView from "../views/ProvinceDetailView.vue";
-import AboutView from "../views/AboutView.vue";
-import AttractionDetail from "../components/AttractionDetail.vue";
-import TripPlannerView from "../views/TripPlannerView.vue";
-import TripFormView from "../views/TripFormView.vue";
-import TripResultsView from "../views/TripResultsView.vue";
-import MapView from "../views/MapView.vue";
-import ProfileView from "../views/ProfileView.vue";
+import { createRouter, createWebHistory } from 'vue-router'
+import { clearAuthSession, isAuthSessionExpired } from '@/services/auth-session.service'
+
+import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/auth/LoginView.vue'
+import RegisterView from '../views/auth/RegisterView.vue'
+import VerifyView from '../views/auth/VerifyView.vue'
+import AdminView from '../views/AdminView.vue'
+import Admin_Dashboard from '../views/Admin_Dashboard.vue'
+import Admin_Destination from '../views/Admin_Destination.vue'
+import Admin_Moderation from '../views/Admin_Moderation.vue'
+import Admin_User from '../views/Admin_User.vue'
+import Admin_Setting from '../views/Admin_Setting.vue'
+import UserView from '../views/UserView.vue'
+import User_Discover from '../views/User_Discover.vue'
+import CommunityView from '../views/CommunityView.vue'
+import ProvinceDetailView from '../views/ProvinceDetailView.vue'
+import AboutView from '../views/AboutView.vue'
+import AttractionDetail from '../components/AttractionDetail.vue'
+import TripPlannerView from '../views/TripPlannerView.vue'
+import TripFormView from '../views/TripFormView.vue'
+import TripResultsView from '../views/TripResultsView.vue'
+import MapView from '../views/MapView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import MyTripsView from '../views/MyTripsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,7 +51,11 @@ const router = createRouter({
       path: "/admin",
       component: AdminView,
       children: [
-        { path: "", name: "admin-dashboard", component: Admin_Dashboard },
+        { path: '', name: 'admin-dashboard', component: Admin_Dashboard },
+        { path: 'destination', name: 'admin-destination', component: Admin_Destination },
+        { path: 'moderation', name: 'admin-moderation', component: Admin_Moderation },
+        { path: 'user', name: 'admin-user', component: Admin_User },
+        { path: 'setting', name: 'admin-setting', component: Admin_Setting },
       ],
     },
     {
@@ -81,6 +92,11 @@ const router = createRouter({
     {
       path: "/plan-trip",
       redirect: "/trip",
+    },
+    {
+      path: "/my-trips",
+      name: "my-trips",
+      component: MyTripsView,
     },
     {
       path: "/province/:slug",
@@ -140,6 +156,45 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("auth_token");
+  if (token && isAuthSessionExpired()) {
+    clearAuthSession()
+    next('/login')
+    return
+  }
+
+  const rawUser = localStorage.getItem('user_data') || localStorage.getItem('user') || localStorage.getItem('currentUser')
+  let isAdminUser = false
+
+  if (rawUser) {
+    try {
+      const user = JSON.parse(rawUser)
+      const role = String(user?.role || user?.user_role || '').trim().toLowerCase()
+      isAdminUser = role === 'admin'
+    } catch {
+      isAdminUser = false
+    }
+  }
+
+  const isAdminRoute = to.path.startsWith('/admin')
+  const authRoutes = ['/login', '/register', '/verify']
+
+  if (isAdminUser && !isAdminRoute) {
+    next('/admin')
+    return
+  }
+
+  if (isAdminRoute) {
+    if (!token) {
+      next('/login')
+      return
+    }
+
+    if (!isAdminUser) {
+      next('/')
+      return
+    }
+  }
+
   const publicRoutes = [
     "home",
     "login",
@@ -152,10 +207,11 @@ router.beforeEach((to, _from, next) => {
     "province-detail",
     "place-detail",
     "AttractionDetail",
+
   ];
   const routeName = typeof to.name === "string" ? to.name : "";
 
-  if (!token && !publicRoutes.includes(routeName)) {
+  if (!token && !publicRoutes.includes(routeName) && !authRoutes.includes(to.path)) {
     next("/login");
   } else {
     next();

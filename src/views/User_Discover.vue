@@ -117,15 +117,6 @@
               </div>
               
               <div class="absolute flex top-3 right-3 flex-col gap-2">
-                <button
-                  type="button"
-                  class="flex items-center gap-1.5 backdrop-blur-sm text-white text-xs px-2.5 py-1.5 rounded-md font-bold shadow-lg transition-all bg-blue-900/95 hover:bg-blue-800"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V5z" />
-                  </svg>
-                </button>
-                
                 <div class="flex items-center gap-1.5 bg-amber-600/95 backdrop-blur-sm text-white text-xs px-2.5 py-1.5 rounded-md font-bold shadow-lg">
                   <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -166,6 +157,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAttractions, getCategories } from '@/services/attractions.service'
+import type { AttractionsFilterParams } from '@/services/attractions.service'
 import { getProvinces } from '@/services/home.service'
 
 const router = useRouter()
@@ -179,6 +171,24 @@ const provinceNameById = ref<Record<number, string>>({})
 const loading = ref(false)
 const error = ref<string | null>(null)
 const sortBy = ref<string>('rating')
+const FETCH_LIMIT = 100
+
+const normalizeText = (value: unknown) =>
+  value ? value.toString().trim().toLowerCase() : ''
+
+const resolveCategoryLabel = (category: unknown) => {
+  if (!category) return ''
+  if (typeof category === 'string') return category
+  if (typeof category === 'object') {
+    const maybe =
+      (category as any).name ??
+      (category as any).name_en ??
+      (category as any).title ??
+      (category as any).label
+    if (maybe) return maybe
+  }
+  return String(category)
+}
 
 onMounted(async () => {
   await Promise.all([loadCategories(), loadProvinces()])
@@ -188,7 +198,13 @@ onMounted(async () => {
 async function loadCategories() {
   try {
     const response = await getCategories()
-    categories.value = ['', ...response.data.categories]
+    const list = Array.isArray(response.data?.categories)
+      ? (response.data.categories as unknown[])
+      : []
+    const normalized = list
+      .map(resolveCategoryLabel)
+      .filter((value): value is string => Boolean(value))
+    categories.value = ['', ...Array.from(new Set(normalized))]
   } catch (err) {
     console.error('Failed to load categories:', err)
   }
@@ -211,19 +227,40 @@ async function fetchAttractions() {
   error.value = null
 
   try {
-    const response = await getAttractions({
+    const filters: AttractionsFilterParams = {
       search: searchQuery.value || undefined,
       category: selectedCategory.value || undefined,
       sortBy: sortBy.value,
       sortOrder: 'DESC',
-    })
+    }
+    const allAttractions: any[] = []
+    let offset = 0
 
-    const rawAttractions = Array.isArray(response.data?.data) ? response.data.data : []
+    for (let page = 0; page < 100; page += 1) {
+      const response = await getAttractions({
+        ...filters,
+        limit: FETCH_LIMIT,
+        offset,
+      })
+      const pageAttractions = Array.isArray(response.data?.data) ? response.data.data : []
+      allAttractions.push(...pageAttractions)
 
-    attractions.value = rawAttractions.map((item: any) => ({
+      const total = Number(response.data?.pagination?.total ?? pageAttractions.length)
+      if (pageAttractions.length === 0 || allAttractions.length >= total) {
+        break
+      }
+
+      offset += FETCH_LIMIT
+    }
+
+    const uniqueAttractions = Array.from(
+      new Map(allAttractions.map((item: any) => [String(item.id), item])).values(),
+    )
+
+    const mappedAttractions = uniqueAttractions.map((item: any) => ({
       id: item.id,
       name: item.name ?? item.name_en ?? item.name_kh ?? 'Unnamed Attraction',
-      category: item.category ?? 'Unknown',
+      category: resolveCategoryLabel(item.category ?? item.main_category ?? item.category_name) || 'Unknown',
       rating: Number(item.rating ?? item.average_rating ?? 0),
       review_count: Number(item.review_count ?? 0),
       image_url: item.image_url ?? item.image ?? '',
@@ -232,7 +269,41 @@ async function fetchAttractions() {
         item.province?.name_en ??
         provinceNameById.value[Number(item.province_id)] ??
         'Unknown Province',
+      created_at: item.created_at ?? item.createdAt ?? null,
     }))
+
+    const selected = normalizeText(selectedCategory.value)
+    const query = normalizeText(searchQuery.value)
+
+    let filtered = mappedAttractions
+    if (selected) {
+      filtered = filtered.filter(
+        (item) => normalizeText(item.category) === selected,
+      )
+    }
+    if (query) {
+      filtered = filtered.filter((item) =>
+        normalizeText(
+          [item.name, item.category, item.province_name_en].join(' '),
+        ).includes(query),
+      )
+    }
+
+    if (sortBy.value === 'name') {
+      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortBy.value === 'reviewCount') {
+      filtered = [...filtered].sort((a, b) => b.review_count - a.review_count)
+    } else if (sortBy.value === 'createdAt') {
+      filtered = [...filtered].sort((a, b) => {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+        return bTime - aTime
+      })
+    } else {
+      filtered = [...filtered].sort((a, b) => b.rating - a.rating)
+    }
+
+    attractions.value = filtered
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to fetch attractions'
     console.error('Error fetching attractions:', err)

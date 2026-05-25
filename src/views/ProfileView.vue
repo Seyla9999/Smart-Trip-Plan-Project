@@ -289,7 +289,8 @@ export default defineComponent({
     }
 
     function getToken(): string {
-      return localStorage.getItem('access_token')
+      return localStorage.getItem('auth_token')
+          || localStorage.getItem('access_token')
           || localStorage.getItem('token')
           || localStorage.getItem('authToken')
           || localStorage.getItem('jwt')
@@ -364,11 +365,16 @@ export default defineComponent({
     async function loadTrips() {
       tripsLoading.value = true
       try {
-        const res  = await fetch(`${API_URL}/trips`, { headers: getHeaders() })
+        // Use the same API prefix as TripResultsView (backend uses /api)
+        const res  = await fetch(`${API_URL}/api/trips`, { headers: getHeaders() })
         const data = await res.json()
         trips.value       = Array.isArray(data) ? data : (data.data || data.trips || [])
         stats.value.trips = trips.value.length
-      } catch { trips.value = [] } finally { tripsLoading.value = false }
+      } catch {
+        trips.value = []
+      } finally {
+        tripsLoading.value = false
+      }
     }
 
     async function loadStories() {

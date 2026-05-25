@@ -52,7 +52,7 @@ export const mockProvinces = [
   {
     id: 8,
     nameEn: 'Banteay Meanchey',
-    nameKh: 'បន្ទាយ មាន់ចghostay',
+    nameKh: 'បន្ទាយមានជ័យ',
     description: 'Border province with historical significance.',
     mainImageUrl: 'https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5?w=600'
   },

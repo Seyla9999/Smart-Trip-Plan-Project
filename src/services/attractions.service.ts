@@ -145,3 +145,8 @@ export const getAttractionById = (id: string) => {
 export const createAttraction = (data: any) => {
   return API.post('/attractions', data)
 }
+
+// Update attraction (admin only)
+export const updateAttraction = (id: string, data: any) => {
+  return API.patch(`/attractions/${id}`, data)
+}

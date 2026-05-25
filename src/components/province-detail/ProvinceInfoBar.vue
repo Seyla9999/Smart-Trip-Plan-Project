@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { RouterLink } from "vue-router";
-
-const props = defineProps<{
+defineProps<{
   provinceName: string;
   totalPlaces: number;
 }>();
 
-const provinceSlug = computed(() =>
-  props.provinceName.toLowerCase().trim().replace(/\s+/g, "-"),
-);
+const emit = defineEmits<{
+  (e: "open-map"): void;
+}>();
+
+function openMapView() {
+  emit("open-map");
+}
 </script>
 
 <template>
@@ -19,9 +20,10 @@ const provinceSlug = computed(() =>
         {{ totalPlaces }} attractions found in {{ provinceName }} — view them
         all on the map
       </p>
-      <RouterLink :to="`/map?province=${provinceSlug}`" class="map-link">
+
+      <button class="map-link" type="button" @click="openMapView">
         OPEN MAP VIEW →
-      </RouterLink>
+      </button>
     </div>
   </section>
 </template>
@@ -48,8 +50,11 @@ const provinceSlug = computed(() =>
 
 .map-link {
   color: #ffcb4d;
-  text-decoration: none;
+  background: transparent;
+  border: none;
   font-weight: 700;
+  cursor: pointer;
+  padding: 0;
 }
 
 @media (max-width: 640px) {
