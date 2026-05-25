@@ -263,6 +263,8 @@ function placeUserMarker(lat: number, lng: number) {
   buildMarkers()
 }
 
+const geoOptions = { maximumAge: 0, timeout: 10000, enableHighAccuracy: true }
+
 function toggleNearMe() {
   if (nearMeActive.value) {
     nearMeActive.value = false
@@ -282,6 +284,7 @@ function toggleNearMe() {
       placeUserMarker(coords.latitude, coords.longitude)
     },
     () => alert('Could not get your location. Please allow location access and try again.'),
+    geoOptions,
   )
 }
 
@@ -290,6 +293,7 @@ function refreshLocation() {
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => placeUserMarker(coords.latitude, coords.longitude),
     () => alert('Could not refresh your location.'),
+    geoOptions,
   )
 }
 
