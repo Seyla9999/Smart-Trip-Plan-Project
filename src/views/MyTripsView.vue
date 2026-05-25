@@ -42,8 +42,8 @@
             <article
               v-for="trip in upcomingTrips" :key="trip.id"
               class="trip-card trip-card--upcoming"
-              @click="goToTrip(trip)"
             >
+              <a class="card-overlay" :href="`/trip/results/${trip.id}`" @click.prevent="goToTrip(trip)" aria-hidden></a>
               <!-- Card top bar -->
               <div class="card-bar" :style="{ background: tripColor(trip.id) }"></div>
 
@@ -117,14 +117,11 @@
 
                 <!-- Actions -->
                 <div class="card-actions">
-                  <router-link
-                    :to="{ name: 'trip-results-saved', params: { id: trip.id } }"
-                    class="btn-view"
-                    @click.stop
-                  >View Plan</router-link>
+                    <button class="btn-view" @click.stop.prevent="goToTrip(trip)">View Plan</button>
                   <button class="btn-share" @click.stop="shareTrip(trip)">🔗 Share</button>
                 </div>
               </div>
+              
             </article>
           </div>
         </section>
@@ -138,8 +135,8 @@
             <article
               v-for="trip in ongoingTrips" :key="trip.id"
               class="trip-card trip-card--ongoing"
-              @click="goToTrip(trip)"
             >
+              <a class="card-overlay" :href="`/trip/results/${trip.id}`" @click.prevent="goToTrip(trip)" aria-hidden></a>
               <div class="card-bar" style="background: linear-gradient(90deg,#f59e0b,#f97316)"></div>
               <div class="card-body">
                 <div class="card-title-row">
@@ -169,10 +166,11 @@
                   <div class="stat"><span class="stat-num">{{ trip.packing_list?.filter(p => p.packed).length ?? 0 }}/{{ trip.packing_list?.length ?? 0 }}</span><span class="stat-label">packed</span></div>
                 </div>
                 <div class="card-actions">
-                  <router-link :to="{ name: 'trip-results-saved', params: { id: trip.id } }" class="btn-view" @click.stop>View Plan</router-link>
+                    <button class="btn-view" @click.stop.prevent="goToTrip(trip)">View Plan</button>
                   <button class="btn-share" @click.stop="shareTrip(trip)">🔗 Share</button>
                 </div>
               </div>
+              
             </article>
           </div>
         </section>
@@ -410,7 +408,7 @@ const tripColor = (id: string) => {
 // ─── API calls ────────────────────────────────────────────────────────────────
 const authHeaders = () => ({
   'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('access_token') ?? ''}`,
+  Authorization: `Bearer ${localStorage.getItem('auth_token') ?? localStorage.getItem('access_token') ?? ''}`,
 })
 
 const fetchTrips = async () => {
@@ -611,6 +609,14 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
   flex-shrink: 0;
 }
 .btn-delete:hover { color: #ef4444; background: #fef2f2; }
+
+/* Make the whole card clickable via an invisible overlay while keeping buttons clickable */
+.trip-card { position: relative; }
+.card-overlay {
+  position: absolute; inset: 0; display: block; z-index: 2;
+}
+.card-body { position: relative; z-index: 1; }
+.card-actions button, .btn-delete, .btn-share, .btn-view { position: relative; z-index: 3; }
 
 .card-route {
   display: flex; align-items: center; gap: 6px;

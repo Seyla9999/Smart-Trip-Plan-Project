@@ -745,7 +745,7 @@ const fetchTrip = async () => {
   apiError.value = null
   try {
     const token = localStorage.getItem('auth_token')
-    const res = await fetch(`${API_BASE}/trips/${tripId.value}`, {
+    const res = await fetch(`${API_BASE}/api/trips/${tripId.value}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`) }
