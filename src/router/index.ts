@@ -87,6 +87,7 @@ const router = createRouter({
       children: [
         { path: "", name: "trip", component: TripFormView },
         { path: "results", name: "trip-results", component: TripResultsView },
+        { path: "results/:id", name: "trip-results-saved", component: TripResultsView },
       ],
     },
     {
