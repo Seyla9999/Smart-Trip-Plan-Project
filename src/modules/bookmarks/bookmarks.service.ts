@@ -43,10 +43,33 @@ export class BookmarksService {
 
   async getUserBookmarks(userId: string): Promise<BookmarkRow[]> {
     return this.bookmarkRepo.manager.query(
-      `SELECT id, entity_type, entity_id, created_at
-       FROM bookmarks
-       WHERE user_id = $1
-       ORDER BY created_at DESC`,
+      `SELECT
+         b.id,
+         b.entity_type,
+         b.entity_id,
+         b.created_at,
+         CASE WHEN b.entity_type = 'attraction' AND a.id IS NOT NULL THEN
+           json_build_object(
+             'id',        a.id,
+             'name_en',   a.name_en,
+             'category',  a.category,
+             'image_url', COALESCE(a.image_url, a.hero_image),
+             'province',  json_build_object(
+               'id',             p.id,
+               'name_en',        p.name_en,
+               'main_image_url', p.main_image_url
+             )
+           )
+         END AS attraction
+       FROM bookmarks b
+       LEFT JOIN attractions a
+         ON b.entity_type = 'attraction'
+        AND b.entity_id IS NOT NULL
+        AND a.id = b.entity_id
+        AND a.deleted_at IS NULL
+       LEFT JOIN provinces p ON p.id = a.province_id
+       WHERE b.user_id = $1
+       ORDER BY b.created_at DESC`,
       [userId],
     );
   }
