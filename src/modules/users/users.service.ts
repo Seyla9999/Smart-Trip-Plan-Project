@@ -99,6 +99,21 @@ export class UsersService {
     const unread = data.filter((n: any) => !n.is_read).length
     return { success: true, data, unread }
   }
+  async searchUsers(q: string) {
+    if (!q || q.length < 2) return { success: true, data: [] }
+    const users = await this.repo.manager.query(`
+      SELECT id, full_name, username, email, avatar_url, role
+      FROM users
+      WHERE deleted_at IS NULL
+        AND (
+          email ILIKE $1
+          OR username ILIKE $1
+          OR full_name ILIKE $1
+        )
+      LIMIT 10
+    `, [`%${q}%`])
+    return { success: true, data: users }
+  }
 
   async markNotificationsRead(userId: string) {
     await this.repo.manager.query(
