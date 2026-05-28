@@ -1,8 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm'
-import { User } from '../users/user.entity'
-import { TripMember } from './trip-member.entity'
-import { ItineraryItem } from './itinerary-item.entity'
-import { PackingListItem } from './packing-list-item.entity'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
+import { User } from '../users/user.entity';
+import { TripMember } from './trip-member.entity';
+import { ItineraryItem } from './itinerary-item.entity';
+import { PackingListItem } from './packing-list-item.entity';
 
 @Entity('trips')
 export class Trip {

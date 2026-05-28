@@ -1,23 +1,23 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm'
-import { Trip } from './trip.entity'
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Trip } from './trip.entity';
 
 @Entity('packing_list_items')
 export class PackingListItem {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
   @ManyToOne(() => Trip, (trip) => trip.packing_list, { onDelete: 'CASCADE' })
-  trip!: Trip
+  trip!: Trip;
 
   @Column()
-  trip_id!: string
+  trip_id!: string;
 
   @Column()
-  name!: string
+  name!: string;
 
   @Column({ type: 'int', default: 1 })
-  quantity!: number
+  quantity!: number;
 
   @Column({ type: 'boolean', default: false })
-  packed!: boolean
+  packed!: boolean;
 }

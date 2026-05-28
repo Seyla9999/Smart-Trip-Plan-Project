@@ -1,13 +1,17 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { JwtService } from '@nestjs/jwt'
-import * as bcrypt from 'bcrypt'
-import { Resend } from 'resend'
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { Resend } from 'resend';
 
-import { User } from '../users/user.entity'
-import { RegisterDto } from './dto/register.dto'
-import { LoginDto } from './dto/login.dto'
+import { User } from '../users/user.entity';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 interface PendingUser {
   email: string;
@@ -19,7 +23,6 @@ interface PendingUser {
 
 @Injectable()
 export class AuthService {
-
   private pendingUsers = new Map<string, PendingUser>();
   private resend: Resend | null = null;
 
@@ -32,14 +35,13 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    
-    const hashed = await bcrypt.hash(dto.password, 10)
+    const hashed = await bcrypt.hash(dto.password, 10);
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     const existingUser = await this.userRepo.findOne({
       where: { email: dto.email },
-    })
+    });
     if (existingUser) {
       throw new BadRequestException('Email already exists');
     }
@@ -55,8 +57,13 @@ export class AuthService {
     try {
       await this.sendVerificationEmail(dto.email, code);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown email provider error';
-      console.error('Failed to send verification email during registration:', errorMessage, err);
+      const errorMessage =
+        err instanceof Error ? err.message : 'Unknown email provider error';
+      console.error(
+        'Failed to send verification email during registration:',
+        errorMessage,
+        err,
+      );
       throw new BadRequestException(
         `Registered account could not be verified because the email could not be sent: ${errorMessage}`,
       );
@@ -71,7 +78,9 @@ export class AuthService {
     const resendApiKey = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
 
     if (!resendApiKey) {
-      throw new BadRequestException('Email provider is not configured. Set RESEND_API_KEY in .env.');
+      throw new BadRequestException(
+        'Email provider is not configured. Set RESEND_API_KEY in .env.',
+      );
     }
 
     if (!this.resend) {
@@ -101,26 +110,49 @@ export class AuthService {
       });
 
       if (error) {
-        const errorMessage = error.message || 'Resend returned an unknown error';
-        console.error('Resend rejected verification email to', email, errorMessage, error);
-        throw new BadRequestException(`Failed to send verification email: ${errorMessage}`);
+        const errorMessage =
+          error.message || 'Resend returned an unknown error';
+        console.error(
+          'Resend rejected verification email to',
+          email,
+          errorMessage,
+          error,
+        );
+        throw new BadRequestException(
+          `Failed to send verification email: ${errorMessage}`,
+        );
       }
 
-      console.log('Verification email queued for', email, 'message id:', data?.id);
+      console.log(
+        'Verification email queued for',
+        email,
+        'message id:',
+        data?.id,
+      );
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown email provider error';
-      console.error('Mailer error sending verification email to', email, errorMessage, err);
-      throw new BadRequestException(`Failed to send verification email: ${errorMessage}`);
+      const errorMessage =
+        err instanceof Error ? err.message : 'Unknown email provider error';
+      console.error(
+        'Mailer error sending verification email to',
+        email,
+        errorMessage,
+        err,
+      );
+      throw new BadRequestException(
+        `Failed to send verification email: ${errorMessage}`,
+      );
     }
   }
 
   async resendVerificationEmail(email: string) {
     const pendingUser = this.pendingUsers.get(email);
     if (!pendingUser) {
-        throw new Error('No pending registration found for this email. Please register again.')
+      throw new Error(
+        'No pending registration found for this email. Please register again.',
+      );
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
     pendingUser.verification_code = code;
     this.pendingUsers.set(email, pendingUser);
 
@@ -139,7 +171,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    console.log('LOGIN DTO:', dto)
+    console.log('LOGIN DTO:', dto);
 
     const user = await this.userRepo.findOne({
       where: { email: dto.email },
@@ -161,12 +193,12 @@ export class AuthService {
     }
 
     // Generate JWT token
-    const token = this.jwtService.sign({ sub: user.id, email: user.email })
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, full_name: user.full_name })
 
     return {
-        message: 'Login success',
-        token,
-        user: {
+      message: 'Login success',
+      token,
+      user: {
         id: user.id,
         email: user.email,
         full_name: user.full_name,
@@ -192,7 +224,7 @@ export class AuthService {
   //       email: pendingUser.email,
   //       full_name: pendingUser.full_name,
   //       password_hash: pendingUser.password_hash,
-  //       is_verified: true, 
+  //       is_verified: true,
   //       verification_code: '',
   //   });
 
@@ -202,13 +234,15 @@ export class AuthService {
   //   return {
   //       message: 'Email verified and account created successfully!',
   //   }
-  // } 
+  // }
 
   async verify(email: string, code: string) {
     const pendingUser = this.pendingUsers.get(email);
 
     if (!pendingUser) {
-      throw new NotFoundException('Registration session expired or not found. Please register again.');
+      throw new NotFoundException(
+        'Registration session expired or not found. Please register again.',
+      );
     }
 
     if (pendingUser.verification_code !== code) {

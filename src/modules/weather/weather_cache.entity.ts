@@ -11,11 +11,11 @@ export class WeatherCache {
   @Column({ name: 'temp_celsius', type: 'decimal', nullable: true })
   tempCelsius: number;
 
- @Column({ name: 'condition_text', type: 'varchar', nullable: true })
-conditionText: string | null;
+  @Column({ name: 'condition_text', type: 'varchar', nullable: true })
+  conditionText: string | null;
 
-@Column({ name: 'icon_url', type: 'text', nullable: true })
-iconUrl: string | null;
+  @Column({ name: 'icon_url', type: 'text', nullable: true })
+  iconUrl: string | null;
   @Column({ name: 'last_updated', type: 'timestamptz', nullable: true })
   lastUpdated: Date;
 }

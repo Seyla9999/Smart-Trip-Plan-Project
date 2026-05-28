@@ -20,6 +20,7 @@ import { NearbyImagesModule } from './nearby-images/nearby-images.module';
 import { SponsorsModule } from './modules/sponsors/sponsors.module';
 import { WeatherModule } from './modules/weather/weather.module';
 import { TripsModule } from './modules/trips/trips.module';
+
 import { ChatModule } from './modules/chat/chat.module';
 
 // Entities
@@ -34,6 +35,9 @@ import { Conversation } from './modules/chat/entities/conversation.entity';
 import { ChatMessage } from './modules/chat/entities/chat-message.entity';
 import { ConversationRead } from './modules/chat/entities/conversation-read.entity';
 import { ConversationMember } from './modules/chat/entities/conversation-member.entity';
+
+import { ReviewsModule } from './modules/reviews/reviews.module';
+
 
 @Module({
   imports: [
@@ -50,7 +54,6 @@ import { ConversationMember } from './modules/chat/entities/conversation-member.
       database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: false,
-      entities: [Attraction, Province, Story, StoryComment, Bookmark, NearbyImage],
 
       ssl: {
         rejectUnauthorized: false,
@@ -65,8 +68,8 @@ import { ConversationMember } from './modules/chat/entities/conversation-member.
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         transport: {
-          host:   config.get('SMTP_HOST'),
-          port:   parseInt(config.get('SMTP_PORT') || '587', 10),
+          host: config.get('SMTP_HOST'),
+          port: parseInt(config.get('SMTP_PORT') || '587', 10),
           secure: config.get('SMTP_PORT') === '465',
           auth: {
             user: config.get('SMTP_USER'),
@@ -84,17 +87,20 @@ import { ConversationMember } from './modules/chat/entities/conversation-member.
     HttpModule,
     ProvincesModule,
     AttractionsModule,
+    PointsOfInterestModule,
     StoriesModule,
     SponsorsModule,
     WeatherModule,
     UsersModule,
     BookmarksModule,
+    ReviewsModule,
     TripsModule,
     ChatModule,
     Conversation,
     ChatMessage,
     ConversationRead,
     ConversationMember,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
