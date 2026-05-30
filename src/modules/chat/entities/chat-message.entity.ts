@@ -11,8 +11,14 @@ export class ChatMessage {
   @Column({ name: 'sender_id' })
   senderId: string
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   text: string
+
+  @Column({ name: 'image_url', type: 'text', nullable: true })
+  imageUrl: string
+
+  @Column({ type: 'varchar', length: 20, default: 'sent' })
+  status: string
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date

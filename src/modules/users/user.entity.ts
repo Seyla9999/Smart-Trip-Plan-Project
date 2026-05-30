@@ -37,6 +37,9 @@ export class User {
   @Column({ nullable: true })
   last_login!: Date;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  last_seen!: Date;
+
   @Column({ default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 

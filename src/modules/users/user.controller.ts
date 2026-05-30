@@ -21,9 +21,6 @@ import { UsersService } from './users.service'
 export class UsersController {
   constructor(private readonly service: UsersService) {}
 
-  // ✅ IMPORTANT: All fixed routes MUST come before /:id routes
-  // Otherwise NestJS treats 'count', 'search' as an :id value
-
   // GET /users/count
   @Get('count')
   async count() {
@@ -31,7 +28,6 @@ export class UsersController {
     return { success: true, count }
   }
 
-  // ✅ GET /users/search?q=xxx — MUST be before GET /users/:id
   @Get('search')
   async searchUsers(@Query('q') q: string) {
     return this.service.searchUsers(q)
