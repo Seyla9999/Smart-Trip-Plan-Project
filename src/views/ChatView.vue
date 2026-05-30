@@ -6,7 +6,9 @@
         <div class="sidebar-header">
           <h2 class="sidebar-title">Messages</h2>
           <div class="search-wrap">
-            <span>🔍</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
             <input v-model="searchQuery" class="search-input" placeholder="Search..." />
           </div>
           <button class="new-chat-btn" @click="showNewChat = true">New Chat</button>
@@ -20,13 +22,16 @@
           <div v-for="c in filteredContacts" :key="c.id"
                class="contact" :class="{ active: activeConv?.id === c.id }"
                @click="selectConversation(c)">
-            <div class="c-avatar" :style="{ background: getConvColor(c) }">
-              <img v-if="getConvAvatar(c)" :src="getAvatarSrc(getConvAvatar(c))" class="c-avatar-img" />
-              <span v-else>{{ getConvInitials(c) }}</span>
+            <div class="c-avatar-wrap">
+              <div class="c-avatar" :style="{ background: getConvColor(c) }">
+                <img v-if="getConvAvatar(c)" :src="getAvatarSrc(getConvAvatar(c))" class="c-avatar-img" />
+                <span v-else>{{ getConvInitials(c) }}</span>
+              </div>
+              <span v-if="isOnline(c.other_user?.last_seen)" class="online-dot"></span>
             </div>
             <div class="c-info">
               <div class="c-name">{{ getConvName(c) }}</div>
-              <div class="c-preview">{{ c.last_message || 'No messages yet' }}</div>
+              <div class="c-preview">{{ getLastMessagePreview(c) }}</div>
             </div>
             <div class="c-meta">
               <span class="c-time">{{ formatTime(c.last_message_at || c.updated_at) }}</span>
@@ -53,16 +58,20 @@
         <template v-else>
           <div class="chat-header" @click="showContactProfile(activeConv)" style="cursor:pointer">
             <button class="back-btn" @click.stop="showSidebar = true">←</button>
-            <div class="ch-avatar" :style="{ background: getConvColor(activeConv) }">
-              <img v-if="getConvAvatar(activeConv)" :src="getAvatarSrc(getConvAvatar(activeConv))" class="c-avatar-img" />
-              <span v-else>{{ getConvInitials(activeConv) }}</span>
+            <div class="ch-avatar-wrap">
+              <div class="ch-avatar" :style="{ background: getConvColor(activeConv) }">
+                <img v-if="getConvAvatar(activeConv)" :src="getAvatarSrc(getConvAvatar(activeConv))" class="c-avatar-img" />
+                <span v-else>{{ getConvInitials(activeConv) }}</span>
+              </div>
+              <span v-if="isOnline(activeConv.other_user?.last_seen)" class="online-dot"></span>
             </div>
             <div class="ch-info">
               <div class="ch-name">{{ getConvName(activeConv) }}</div>
               <div class="ch-sub">
-                {{ activeConv.type === 'group'
-                  ? `${activeConv.members?.length || 0} members · tap to view`
-                  : 'tap to view profile' }}
+                <span v-if="isOnline(activeConv.other_user?.last_seen)" class="online-label">Online</span>
+                <span v-else-if="activeConv.type === 'group'">{{ activeConv.members?.length || 0 }} members</span>
+                <span v-else-if="activeConv.other_user?.last_seen">{{ getLastSeenText(activeConv.other_user.last_seen) }}</span>
+                <span v-else class="ch-sub-muted">Offline</span>
               </div>
             </div>
           </div>
@@ -97,23 +106,36 @@
                     {{ msg.sender_name }}
                   </div>
 
-                  <div v-if="msg.image_url" class="bubble"
+                  <div v-if="msg.deleted || msg.status === 'deleted'" class="bubble"
+                       :class="[msg.sender_id === loggedInUser.id ? 'bubble-mine' : 'bubble-theirs', 'bubble-deleted']">
+                    <span class="deleted-text">Message deleted</span>
+                  </div>
+
+                  <div v-else-if="msg.image_url" class="bubble"
                        :class="msg.sender_id === loggedInUser.id ? 'bubble-mine' : 'bubble-theirs'">
                     <img :src="getAvatarSrc(msg.image_url)" class="msg-image" @click="openImage(msg.image_url)" />
                     <div v-if="msg.text" class="msg-image-caption">{{ msg.text }}</div>
                   </div>
 
                   <div v-else class="bubble"
-                       :class="[
-                         msg.sender_id === loggedInUser.id ? 'bubble-mine' : 'bubble-theirs',
-                         { 'bubble-deleted': msg.deleted }
-                       ]">
-                    <span v-if="msg.deleted" class="deleted-text">Message deleted</span>
-                    <span v-else>{{ msg.text }}</span>
+                       :class="msg.sender_id === loggedInUser.id ? 'bubble-mine' : 'bubble-theirs'">
+                    {{ msg.text }}
                   </div>
 
                   <div class="msg-time" :class="{ 'time-right': msg.sender_id === loggedInUser.id }">
                     {{ formatMsgTime(msg.created_at) }}
+
+                    <span v-if="msg.sender_id === loggedInUser.id && !msg.deleted && msg.status !== 'deleted'" class="msg-ticks">
+
+                      <svg v-if="msg.status !== 'seen'" class="tick" viewBox="0 0 16 11" fill="none">
+                        <path d="M1.5 5.5L5.5 9.5L14.5 1.5" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+
+                      <svg v-else class="tick double-tick" viewBox="0 0 22 11" fill="none">
+                        <path d="M1.5 5.5L5.5 9.5L14.5 1.5" stroke="#53a6f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7.5 5.5L11.5 9.5L20.5 1.5" stroke="#53a6f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -129,14 +151,45 @@
             </div>
           </div>
 
-          <div class="input-area">
-            <label class="attach-btn" title="Send photo">
-              📷
+          <transition name="emoji-fade">
+            <div v-if="showEmojiPicker" class="emoji-picker" @click.stop>
+              <div class="emoji-cats">
+                <button v-for="cat in emojiCategories" :key="cat.name"
+                        class="emoji-cat-btn"
+                        :class="{ active: activeEmojiCat === cat.name }"
+                        @click="activeEmojiCat = cat.name">{{ cat.icon }}</button>
+              </div>
+              <div class="emoji-grid">
+                <button v-for="emoji in currentEmojis" :key="emoji"
+                        class="emoji-btn"
+                        @click="insertEmoji(emoji)">{{ emoji }}</button>
+              </div>
+            </div>
+          </transition>
+
+          <div class="input-area" @click="showEmojiPicker = false">
+            <label class="attach-btn" title="Send photo" @click.stop>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
               <input type="file" accept="image/*" class="file-input" @change="sendPhoto" />
             </label>
+
             <input v-model="newMessage" class="msg-input"
                    :placeholder="`Message ${getConvName(activeConv)}...`"
-                   @keydown.enter="sendMessage" :disabled="sending" />
+                   @keydown.enter="sendMessage"
+                   @click.stop
+                   :disabled="sending" />
+
+            <button class="emoji-toggle-btn" @click.stop="showEmojiPicker = !showEmojiPicker" title="Emoji">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3" stroke-linecap="round"/>
+                <line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </button>
+
             <button class="send-btn" @click="sendMessage"
                     :disabled="!newMessage.trim() || sending">
               {{ sending ? '⏳' : '➤' }}
@@ -156,31 +209,20 @@
         <div class="popup-name">{{ profilePopup.name }}</div>
         <div class="popup-username" v-if="profilePopup.username">@{{ profilePopup.username }}</div>
         <div class="popup-actions">
-          <button class="popup-btn-primary" @click="goToProfile(profilePopup.id)">
-            View Profile
-          </button>
-          <button class="popup-btn-secondary" @click="startDirectChat(profilePopup.id); profilePopup = null">
-            Message
-          </button>
+          <button class="popup-btn-primary" @click="goToProfile(profilePopup.id)">View Profile</button>
+          <button class="popup-btn-secondary" @click="startDirectChat(profilePopup.id); profilePopup = null">Message</button>
         </div>
       </div>
     </div>
 
-    <div v-if="msgMenu" class="msg-menu" :style="{ top: msgMenu.y + 'px', left: msgMenu.x + 'px' }"
-         @click.stop>
+    <div v-if="msgMenu" class="msg-menu" :style="{ top: msgMenu.y + 'px', left: msgMenu.x + 'px' }" @click.stop>
       <button v-if="msgMenu.msg.sender_id === loggedInUser.id && !msgMenu.msg.deleted"
-              class="msg-menu-item delete"
-              @click="deleteMessage(msgMenu.msg)">
-        Delete Message
-      </button>
-      <button class="msg-menu-item" @click="copyMessage(msgMenu.msg)">
-        Copy
-      </button>
-      <button class="msg-menu-item cancel" @click="msgMenu = null">
-        Cancel
-      </button>
+              class="msg-menu-item delete" @click="deleteMessage(msgMenu.msg)">Delete Message</button>
+      <button class="msg-menu-item" @click="copyMessage(msgMenu.msg)">Copy</button>
+      <button class="msg-menu-item cancel" @click="msgMenu = null">Cancel</button>
     </div>
     <div v-if="msgMenu" class="msg-menu-backdrop" @click="msgMenu = null" />
+
     <div v-if="viewingImage" class="image-viewer-overlay" @click="viewingImage = null">
       <img :src="viewingImage" class="image-viewer-img" />
     </div>
@@ -189,12 +231,8 @@
       <div class="modal">
         <div class="modal-title">New Conversation</div>
         <div class="modal-tabs">
-          <button :class="{ active: newChatType === 'direct' }" @click="newChatType = 'direct'">
-            Direct
-          </button>
-          <button :class="{ active: newChatType === 'group' }" @click="newChatType = 'group'">
-            Group
-          </button>
+          <button :class="{ active: newChatType === 'direct' }" @click="newChatType = 'direct'">Direct</button>
+          <button :class="{ active: newChatType === 'group' }" @click="newChatType = 'group'">Group</button>
         </div>
         <div v-if="newChatType === 'group'" class="form-group">
           <label class="form-label">Group Name</label>
@@ -258,6 +296,17 @@ import { useRouter } from 'vue-router'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const COLORS  = ['#1D3557','#2D6A4F','#C8922A','#5C4B8A','#AE2012','#2196A6','#6B4C3B']
 
+const EMOJI_CATEGORIES = [
+  { name: 'smileys',  icon: '😊', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😍','🥰','😘','😋','😛','😝','😜','🤩','🥳','😏','😒','😔','😟','😢','😭','😤','😠','🤯','😳','🥺','😱','😨'] },
+  { name: 'gestures', icon: '👋', emojis: ['👋','🤚','✋','🖖','👌','✌️','🤞','👍','👎','✊','👊','👏','🙌','🙏','💪','🤝','👈','👉','👆','👇','☝️'] },
+  { name: 'nature',   icon: '🌿', emojis: ['🐶','🐱','🐭','🐰','🦊','🐻','🐼','🐯','🦁','🐸','🌸','🌺','🌻','🌷','🌹','🌿','🍀','🌱','🌲','🌴','🌵','🍁','🍂','🍃'] },
+  { name: 'travel',   icon: '✈️', emojis: ['✈️','🚀','🛸','🚁','⛵','🚤','🚢','🏖️','🏝️','🗺️','🧭','⛰️','🏔️','🌋','🏕️','🌉','🌃','🌆','🌇','🌄','🌅','🗽','🗼','🏰','🏯','🎠','🎡','🎢'] },
+  { name: 'food',     icon: '🍜', emojis: ['🍚','🍛','🍜','🍝','🍲','🥘','🍱','🍣','🍗','🥩','🍳','🥞','🍞','🥗','🌮','🍔','🍟','🍕','🍦','🍩','🍪','🎂','🍰','🧁','🍫','🍷','🍸','🍹','☕','🍵','🧋'] },
+  { name: 'symbols',  icon: '❤️', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💕','💞','💓','💗','💖','💘','💝','⭐','🌟','💫','⚡','🌈','🔥','💥','❄️','🌊','🎉','🎊','🎈','🎁','🏆','🥇'] },
+]
+
+const _deletedIds = new Set<string>()
+
 export default defineComponent({
   name: 'ChatView',
   setup() {
@@ -277,8 +326,7 @@ export default defineComponent({
     const isTyping       = ref(false)
 
     const profilePopup = ref<any>(null)
-    const msgMenu = ref<any>(null)
-
+    const msgMenu      = ref<any>(null)
     const viewingImage = ref<string | null>(null)
 
     const showNewChat     = ref(false)
@@ -291,10 +339,62 @@ export default defineComponent({
     const newChatError    = ref('')
     const creating        = ref(false)
 
+    const showEmojiPicker = ref(false)
+    const activeEmojiCat  = ref('smileys')
+    const emojiCategories = EMOJI_CATEGORIES
+    const currentEmojis   = computed(() =>
+      EMOJI_CATEGORIES.find(c => c.name === activeEmojiCat.value)?.emojis ?? []
+    )
+    function insertEmoji(emoji: string) {
+      newMessage.value += emoji
+    }
+
     let lastMsgCount = 0
     let lastConvData = ''
     let pollInterval: any = null
+    let pingInterval: any = null
     let searchTimeout: any = null
+
+    function getLastMessagePreview(conv: any): string {
+      if (conv.last_message && conv.last_message.trim()) return conv.last_message
+      if (conv.last_message_image) {
+        const senderName = conv.last_message_sender_id === loggedInUser.value?.id
+          ? 'You'
+          : (getConvName(conv) || 'Someone')
+        return `${senderName} sent a photo`
+      }
+      return 'No messages yet'
+    }
+
+    function getLastSeenText(lastSeen: string): string {
+      if (!lastSeen) return 'Offline'
+      const diffMs   = Date.now() - new Date(lastSeen).getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      if (diffMins < 1)   return 'Last seen just now'
+      if (diffMins < 60)  return `Last seen ${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`
+      const diffHrs = Math.floor(diffMins / 60)
+      if (diffHrs < 24)   return `Last seen ${diffHrs} hour${diffHrs !== 1 ? 's' : ''} ago`
+      const diffDays = Math.floor(diffHrs / 24)
+      if (diffDays === 1) return 'Last seen yesterday'
+      return `Last seen ${diffDays} days ago`
+    }
+
+    function isOnline(lastSeen: string | null | undefined): boolean {
+      if (!lastSeen) return false
+      const diffMins = (Date.now() - new Date(lastSeen).getTime()) / 60000
+      return diffMins < 5
+    }
+
+    async function pingLastSeen() {
+      if (!loggedInUser.value?.id) return
+      try {
+        await fetch(`${API_URL}/chat/ping`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: loggedInUser.value.id }),
+        })
+      } catch {}
+    }
 
     onMounted(async () => {
       const raw = localStorage.getItem('user_data') || localStorage.getItem('user')
@@ -302,13 +402,16 @@ export default defineComponent({
         try {
           loggedInUser.value = JSON.parse(raw)
           await loadConversations()
+          await pingLastSeen()
           pollInterval = setInterval(pollUpdates, 5000)
+          pingInterval = setInterval(pingLastSeen, 30000)
         } catch { loggedInUser.value = null }
       }
     })
 
     onUnmounted(() => {
       if (pollInterval) clearInterval(pollInterval)
+      if (pingInterval) clearInterval(pingInterval)
     })
 
     async function loadConversations() {
@@ -337,15 +440,32 @@ export default defineComponent({
         if (newDataStr !== lastConvData) {
           conversations.value = newData
           lastConvData = newDataStr
+
+          if (activeConv.value) {
+            const updated = newData.find((c: any) => c.id === activeConv.value.id)
+            if (updated) activeConv.value = updated
+          }
         }
         if (activeConv.value) {
-          const msgRes  = await fetch(`${API_URL}/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}`)
+          const msgRes  = await fetch(
+            `${API_URL}/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
+            { cache: 'no-store' }
+          )
           const msgData = await msgRes.json()
           const newMsgs = Array.isArray(msgData.data) ? msgData.data : []
-          if (newMsgs.length > lastMsgCount) {
-            messages.value = newMsgs
-            lastMsgCount   = newMsgs.length
+
+          const existingIds = new Set(messages.value.map((m: any) => m.id))
+          const toAdd = newMsgs.filter((m: any) => !existingIds.has(m.id))
+          if (toAdd.length > 0) {
+            messages.value.push(...toAdd)
             scrollToBottom()
+          }
+
+          for (const inMsg of newMsgs) {
+            const local = messages.value.find((m: any) => m.id === inMsg.id)
+            if (local && !local.deleted && local.status !== 'deleted') {
+              local.status = inMsg.status
+            }
           }
         }
       } catch {}
@@ -354,10 +474,33 @@ export default defineComponent({
     async function loadMessages(convId: string) {
       msgsLoading.value = true; lastMsgCount = 0
       try {
-        const res  = await fetch(`${API_URL}/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}`)
+        const res  = await fetch(
+          `${API_URL}/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
+          { cache: 'no-store' }
+        )
         const data = await res.json()
-        messages.value = Array.isArray(data.data) ? data.data : []
-        lastMsgCount   = messages.value.length
+        messages.value = (Array.isArray(data.data) ? data.data : []).map((m: any) => {
+          const isDeleted = _deletedIds.has(m.id)
+            || m.deleted === true
+            || m.deleted === 'true'
+            || m.status === 'deleted'
+            || (m.text === null && !m.image_url)
+            || (m.text === '' && !m.image_url)
+          if (isDeleted) _deletedIds.add(m.id)
+          return {
+            ...m,
+            deleted:   isDeleted,
+            text:      isDeleted ? null : m.text,
+            image_url: isDeleted ? null : m.image_url,
+          }
+        })
+        lastMsgCount = messages.value.length
+
+        fetch(`${API_URL}/chat/conversations/${convId}/seen`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: loggedInUser.value.id }),
+        }).catch(() => {})
         scrollToBottom()
       } catch { messages.value = [] }
       finally { msgsLoading.value = false }
@@ -367,19 +510,21 @@ export default defineComponent({
       activeConv.value  = conv
       showSidebar.value = false
       conv.unread_count = 0
+      showEmojiPicker.value = false
       await loadMessages(conv.id)
     }
 
     async function sendMessage() {
       if (!newMessage.value.trim() || !activeConv.value || sending.value) return
       const text = newMessage.value.trim()
-      newMessage.value = ''
-      sending.value    = true
+      newMessage.value      = ''
+      showEmojiPicker.value = false
+      sending.value         = true
 
       const optimistic = {
         id: 'temp-' + Date.now(), sender_id: loggedInUser.value.id,
         sender_name: loggedInUser.value.full_name, sender_avatar: loggedInUser.value.avatar_url,
-        text, created_at: new Date().toISOString(),
+        text, status: 'sent', created_at: new Date().toISOString(),
       }
       messages.value.push(optimistic)
       lastMsgCount = messages.value.length
@@ -392,9 +537,9 @@ export default defineComponent({
         })
         const data = await res.json()
         if (data.success) {
-          const idx = messages.value.findIndex(m => m.id === optimistic.id)
-          if (idx !== -1) messages.value[idx] = data.data
-          const conv = conversations.value.find(c => c.id === activeConv.value.id)
+          const idx = messages.value.findIndex((m: any) => m.id === optimistic.id)
+          if (idx !== -1) messages.value[idx] = { ...data.data, status: data.data.status || 'sent' }
+          const conv = conversations.value.find((c: any) => c.id === activeConv.value.id)
           if (conv) { conv.last_message = text; conv.last_message_at = new Date().toISOString() }
           lastConvData = ''
         }
@@ -415,7 +560,7 @@ export default defineComponent({
           sender_name: loggedInUser.value.full_name,
           sender_avatar: loggedInUser.value.avatar_url,
           text: '', image_url: ev.target?.result as string,
-          created_at: new Date().toISOString(),
+          status: 'sent', created_at: new Date().toISOString(),
         }
         messages.value.push(optimistic)
         lastMsgCount = messages.value.length
@@ -432,12 +577,10 @@ export default defineComponent({
         })
         if (res.ok) {
           const data = await res.json()
-          const idx  = messages.value.findIndex(m => m.id.startsWith('temp-'))
-          if (idx !== -1) messages.value[idx] = data.data
+          const idx  = messages.value.findIndex((m: any) => m.id.startsWith('temp-'))
+          if (idx !== -1) messages.value[idx] = { ...data.data, status: data.data.status || 'sent' }
         }
-      } catch {
-        // Keep the optimistic base64 preview even if upload fails
-      } finally {
+      } catch {} finally {
         sending.value = false;
         (e.target as HTMLInputElement).value = ''
       }
@@ -445,14 +588,24 @@ export default defineComponent({
 
     async function deleteMessage(msg: any) {
       msgMenu.value = null
-      const idx = messages.value.findIndex(m => m.id === msg.id)
-      if (idx !== -1) messages.value[idx] = { ...messages.value[idx], deleted: true, text: '' }
-
+      const original = { ...msg }
+      const idx = messages.value.findIndex((m: any) => m.id === msg.id)
+      _deletedIds.add(msg.id)
+      if (idx !== -1) messages.value[idx] = { ...messages.value[idx], deleted: true, status: 'deleted', text: null, image_url: null }
       try {
-        await fetch(`${API_URL}/chat/messages/${msg.id}?userId=${loggedInUser.value.id}`, {
-          method: 'DELETE',
-        })
-      } catch {}
+        const res  = await fetch(`${API_URL}/chat/messages/${msg.id}?userId=${loggedInUser.value.id}`, { method: 'DELETE' })
+        const data = await res.json()
+        console.log('Delete response:', data)
+        if (!data.success) {
+          console.error('Delete failed:', data.message)
+          _deletedIds.delete(msg.id)
+          if (idx !== -1) messages.value[idx] = original
+        }
+      } catch (e) {
+        console.error('Delete error:', e)
+        _deletedIds.delete(msg.id)
+        if (idx !== -1) messages.value[idx] = original
+      }
     }
 
     function copyMessage(msg: any) {
@@ -461,7 +614,7 @@ export default defineComponent({
     }
 
     function showMsgMenu(msg: any, e: MouseEvent) {
-      if (msg.deleted) return
+      if (msg.deleted || msg.status === 'deleted') return
       msgMenu.value = {
         msg,
         x: Math.min(e.clientX, window.innerWidth - 160),
@@ -469,9 +622,7 @@ export default defineComponent({
       }
     }
 
-    function openImage(url: string) {
-      viewingImage.value = getAvatarSrc(url)
-    }
+    function openImage(url: string) { viewingImage.value = getAvatarSrc(url) }
 
     function showContactProfile(conv: any) {
       if (!conv) return
@@ -511,7 +662,7 @@ export default defineComponent({
         if (data.success) {
           lastConvData = ''
           await loadConversations()
-          const conv = conversations.value.find(c => c.id === data.data.id)
+          const conv = conversations.value.find((c: any) => c.id === data.data.id)
           if (conv) selectConversation(conv)
         }
       } catch {}
@@ -535,9 +686,8 @@ export default defineComponent({
 
     function toggleSelectUser(user: any) {
       const idx = selectedUsers.value.findIndex(u => u.id === user.id)
-      if (idx !== -1) {
-        selectedUsers.value.splice(idx, 1)
-      } else {
+      if (idx !== -1) selectedUsers.value.splice(idx, 1)
+      else {
         if (newChatType.value === 'direct') selectedUsers.value = [user]
         else selectedUsers.value.push(user)
       }
@@ -552,17 +702,17 @@ export default defineComponent({
         const res = await fetch(`${API_URL}/chat/conversations`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            createdBy:  loggedInUser.value.id,
-            type:       newChatType.value,
-            name:       newChatType.value === 'group' ? newGroupName.value : undefined,
-            memberIds:  selectedUsers.value.map(u => u.id),
+            createdBy: loggedInUser.value.id,
+            type:      newChatType.value,
+            name:      newChatType.value === 'group' ? newGroupName.value : undefined,
+            memberIds: selectedUsers.value.map(u => u.id),
           }),
         })
         const data = await res.json()
         if (data.success) {
           closeNewChat(); lastConvData = ''
           await loadConversations()
-          const newConv = conversations.value.find(c => c.id === data.data.id)
+          const newConv = conversations.value.find((c: any) => c.id === data.data.id)
           if (newConv) selectConversation(newConv)
         } else { newChatError.value = data.message || 'Failed to create' }
       } catch { newChatError.value = 'Network error. Please try again.' }
@@ -617,13 +767,16 @@ export default defineComponent({
       const mins  = Math.floor(diff / 60000)
       const hours = Math.floor(mins / 60)
       const days  = Math.floor(hours / 24)
-      if (mins < 1) return 'now'; if (mins < 60) return `${mins}m`
-      if (hours < 24) return `${hours}h`; return `${days}d`
+      if (mins < 1) return 'now'
+      if (mins < 60) return `${mins}m`
+      if (hours < 24) return `${hours}h`
+      return `${days}d`
     }
     function formatMsgTime(dateStr: string): string {
       if (!dateStr) return ''
       return new Date(dateStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     }
+
     const filteredContacts = computed(() =>
       conversations.value.filter(c => getConvName(c).toLowerCase().includes(searchQuery.value.toLowerCase()))
     )
@@ -650,10 +803,14 @@ export default defineComponent({
       showNewChat, newChatType, newGroupName,
       searchUserInput, searchResults, selectedUsers, searchingUsers,
       newChatError, creating,
+      showEmojiPicker, activeEmojiCat, emojiCategories, currentEmojis,
       filteredContacts, groupedMessages,
+      isOnline,
+      insertEmoji,
       getConvName, getConvInitials, getConvColor, getConvAvatar,
       getSenderColor, getInitials, getColorFromName, getAvatarSrc,
       formatTime, formatMsgTime,
+      getLastMessagePreview, getLastSeenText,
       selectConversation, sendMessage, sendPhoto,
       deleteMessage, copyMessage, showMsgMenu, openImage,
       showContactProfile, showSenderProfile, goToProfile, startDirectChat,
@@ -664,12 +821,14 @@ export default defineComponent({
 </script>
 
 <style scoped>
+
 .chat-page { height: calc(100vh - 64px); background: #F5F3EE; display: flex; flex-direction: column; }
 .chat-layout { display: flex; flex: 1; overflow: hidden; max-width: 1200px; width: 100%; margin: 24px auto; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); background: #fff; }
 .sidebar { width: 280px; flex-shrink: 0; border-right: 1px solid #E0DDD6; display: flex; flex-direction: column; background: #F5F3EE; }
 .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #E0DDD6; }
-.sidebar-title { font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; }
+.sidebar-title { font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 600; color: #1a1a1a; margin-bottom: 10px; letter-spacing: 0.01em; }
 .search-wrap { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #E0DDD6; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
+.search-icon { width: 15px; height: 15px; flex-shrink: 0; color: #aaa; }
 .search-input { border: none; outline: none; font-size: 13px; color: #1a1a1a; background: transparent; width: 100%; font-family: 'DM Sans', sans-serif; }
 .new-chat-btn { width: 100%; padding: 8px; background: #1a2340; color: #fff; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .new-chat-btn:hover { background: #2D6A4F; }
@@ -678,8 +837,12 @@ export default defineComponent({
 .contact { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; border-bottom: 1px solid #E0DDD6; transition: background 0.15s; }
 .contact:hover { background: #fff; }
 .contact.active { background: #fff; border-left: 3px solid #C8922A; }
-.c-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden; }
+
+.c-avatar-wrap { position: relative; flex-shrink: 0; }
+.c-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; }
 .c-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.online-dot { position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; background: #22c55e; border-radius: 50%; border: 2px solid #fff; }
+
 .c-info { flex: 1; min-width: 0; }
 .c-name { font-size: 13px; font-weight: 600; color: #1a1a1a; }
 .c-preview { font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
@@ -687,19 +850,25 @@ export default defineComponent({
 .c-time { font-size: 11px; color: #888; }
 .c-badge { background: #C8922A; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
 .no-contacts { padding: 32px 16px; text-align: center; font-size: 13px; color: #888; line-height: 1.8; }
+
 .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .no-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 48px; text-align: center; }
 .no-chat-icon  { font-size: 52px; }
 .no-chat-title { font-family: 'Cinzel', serif; font-size: 20px; color: #1a1a1a; }
 .no-chat-sub   { font-size: 14px; color: #888; margin-bottom: 8px; }
 .new-chat-big-btn { padding: 11px 28px; background: #2D6A4F; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
 .chat-header { padding: 14px 20px; border-bottom: 1px solid #E0DDD6; display: flex; align-items: center; gap: 12px; background: #fff; transition: background 0.15s; }
 .chat-header:hover { background: #F5F3EE; }
 .back-btn { display: none; background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px 8px; }
+.ch-avatar-wrap { position: relative; flex-shrink: 0; }
 .ch-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; }
 .ch-info { flex: 1; }
 .ch-name { font-size: 14px; font-weight: 600; color: #1a1a1a; }
 .ch-sub  { font-size: 12px; color: #888; margin-top: 1px; }
+.online-label { color: #22c55e; font-weight: 500; }
+
+
 .messages-loading { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; color: #888; font-size: 13px; }
 .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 4px; background: #F5F3EE; }
 .date-divider { text-align: center; font-size: 11px; color: #888; margin: 12px 0 8px; position: relative; }
@@ -723,18 +892,59 @@ export default defineComponent({
 .deleted-text { color: #888; }
 .msg-image { max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer; display: block; }
 .msg-image-caption { font-size: 12px; margin-top: 4px; opacity: 0.8; }
-.msg-time { font-size: 10px; color: #aaa; margin-top: 3px; padding: 0 4px; }
-.time-right { text-align: right; }
+
+.msg-time {
+  font-size: 10px;
+  color: #aaa;
+  margin-top: 3px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.time-right { justify-content: flex-end; }
+.msg-ticks { display: inline-flex; align-items: center; }
+.tick { width: 14px; height: 10px; }
+.double-tick { width: 20px; }
+
+
 .typing-bubble { display: flex; align-items: center; gap: 4px; padding: 10px 14px; min-width: 52px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: #888; animation: bounce 1.2s infinite; }
 .dot:nth-child(2) { animation-delay: 0.2s; } .dot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes bounce { 0%,60%,100% { transform:translateY(0) } 30% { transform:translateY(-5px) } }
-.input-area { padding: 12px 16px; border-top: 1px solid #E0DDD6; display: flex; gap: 10px; background: #fff; align-items: center; }
-.attach-btn { width: 36px; height: 36px; border-radius: 50%; background: #F5F3EE; border: 1px solid #E0DDD6; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; flex-shrink: 0; }
+
+.emoji-picker {
+  position: absolute;
+  bottom: 70px;
+  left: 60px;
+  width: 300px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border: 1px solid #E0DDD6;
+  z-index: 100;
+  overflow: hidden;
+}
+.emoji-cats { display: flex; gap: 2px; padding: 8px 8px 4px; border-bottom: 1px solid #F5F3EE; overflow-x: auto; }
+.emoji-cats::-webkit-scrollbar { display: none; }
+.emoji-cat-btn { flex-shrink: 0; width: 34px; height: 30px; border: none; background: transparent; border-radius: 6px; font-size: 16px; cursor: pointer; }
+.emoji-cat-btn:hover, .emoji-cat-btn.active { background: #F5F3EE; }
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 6px; max-height: 180px; overflow-y: auto; }
+.emoji-grid::-webkit-scrollbar { width: 4px; }
+.emoji-grid::-webkit-scrollbar-thumb { background: #E0DDD6; border-radius: 4px; }
+.emoji-btn { aspect-ratio: 1; border: none; background: transparent; font-size: 18px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.emoji-btn:hover { background: #F5F3EE; transform: scale(1.2); }
+.emoji-fade-enter-active, .emoji-fade-leave-active { transition: opacity 0.15s, transform 0.15s; }
+.emoji-fade-enter-from, .emoji-fade-leave-to { opacity: 0; transform: translateY(6px); }
+
+.input-area { padding: 12px 16px; border-top: 1px solid #E0DDD6; display: flex; gap: 10px; background: #fff; align-items: center; position: relative; }
+.attach-btn { width: 36px; height: 36px; border-radius: 50%; background: #F5F3EE; border: 1px solid #E0DDD6; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; color: #555; }
 .attach-btn:hover { background: #E0DDD6; }
 .file-input { display: none; }
 .msg-input { flex: 1; background: #F5F3EE; border: 1px solid #E0DDD6; border-radius: 20px; padding: 10px 16px; font-size: 13px; color: #1a1a1a; outline: none; font-family: 'DM Sans', sans-serif; }
 .msg-input:focus { border-color: #1a2340; }
+.emoji-toggle-btn { width: 34px; height: 34px; border-radius: 50%; background: transparent; border: none; cursor: pointer; color: #888; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.emoji-toggle-btn:hover { color: #C8922A; background: #F5F3EE; }
 .send-btn { width: 38px; height: 38px; border-radius: 50%; background: #C8922A; border: none; cursor: pointer; font-size: 16px; color: #fff; flex-shrink: 0; }
 .send-btn:hover:not(:disabled) { background: #a8771f; }
 .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -744,7 +954,7 @@ export default defineComponent({
 .popup-close { position: absolute; top: 14px; right: 14px; background: #F5F3EE; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
 .popup-avatar { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #fff; margin: 0 auto 12px; overflow: hidden; }
 .popup-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.popup-name { font-family: 'Cinzel', serif; font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+.popup-name { font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
 .popup-username { font-size: 13px; color: #888; margin-bottom: 20px; }
 .popup-actions { display: flex; gap: 10px; }
 .popup-btn-primary   { flex: 1; padding: 10px; background: #1a2340; color: #fff; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
@@ -797,10 +1007,12 @@ export default defineComponent({
 .nli-icon  { font-size: 52px; }
 .nli-title { font-family: 'Cinzel', serif; font-size: 22px; color: #1a1a1a; }
 .btn-login-big { padding: 11px 28px; background: #2D6A4F; border-radius: 8px; color: #fff; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px; display: inline-block; }
+
 @media (max-width: 768px) {
   .chat-layout { margin: 0; border-radius: 0; }
   .sidebar { position: absolute; z-index: 10; width: 100%; height: 100%; display: none; background: #F5F3EE; }
   .sidebar.mobile-show { display: flex; }
   .back-btn { display: block; }
+  .emoji-picker { left: 8px; width: calc(100vw - 16px); }
 }
 </style>
