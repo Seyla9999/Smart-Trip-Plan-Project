@@ -43,7 +43,7 @@
           <div class="sidebar-info">
             <p class="sidebar-name">{{ a.name_en }}</p>
             <p class="sidebar-cat">{{ a.category || 'Attraction' }}</p>
-            <p class="sidebar-rating">★ {{ Number(a.average_rating).toFixed(1) }}</p>
+            <p class="sidebar-rating" v-html="renderStars(Number(a.average_rating))"></p>
           </div>
         </div>
         <p v-if="!loading && filteredAttractions.length === 0" class="sidebar-empty">
@@ -89,6 +89,25 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   const a    = Math.sin(dLat / 2) ** 2
     + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// ── Star rating renderer ──────────────────────────────────────────────
+function renderStars(rating: number): string {
+  let html = '<span style="letter-spacing:2px">'
+  for (let i = 1; i <= 5; i++) {
+    if (rating >= i) {
+      html += '<span style="color:#C8922A">★</span>'
+    } else if (rating >= i - 0.5) {
+      html += '<span style="position:relative;display:inline-block">' +
+              '<span style="color:#ddd">★</span>' +
+              '<span style="position:absolute;left:0;top:0;overflow:hidden;width:50%;color:#C8922A">★</span>' +
+              '</span>'
+    } else {
+      html += '<span style="color:#ddd">★</span>'
+    }
+  }
+  html += '</span>'
+  return html
 }
 
 // ── Filtered list (category + near-me) ───────────────────────────────
@@ -162,7 +181,7 @@ function buildMarkers() {
         <div style="min-width:160px">
           <b style="font-size:14px">${a.name_en}</b><br>
           <span style="color:#888;font-size:12px">${a.category || 'Attraction'}</span><br>
-          <span style="color:#C8922A;font-size:13px">★ ${Number(a.average_rating).toFixed(1)}</span><br>
+          <span style="font-size:13px">${renderStars(Number(a.average_rating))}</span><br>
           <a href="/attraction/${slugOrId(a)}"
              style="display:inline-block;margin-top:6px;color:#C8922A;font-weight:600;font-size:13px;text-decoration:none">
             View Details →
@@ -281,6 +300,8 @@ function placeUserMarker(lat: number, lng: number) {
   buildMarkers()
 }
 
+const geoOptions = { maximumAge: 0, timeout: 10000, enableHighAccuracy: true }
+
 function toggleNearMe() {
   if (nearMeActive.value) {
     nearMeActive.value = false
@@ -300,6 +321,7 @@ function toggleNearMe() {
       placeUserMarker(coords.latitude, coords.longitude)
     },
     () => alert('Could not get your location. Please allow location access and try again.'),
+    geoOptions,
   )
 }
 
@@ -308,6 +330,7 @@ function refreshLocation() {
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => placeUserMarker(coords.latitude, coords.longitude),
     () => alert('Could not refresh your location.'),
+    geoOptions,
   )
 }
 

@@ -132,7 +132,7 @@ const provinces = [
   { value: 'sihanoukvile',    label: 'Sihanoukville'    },
 ]
 
-const travelTypes = [
+const travelTypes: { value: 'solo' | 'couple' | 'friends' | 'family'; label: string; icon: string }[] = [
   { value: 'solo',    label: 'Solo',    icon: '🧳' },
   { value: 'couple',  label: 'Couple',  icon: '💑' },
   { value: 'friends', label: 'Friends', icon: '👥' },
