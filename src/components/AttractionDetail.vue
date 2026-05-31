@@ -68,12 +68,13 @@
           <h2>Location & Nearby Services</h2>
           <div v-if="mapCoords" class="map-wrapper">
             <div ref="mapEl" class="map-iframe"></div>
-            <a
-              :href="`https://www.openstreetmap.org/?mlat=${mapCoords.lat}&mlon=${mapCoords.lng}#map=14/${mapCoords.lat}/${mapCoords.lng}`"
-                target="_blank"
-                rel="noopener"
-                class="map-link"
-              >Open in OpenStreetMap —</a>
+            <div class="map-actions">
+              <a
+                :href="`https://www.google.com/maps?q=${mapCoords.lat},${mapCoords.lng}`"
+                target="_blank" rel="noopener"
+                class="map-btn map-btn--google"
+              >🗺️ Open in Google Maps</a>
+            </div>
           </div>
           <div v-else class="map-placeholder">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="#C8922A" stroke="white" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="white" stroke="#C8922A"/></svg>
@@ -87,7 +88,20 @@
           <h2>Reviews{{ reviews.length ? ` (${reviews.length})` : '' }}</h2>
 
           <!-- Write a review -->
-          <div v-if="isLoggedIn" class="review-form">
+          <div v-if="!isLoggedIn" class="review-login-prompt">
+            Please <span class="review-login-link" @click="$router.push('/login')">log in</span> to leave a review.
+          </div>
+          <div v-else-if="canReview === null" class="review-login-prompt">
+            Checking eligibility…
+          </div>
+          <div v-else-if="canReview === false" class="review-locked">
+            <div class="review-locked-icon">🔒</div>
+            <p class="review-locked-title">Review Locked</p>
+            <p class="review-locked-desc">
+              Complete a trip that includes <strong>{{ attraction?.name }}</strong> to unlock the ability to leave a review.
+            </p>
+          </div>
+          <div v-else class="review-form">
             <p class="review-form-title">Write a Review</p>
             <div class="star-picker">
               <span
@@ -111,9 +125,6 @@
                 @click="submitReview"
               >{{ submittingReview ? 'Submitting…' : 'Submit Review' }}</button>
             </div>
-          </div>
-          <div v-else class="review-login-prompt">
-            Please <span class="review-login-link" @click="$router.push('/login')">log in</span> to leave a review.
           </div>
 
           <div v-if="reviews.length" class="reviews-list" style="margin-top:1.5rem">
@@ -169,7 +180,7 @@
           <h3>Plan your visit</h3>
           <p class="sidebar-sub">Add this to your trip itinerary</p>
 
-          <button class="btn-add-trip">
+          <button class="btn-add-trip" @click="openTripModal">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             Add to my trip
           </button>
@@ -237,6 +248,114 @@
       </aside>
     </div>
 
+  <!-- ── Add to Trip Modal ─────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="showTripModal" class="trip-modal-backdrop" @click.self="showTripModal = false">
+      <div class="trip-modal">
+
+        <!-- Header -->
+        <div class="trip-modal-header">
+          <div>
+            <h3 class="trip-modal-title">Add to My Trip</h3>
+            <p class="trip-modal-sub">{{ attraction?.name }}</p>
+          </div>
+          <button class="trip-modal-close" @click="showTripModal = false">✕</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="trip-modal-tabs">
+          <button :class="['trip-tab', { active: tripModalTab === 'new' }]"      @click="tripModalTab = 'new'">✈️ New Trip</button>
+          <button :class="['trip-tab', { active: tripModalTab === 'existing' }]" @click="tripModalTab = 'existing'">📋 Existing Trip</button>
+        </div>
+
+        <!-- New Trip tab -->
+        <div v-if="tripModalTab === 'new'" class="trip-modal-body">
+
+          <!-- Route: origin → destination -->
+          <div class="trip-route-row">
+            <div class="trip-route-group" style="position:relative">
+              <label>Starting from</label>
+              <div
+                class="trip-route-select"
+                :class="{ open: showOriginDropdown }"
+                tabindex="0"
+                @click="showOriginDropdown = !showOriginDropdown"
+                @blur="showOriginDropdown = false"
+              >
+                <span :style="newTripOrigin ? 'color:#1e293b' : 'color:#94a3b8'">
+                  {{ newTripOrigin ? cambodiaProvinces.find(p => p.slug === newTripOrigin)?.name : 'Select province…' }}
+                </span>
+                <span class="trip-select-caret">▾</span>
+                <div v-if="showOriginDropdown" class="trip-select-dropdown" @mousedown.prevent>
+                  <div
+                    v-for="p in cambodiaProvinces" :key="p.slug"
+                    class="trip-select-option"
+                    :class="{ selected: newTripOrigin === p.slug }"
+                    @click.stop="newTripOrigin = p.slug; showOriginDropdown = false"
+                  >{{ p.name }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="trip-route-arrow">→</div>
+            <div class="trip-route-group">
+              <label>Destination</label>
+              <div class="trip-destination-preset">{{ attraction?.province?.nameEn || '—' }}<span v-if="attraction?.name" style="color:#64748b;font-weight:400"> / {{ attraction.name }}</span></div>
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <p class="trip-modal-hint">Dates are optional — skip them if you haven't decided yet.</p>
+          <div class="trip-date-row">
+            <div class="trip-date-group">
+              <label>Start date</label>
+              <input type="date" v-model="newTripStart" :min="today" />
+            </div>
+            <div class="trip-date-group">
+              <label>End date</label>
+              <input type="date" v-model="newTripEnd" :min="newTripStart || today" />
+            </div>
+          </div>
+
+          <p v-if="tripModalError" class="trip-modal-error">{{ tripModalError }}</p>
+          <button class="trip-modal-btn" :disabled="addingToTrip || !newTripOrigin" @click="createNewTrip">
+            <span v-if="addingToTrip" class="trip-spinner"></span>
+            {{ addingToTrip ? 'Creating…' : 'Create Trip & Go' }}
+          </button>
+          <p v-if="!newTripOrigin" style="font-size:11px;color:#aaa;text-align:center;margin-top:4px">Select a starting province to continue</p>
+        </div>
+
+        <!-- Existing Trip tab -->
+        <div v-else class="trip-modal-body">
+          <div v-if="userTrips.length === 0" class="trip-modal-empty">
+            No saved trips yet. Create one first!
+          </div>
+          <template v-else>
+            <div class="trip-list">
+              <label v-for="trip in userTrips" :key="trip.id"
+                :class="['trip-list-item', { selected: selectedTripId === trip.id }]"
+                @click="selectedTripId = trip.id">
+                <span class="trip-list-name">{{ trip.title }}</span>
+                <span class="trip-list-dest">{{ trip.destination || '—' }}</span>
+              </label>
+            </div>
+            <div class="trip-day-row">
+              <label>Add to day</label>
+              <select v-model="selectedDay">
+                <option v-for="d in 14" :key="d" :value="d">Day {{ d }}</option>
+              </select>
+            </div>
+            <p v-if="tripSuccess"    class="trip-modal-success">{{ tripSuccess }}</p>
+            <p v-if="tripModalError" class="trip-modal-error">{{ tripModalError }}</p>
+            <button class="trip-modal-btn" :disabled="addingToTrip || !selectedTripId" @click="addToExistingTrip">
+              <span v-if="addingToTrip" class="trip-spinner"></span>
+              {{ addingToTrip ? 'Adding…' : 'Add to Trip' }}
+            </button>
+          </template>
+        </div>
+
+      </div>
+    </div>
+  </Teleport>
   </div>
 </template>
 
@@ -267,6 +386,53 @@ let   leafletMap: any = null
 const isFavorited   = ref(false)
 const bookmarkId    = ref<string | null>(null)
 const savingFavorite = ref(false)
+
+// null = not yet checked, true = allowed, false = not allowed
+const canReview = ref<boolean | null>(null)
+
+// ── Add to Trip modal ────────────────────────────────────────────────────────
+const showTripModal  = ref(false)
+const tripModalTab   = ref<'new' | 'existing'>('new')
+const today          = new Date().toISOString().split('T')[0]
+const newTripStart   = ref(today)
+const newTripEnd     = ref('')
+const newTripOrigin       = ref('')
+const showOriginDropdown  = ref(false)
+const userTrips           = ref<any[]>([])
+
+const cambodiaProvinces = [
+  { slug: 'phnom-penh',       name: 'Phnom Penh' },
+  { slug: 'siem-reap',        name: 'Siem Reap' },
+  { slug: 'battambang',       name: 'Battambang' },
+  { slug: 'sihanoukville',    name: 'Sihanoukville' },
+  { slug: 'kampot',           name: 'Kampot' },
+  { slug: 'kep',              name: 'Kep' },
+  { slug: 'koh-kong',         name: 'Koh Kong' },
+  { slug: 'kratie',           name: 'Kratie' },
+  { slug: 'mondulkiri',       name: 'Mondulkiri' },
+  { slug: 'ratanakiri',       name: 'Ratanakiri' },
+  { slug: 'kampong-cham',     name: 'Kampong Cham' },
+  { slug: 'kampong-chhnang',  name: 'Kampong Chhnang' },
+  { slug: 'kampong-speu',     name: 'Kampong Speu' },
+  { slug: 'kampong-thom',     name: 'Kampong Thom' },
+  { slug: 'kandal',           name: 'Kandal' },
+  { slug: 'prey-veng',        name: 'Prey Veng' },
+  { slug: 'svay-rieng',       name: 'Svay Rieng' },
+  { slug: 'takeo',            name: 'Takeo' },
+  { slug: 'pursat',           name: 'Pursat' },
+  { slug: 'pailin',           name: 'Pailin' },
+  { slug: 'preah-vihear',     name: 'Preah Vihear' },
+  { slug: 'stung-treng',      name: 'Stung Treng' },
+  { slug: 'oddar-meanchey',   name: 'Oddar Meanchey' },
+  { slug: 'banteay-meanchey', name: 'Banteay Meanchey' },
+  { slug: 'tboung-khmum',     name: 'Tboung Khmum' },
+]
+
+const selectedTripId = ref<string | null>(null)
+const selectedDay    = ref(1)
+const addingToTrip   = ref(false)
+const tripModalError = ref<string | null>(null)
+const tripSuccess    = ref<string | null>(null)
 
 const isLoggedIn = computed(() => !!localStorage.getItem('auth_token'))
 
@@ -388,7 +554,12 @@ async function loadAttraction() {
       router.replace(`/attraction/${attraction.value.slug}`)
     }
 
-    if (isLoggedIn.value) checkBookmark(data.id)
+    if (isLoggedIn.value) {
+      checkBookmark(data.id)
+      checkCanReview(data.id)
+    } else {
+      canReview.value = false
+    }
   } catch (err: any) {
     if (err.response?.status === 404) {
       error.value = `Attraction "${identifier}" not found.`
@@ -402,16 +573,87 @@ async function loadAttraction() {
   }
 }
 
+// ── Trip modal functions ──────────────────────────────────────────────────────
+async function openTripModal() {
+  if (!isLoggedIn.value) { router.push('/login'); return }
+  tripModalError.value = null
+  tripSuccess.value    = null
+  tripModalTab.value   = 'new'
+  showTripModal.value  = true
+  // Pre-load existing trips for the "existing" tab
+  try {
+    const { data } = await API.get('/api/trips')
+    userTrips.value = Array.isArray(data) ? data : []
+    if (userTrips.value.length) selectedTripId.value = userTrips.value[0].id
+  } catch {
+    userTrips.value = []
+  }
+}
+
+async function createNewTrip() {
+  if (!attraction.value || !newTripOrigin.value) return
+  addingToTrip.value   = true
+  tripModalError.value = null
+  try {
+    const destName   = attraction.value.province.nameEn
+    const payload: any = {
+      title:       `Trip to ${destName}`,
+      origin:      newTripOrigin.value,
+      destination: attraction.value.provinceSlug,
+      itinerary_items: [{ attraction_id: attraction.value.id, day_number: 1 }],
+    }
+    if (newTripStart.value) payload.start_date = newTripStart.value
+    if (newTripEnd.value)   payload.end_date   = newTripEnd.value
+
+    await API.post('/api/trips', payload)
+    showTripModal.value = false
+    newTripOrigin.value = ''
+    router.push({ name: 'my-trips' })
+  } catch (e: any) {
+    tripModalError.value = e?.response?.data?.message || 'Failed to create trip'
+  } finally {
+    addingToTrip.value = false
+  }
+}
+
+async function addToExistingTrip() {
+  if (!attraction.value || !selectedTripId.value) return
+  addingToTrip.value   = true
+  tripModalError.value = null
+  try {
+    await API.post(`/api/trips/${selectedTripId.value}/itinerary-items`, {
+      attraction_id: attraction.value.id,
+      day_number:    selectedDay.value,
+    })
+    tripSuccess.value = `Added to Day ${selectedDay.value}!`
+    setTimeout(() => { showTripModal.value = false; tripSuccess.value = null }, 1500)
+  } catch (e: any) {
+    tripModalError.value = e?.response?.data?.message || 'Failed to add to trip'
+  } finally {
+    addingToTrip.value = false
+  }
+}
+
 async function checkBookmark(attractionId: string) {
   try {
     const { data } = await API.get('/bookmarks')
-    const found = (data || []).find((b: any) => b.entity_id === attractionId)
+    const bookmarks = Array.isArray(data) ? data : []
+    const found = bookmarks.find((b: any) => b.entity_id === attractionId)
     if (found) {
       isFavorited.value = true
       bookmarkId.value  = found.id
     }
   } catch {
-    // silently ignore — user may not be authenticated
+    // silent — heart stays empty if fetch fails
+  }
+}
+
+async function checkCanReview(attractionId: string) {
+  try {
+    const { data } = await API.get(`/api/trips/can-review/${attractionId}`)
+    canReview.value = data?.allowed === true
+  } catch {
+    canReview.value = false
   }
 }
 
@@ -436,11 +678,9 @@ async function toggleFavorite() {
       })
       bookmarkId.value = data.id
     }
-  } catch (e: any) {
-    // Revert on failure
+  } catch {
     isFavorited.value = prevFavorited
     bookmarkId.value  = prevBookmarkId
-    console.error('Bookmark error:', e?.response?.data || e)
   } finally {
     savingFavorite.value = false
   }
@@ -458,11 +698,21 @@ async function submitReview() {
       author_name:   currentUserName.value || 'Anonymous',
       title:         newReview.value.title || undefined,
     })
-    reviews.value.unshift(data)
+    // Normalise to snake_case so the review card renders the same as loaded reviews
+    reviews.value.unshift({
+      id:          data.id,
+      rating:      Number(data.rating ?? data.rating),
+      comment:     data.comment,
+      author_name: data.author_name ?? data.authorName ?? currentUserName.value ?? 'Anonymous',
+      title:       data.title ?? null,
+      created_at:  data.created_at ?? data.createdAt ?? new Date().toISOString(),
+    })
     newReview.value = { rating: 5, title: '', comment: '' }
     reviewSuccess.value = true
     setTimeout(() => { reviewSuccess.value = false }, 3000)
   } catch (e: any) {
+    const msg = e?.response?.data?.message || 'Failed to submit review'
+    alert(msg)
     console.error('Review error:', e?.response?.data || e)
   } finally {
     submittingReview.value = false
@@ -567,7 +817,6 @@ onUnmounted(() => {
   if (leafletMap) { leafletMap.remove(); leafletMap = null }
 })
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 watch(
   () => [route.params.slug, route.params.placeSlug, route.params.id],
@@ -679,11 +928,12 @@ watch(
 /* Map */
 .map-wrapper { position: relative; }
 .map-iframe  { border-radius: 12px; border: 1px solid #e0e0e0; display: block; height: 420px; width: 100%; }
-.map-link    {
-  display: block; text-align: right; font-size: 12px;
-  color: #C8922A; margin-top: 6px; text-decoration: none;
-}
-.map-link:hover { text-decoration: underline; }
+.map-actions      { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.map-btn          { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+                    border-radius: 8px; font-size: 13px; font-weight: 600;
+                    text-decoration: none; transition: opacity 0.2s; }
+.map-btn:hover    { opacity: 0.82; }
+.map-btn--google  { background: #4285F4; color: #fff; }
 .map-placeholder {
   border: 2px dashed #d0d0d0; border-radius: 12px; padding: 3rem;
   display: flex; flex-direction: column; align-items: center;
@@ -774,6 +1024,15 @@ watch(
   color: #C8922A; cursor: pointer; font-weight: 600; text-decoration: underline;
 }
 .review-login-link:hover { color: #b07820; }
+
+.review-locked {
+  background: #f9fafb; border: 1.5px dashed #d1d5db;
+  border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;
+  text-align: center;
+}
+.review-locked-icon  { font-size: 28px; margin-bottom: 6px; }
+.review-locked-title { font-size: 15px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+.review-locked-desc  { font-size: 13px; color: #6b7280; line-height: 1.6; }
 
 /* Nearby */
 .nearby-grid {
@@ -872,5 +1131,121 @@ watch(
   font-family: sans-serif;
   box-shadow: 0 2px 6px rgba(0,0,0,0.35);
   border: 2px solid rgba(255,255,255,0.8);
+}
+
+/* ── Trip modal ─────────────────────────────────────────────────────────────── */
+.trip-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 16px;
+}
+.trip-modal {
+  background: #fff; border-radius: 16px; width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden;
+}
+.trip-modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 20px 20px 0;
+}
+.trip-modal-title { font-size: 17px; font-weight: 700; color: #15543f; margin: 0 0 2px; }
+.trip-modal-sub   { font-size: 12px; color: #888; margin: 0; }
+.trip-modal-close {
+  background: none; border: none; font-size: 18px; color: #aaa;
+  cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.trip-modal-close:hover { color: #333; }
+.trip-modal-tabs {
+  display: flex; gap: 0; padding: 16px 20px 0;
+}
+.trip-tab {
+  flex: 1; padding: 8px 0; font-size: 13px; font-weight: 600;
+  border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b;
+  cursor: pointer; transition: all 0.15s;
+}
+.trip-tab:first-child { border-radius: 8px 0 0 8px; }
+.trip-tab:last-child  { border-radius: 0 8px 8px 0; border-left: none; }
+.trip-tab.active { background: #15543f; color: #fff; border-color: #15543f; }
+.trip-modal-body  { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+.trip-modal-hint  { font-size: 12px; color: #888; margin: 0; }
+.trip-date-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.trip-date-group  { display: flex; flex-direction: column; gap: 4px; }
+.trip-date-group label { font-size: 11px; font-weight: 600; color: #15543f; text-transform: uppercase; letter-spacing: 0.5px; }
+.trip-date-group input {
+  padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-family: inherit;
+}
+.trip-date-group input:focus { outline: none; border-color: #15543f; }
+.trip-modal-btn {
+  padding: 11px; background: #15543f; color: #fff; border: none;
+  border-radius: 9999px; font-size: 14px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.2s;
+}
+.trip-modal-btn:hover:not(:disabled) { background: #0f3d2c; }
+.trip-modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.trip-modal-error   { font-size: 12px; color: #dc2626; margin: 0; }
+.trip-modal-success { font-size: 12px; color: #16a34a; font-weight: 600; margin: 0; }
+.trip-modal-empty   { font-size: 13px; color: #888; text-align: center; padding: 16px 0; }
+.trip-spinner {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+.trip-list { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+.trip-list-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.trip-list-item:hover    { border-color: #15543f; }
+.trip-list-item.selected { border-color: #15543f; background: #f0fdf4; }
+.trip-list-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+.trip-list-dest { font-size: 11px; color: #888; }
+.trip-day-row { display: flex; align-items: center; gap: 10px; }
+.trip-day-row label { font-size: 12px; font-weight: 600; color: #15543f; white-space: nowrap; }
+.trip-day-row select {
+  flex: 1; padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-family: inherit;
+}
+.trip-day-row select:focus { outline: none; border-color: #15543f; }
+
+/* Route row (origin → destination) */
+.trip-route-row {
+  display: flex; align-items: flex-end; gap: 8px;
+}
+.trip-route-group {
+  flex: 1; display: flex; flex-direction: column; gap: 4px;
+}
+.trip-route-group label {
+  font-size: 11px; font-weight: 600; color: #15543f;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.trip-route-select {
+  padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; background: #fff; cursor: pointer; width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  user-select: none; outline: none;
+}
+.trip-route-select:focus,
+.trip-route-select.open { border-color: #15543f; }
+.trip-select-caret { font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-left: 4px; }
+.trip-select-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  max-height: 200px; overflow-y: auto; z-index: 9999;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+.trip-select-option {
+  padding: 9px 12px; font-size: 13px; cursor: pointer; color: #1e293b;
+}
+.trip-select-option:hover    { background: #f0fdf4; color: #15543f; }
+.trip-select-option.selected { font-weight: 700; color: #15543f; }
+.trip-route-arrow {
+  font-size: 18px; color: #94a3b8; font-weight: 700;
+  padding-bottom: 10px; flex-shrink: 0;
+}
+.trip-destination-preset {
+  padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: #15543f;
+  background: #f0fdf4; cursor: default;
 }
 </style>

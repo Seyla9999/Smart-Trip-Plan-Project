@@ -281,8 +281,8 @@
 
                 <!-- Photo -->
                 <div class="relative h-40 overflow-hidden bg-gray-100">
-                  <img v-if="place.image_url || place.images?.[0]?.url"
-                    :src="place.image_url ?? place.images?.[0]?.url" :alt="place.name"
+                  <img v-if="place.hero_image || place.image_url || place.images?.[0]?.url"
+                    :src="place.hero_image ?? place.image_url ?? place.images?.[0]?.url" :alt="place.name_en"
                     class="w-full h-full object-cover" />
                   <div v-else class="w-full h-full flex items-center justify-center text-4xl">
                     {{ attractionCategories.find(c => c.type.toLowerCase() === (place.category ?? '').toLowerCase())?.icon ?? '🏛️' }}
@@ -298,11 +298,11 @@
 
                 <!-- Info -->
                 <div class="p-4 flex flex-col flex-1">
-                  <h3 class="font-bold text-green-800 mb-0.5 leading-tight">{{ place.name }}</h3>
-                  <p class="text-xs text-gray-400 mb-1">📍 {{ place.province ?? '' }}</p>
+                  <h3 class="font-bold text-green-800 mb-0.5 leading-tight">{{ place.name_en ?? place.name }}</h3>
+                  <p class="text-xs text-gray-400 mb-1">📍 {{ typeof place.province === 'object' ? place.province?.name_en : place.province }}</p>
                   <p v-if="place.description" class="text-xs text-gray-500 leading-relaxed mb-2 line-clamp-2">{{ place.description }}</p>
                   <div class="flex items-center gap-2 mb-3">
-                    <span class="text-sm font-bold text-amber-500">⭐ {{ place.rating?.toFixed(1) ?? 'N/A' }}</span>
+                    <span class="text-sm font-bold text-amber-500">⭐ {{ Number(place.average_rating ?? place.rating ?? 0).toFixed(1) }}</span>
                   </div>
 
                   <!-- Add to Day selector -->
@@ -369,10 +369,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import router from '@/router'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -382,12 +381,15 @@ L.Icon.Default.mergeOptions({
 })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+interface ItineraryAttraction { id: string; name_en: string; category?: string; province?: string }
 interface ItineraryItem  {
   id: string
-  title: string
-  description: string
+  title?: string
+  description?: string
+  notes?: string
   location?: string
   attraction_id?: string
+  attraction?: ItineraryAttraction
   start_time?: string
   end_time?: string
   day_number?: number
@@ -395,11 +397,12 @@ interface ItineraryItem  {
 }
 interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
 interface TripMember     { id: string; user_id: string; role: string }
-interface TripData       { id: string; title: string; destination: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
+interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
 interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
-// Matches your NestJS /api/attractions response
-interface Attraction   { id: string | number; name: string; description?: string; province?: string; province_id?: string; image_url?: string; images?: { url: string }[]; rating?: number; category?: string; latitude?: number; longitude?: number }
+// Matches your NestJS /attractions response
+interface AttractionProvince { name_en?: string }
+interface Attraction   { id: string | number; name_en: string; name?: string; description?: string; province?: AttractionProvince | string; province_id?: string; image_url?: string; hero_image?: string; images?: { url: string }[]; average_rating?: number; rating?: number; category?: string; latitude?: number; longitude?: number }
 // Matches your NestJS /api/points-of-interest response
 interface POI          { id: string | number; name: string; type: string; icon?: string; description?: string; distance?: string; latitude?: number; longitude?: number }
 interface ScheduleItem { placeId: string; name: string; vicinity: string; icon: string; startTime?: string; endTime?: string }
@@ -424,6 +427,7 @@ const provinceNames: Record<string, string> = {
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const vueRoute          = useRoute()
+const router            = useRouter()
 const tripData          = ref<TripData | null>(null)
 const isPageLoading     = ref(false)
 const apiError          = ref<string | null>(null)
@@ -464,10 +468,16 @@ const qOrigin     = computed(() => vueRoute.query.origin   as string || '')
 const qDest = computed(() => (vueRoute.query.dest as string) || (vueRoute.query.destination as string) || '')
 const qStart      = computed(() => vueRoute.query.from     as string || '')
 const qEnd        = computed(() => vueRoute.query.to       as string || '')
-const travelType  = computed(() => vueRoute.query.type     as string || 'friends')
+const travelType  = computed(() => tripData.value?.travel_type || vueRoute.query.type as string || 'friends')
 
-const origin      = computed(() => tripData.value?.destination?.split('→')[0]?.trim() || qOrigin.value)
-const destination = computed(() => tripData.value?.destination?.split('→')[1]?.trim() || qDest.value)
+const origin = computed(() => {
+  if (tripData.value?.origin) return tripData.value.origin
+  return tripData.value?.destination?.split('→')[0]?.trim() || qOrigin.value
+})
+const destination = computed(() => {
+  if (tripData.value?.origin) return tripData.value.destination  // stored as separate fields
+  return tripData.value?.destination?.split('→')[1]?.trim() || qDest.value
+})
 const startDate   = computed(() => tripData.value?.start_date || qStart.value)
 const endDate     = computed(() => tripData.value?.end_date   || qEnd.value)
 
@@ -615,14 +625,19 @@ const addToSchedule = (attraction: Attraction) => {
     c.type.toLowerCase() === (attraction.category ?? '').toLowerCase()
   )?.icon ?? '📍'
 
+  const attractionName = attraction.name_en ?? attraction.name ?? ''
+  const provinceName = typeof attraction.province === 'object'
+    ? (attraction.province?.name_en ?? '')
+    : (attraction.province ?? '')
+
   schedule.value[day].push({
     placeId:  key,
-    name:     attraction.name,
-    vicinity: attraction.province ?? '',
+    name:     attractionName,
+    vicinity: provinceName,
     icon:     categoryIcon,
   })
   selectedDay.value = day
-  showToast(`Added to Day ${day}: ${attraction.name}`, 'success')
+  showToast(`Added to Day ${day}: ${attractionName}`, 'success')
 }
 
 const removeFromSchedule = (day: number, idx: number) => {
@@ -757,11 +772,15 @@ const fetchTrip = async () => {
       for (const item of tripData.value.itinerary_items) {
         const day = item.day_number ?? (item.day_index ?? 0) + 1
         if (!restored[day]) restored[day] = []
+        const name = item.attraction?.name_en ?? item.notes ?? item.title ?? 'Unnamed stop'
+        const catIcon = attractionCategories.find(c =>
+          c.type.toLowerCase() === (item.attraction?.category ?? '').toLowerCase()
+        )?.icon ?? '📍'
         restored[day].push({
           placeId: String(item.attraction_id ?? item.id),
-          name: item.title,
-          vicinity: item.location ?? '',
-          icon: '📍',
+          name,
+          vicinity: item.attraction?.province ?? item.location ?? '',
+          icon: catIcon,
           startTime: item.start_time,
           endTime: item.end_time,
         })
@@ -796,24 +815,9 @@ const filters = ref<Filter[]>([
 ])
 
 const fetchPOIs = async () => {
-  if (!destination.value) return
-  poisLoading.value = true
+  // No POI endpoint available in the backend — section shows empty state
+  poisLoading.value = false
   allPOIs.value = []
-  try {
-    const token = localStorage.getItem('auth_token')
-    const res = await fetch(
-      //`${API_BASE}/api/points-of-interest?province=${destination.value}`,
-      `${API_BASE}/points-of-interest?province=${encodeURIComponent(destinationName.value)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    if (!res.ok) throw new Error(`POI API error ${res.status}`)
-    const data = await res.json()
-    allPOIs.value = Array.isArray(data) ? data : (data.data ?? data.pois ?? [])
-  } catch (e) {
-    console.error('fetchPOIs failed:', e)
-  } finally {
-    poisLoading.value = false
-  }
 }
 
 const filteredPOIs = computed(() => {

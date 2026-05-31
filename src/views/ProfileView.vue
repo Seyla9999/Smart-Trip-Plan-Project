@@ -53,6 +53,10 @@
 
     <div class="tab-content container">
       <div v-if="activeTab === 'trips'">
+        <div class="trips-tab-header">
+          <span class="trips-tab-count" v-if="!tripsLoading">{{ trips.length }} {{ trips.length === 1 ? 'trip' : 'trips' }}</span>
+          <router-link to="/my-trips" class="btn-view-all">View Detail →</router-link>
+        </div>
         <div v-if="tripsLoading" class="loading-state"><div class="spinner" /> Loading trips...</div>
         <div v-else-if="trips.length === 0" class="empty-state">
           <div class="es-emoji">🗺️</div>
@@ -584,6 +588,17 @@ export default defineComponent({
 .es-desc  { font-size: 14px; color: #6B6B6B; line-height: 1.7; margin-bottom: 24px; }
 .es-btn   { display: inline-block; padding: 12px 28px; background: #2D6A4F; color: #fff; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s; }
 .es-btn:hover { background: #1e4d39; }
+.trips-tab-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.trips-tab-count { font-size: 13px; color: #9ca3af; font-weight: 600; }
+.btn-view-all {
+  color: #15803d; text-decoration: none;
+  font-size: 13px; font-weight: 600;
+  transition: color .15s;
+}
+.btn-view-all:hover { color: #166534; text-decoration: underline; }
 .trips-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .trip-card { background: #fff; border-radius: 12px; padding: 18px; border: 1px solid #E0DDD6; transition: box-shadow 0.2s; }
 .trip-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }

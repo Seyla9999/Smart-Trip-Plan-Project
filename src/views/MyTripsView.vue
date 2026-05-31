@@ -32,6 +32,55 @@
 
       <template v-else>
 
+        <!-- ── Undated Trips ─────────────────────────────────────────────── -->
+        <section v-if="undatedTrips.length" class="section">
+          <div class="section-label">
+            <span class="dot dot-gray"></span> No Date Set
+          </div>
+          <div class="trips-grid">
+            <article
+              v-for="trip in undatedTrips" :key="trip.id"
+              class="trip-card"
+              @click="goToTrip(trip)"
+            >
+              <div class="card-bar" :style="{ background: tripColor(trip.id) }"></div>
+              <div class="card-body">
+                <div class="card-title-row">
+                  <h3 class="card-title">{{ trip.title }}</h3>
+                  <span v-if="trip.status === 'completed'" class="completed-badge">✓ Completed</span>
+                  <button class="btn-delete" @click.stop="confirmDelete(trip)" title="Delete trip">✕</button>
+                </div>
+                <div class="card-route">
+                  <span class="route-from">{{ formatDestination(trip).from }}</span>
+                  <span class="route-arrow">→</span>
+                  <span class="route-to">{{ formatDestination(trip).to }}</span>
+                </div>
+                <div class="card-dates" style="color:#9ca3af;font-style:italic">
+                  No dates scheduled yet
+                </div>
+                <div class="card-stats">
+                  <div class="stat">
+                    <span class="stat-num">{{ trip.itinerary_items?.length ?? 0 }}</span>
+                    <span class="stat-label">places</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-num">{{ trip.members?.length ?? 1 }}</span>
+                    <span class="stat-label">members</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-num">{{ trip.packing_list?.length ? `${trip.packing_list.filter(p => p.packed).length}/${trip.packing_list.length}` : '—' }}</span>
+                    <span class="stat-label">packed</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-detail" @click.stop="viewPlanDetail(trip)">📋 Plan Detail</button>
+                  <button class="btn-share" @click.stop="shareTrip(trip)">🔗 Share</button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <!-- ── Upcoming Trips ────────────────────────────────────────────── -->
         <section v-if="upcomingTrips.length" class="section">
           <div class="section-label">
@@ -51,6 +100,7 @@
                 <!-- Title row -->
                 <div class="card-title-row">
                   <h3 class="card-title">{{ trip.title }}</h3>
+                  <span v-if="trip.status === 'completed'" class="completed-badge">✓ Completed</span>
                   <button
                     class="btn-delete"
                     @click.stop="confirmDelete(trip)"
@@ -60,9 +110,9 @@
 
                 <!-- Route -->
                 <div class="card-route">
-                  <span class="route-from">{{ formatDestination(trip.destination).from }}</span>
+                  <span class="route-from">{{ formatDestination(trip).from }}</span>
                   <span class="route-arrow">→</span>
-                  <span class="route-to">{{ formatDestination(trip.destination).to }}</span>
+                  <span class="route-to">{{ formatDestination(trip).to }}</span>
                 </div>
 
                 <!-- Dates -->
@@ -110,14 +160,14 @@
                     <span class="stat-label">members</span>
                   </div>
                   <div class="stat">
-                    <span class="stat-num">{{ trip.packing_list?.filter(p => p.packed).length ?? 0 }}/{{ trip.packing_list?.length ?? 0 }}</span>
+                    <span class="stat-num">{{ trip.packing_list?.length ? `${trip.packing_list.filter(p => p.packed).length}/${trip.packing_list.length}` : '—' }}</span>
                     <span class="stat-label">packed</span>
                   </div>
                 </div>
 
                 <!-- Actions -->
                 <div class="card-actions">
-                    <button class="btn-view" @click.stop.prevent="goToTrip(trip)">View Plan</button>
+                  <button class="btn-detail" @click.stop="viewPlanDetail(trip)">📋 Plan Detail</button>
                   <button class="btn-share" @click.stop="shareTrip(trip)">🔗 Share</button>
                 </div>
               </div>
@@ -141,13 +191,14 @@
               <div class="card-body">
                 <div class="card-title-row">
                   <h3 class="card-title">{{ trip.title }}</h3>
-                  <div class="ongoing-badge">🟠 In Progress</div>
+                  <span v-if="trip.status === 'completed'" class="completed-badge">✓ Completed</span>
+                  <div v-else class="ongoing-badge">🟠 In Progress</div>
                   <button class="btn-delete" @click.stop="confirmDelete(trip)">✕</button>
                 </div>
                 <div class="card-route">
-                  <span class="route-from">{{ formatDestination(trip.destination).from }}</span>
+                  <span class="route-from">{{ formatDestination(trip).from }}</span>
                   <span class="route-arrow">→</span>
-                  <span class="route-to">{{ formatDestination(trip.destination).to }}</span>
+                  <span class="route-to">{{ formatDestination(trip).to }}</span>
                 </div>
                 <div class="card-dates">
                   <span class="date-icon">📅</span>
@@ -163,10 +214,10 @@
                 <div class="card-stats">
                   <div class="stat"><span class="stat-num">{{ trip.itinerary_items?.length ?? 0 }}</span><span class="stat-label">places</span></div>
                   <div class="stat"><span class="stat-num">{{ trip.members?.length ?? 1 }}</span><span class="stat-label">members</span></div>
-                  <div class="stat"><span class="stat-num">{{ trip.packing_list?.filter(p => p.packed).length ?? 0 }}/{{ trip.packing_list?.length ?? 0 }}</span><span class="stat-label">packed</span></div>
+                  <div class="stat"><span class="stat-num">{{ trip.packing_list?.length ? `${trip.packing_list.filter(p => p.packed).length}/${trip.packing_list.length}` : '—' }}</span><span class="stat-label">packed</span></div>
                 </div>
                 <div class="card-actions">
-                    <button class="btn-view" @click.stop.prevent="goToTrip(trip)">View Plan</button>
+                  <button class="btn-detail" @click.stop="viewPlanDetail(trip)">📋 Plan Detail</button>
                   <button class="btn-share" @click.stop="shareTrip(trip)">🔗 Share</button>
                 </div>
               </div>
@@ -190,11 +241,11 @@
 
               <div class="history-body">
                 <div class="history-left">
-                  <div class="history-icon">{{ destinationEmoji(trip.destination) }}</div>
+                  <div class="history-icon">{{ destinationEmoji(trip) }}</div>
                   <div>
                     <h3 class="history-title">{{ trip.title }}</h3>
                     <div class="history-route">
-                      {{ formatDestination(trip.destination).from }} → {{ formatDestination(trip.destination).to }}
+                      {{ formatDestination(trip).from }} → {{ formatDestination(trip).to }}
                     </div>
                     <div class="history-meta">
                       📅 {{ formatDate(trip.start_date) }} – {{ formatDate(trip.end_date) }}
@@ -208,6 +259,7 @@
 
                 <div class="history-right">
                   <span class="history-badge">Completed</span>
+                  <button class="btn-detail-sm" @click="viewPlanDetail(trip)" title="View plan">📋</button>
                   <button class="btn-delete-sm" @click="confirmDelete(trip)" title="Delete">🗑️</button>
                 </div>
               </div>
@@ -264,6 +316,93 @@
       </transition>
     </Teleport>
 
+    <!-- ── Plan Detail Modal ───────────────────────────────────────────────── -->
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="tripToView" class="modal-overlay" @click.self="tripToView = null">
+          <div class="plan-modal-box">
+            <button class="modal-close" @click="tripToView = null">✕</button>
+
+            <div class="plan-modal-header">
+              <div class="plan-modal-icon">🗺️</div>
+              <h3 class="plan-modal-title">{{ tripToView.title }}</h3>
+              <div class="plan-modal-meta">
+                <span v-if="tripToView.start_date">
+                  📅 {{ formatDate(tripToView.start_date) }}
+                  <template v-if="tripToView.end_date"> – {{ formatDate(tripToView.end_date) }}</template>
+                </span>
+                <span v-else style="color:#9ca3af;font-style:italic">No dates set</span>
+                <span class="plan-meta-dot">·</span>
+                <span>{{ tripToView.itinerary_items?.length ?? 0 }} places</span>
+              </div>
+            </div>
+
+            <div class="plan-modal-body">
+              <div v-if="!groupedItinerary.length" class="plan-empty">
+                <div style="font-size:40px;margin-bottom:8px">📭</div>
+                <p>No itinerary items added yet.</p>
+                <p style="font-size:12px;color:#9ca3af">Use the Trip Planner to build your schedule.</p>
+              </div>
+              <div v-else class="plan-days">
+                <div v-for="group in groupedItinerary" :key="group.dayIndex" class="plan-day">
+                  <div class="plan-day-label">Day {{ group.dayIndex + 1 }}</div>
+                  <div class="plan-items">
+                    <div v-for="item in group.items" :key="item.id" class="plan-item">
+                      <div class="plan-item-icon">{{ categoryIcon(item.attraction?.category) }}</div>
+                      <div class="plan-item-info">
+                        <div class="plan-item-name">{{ item.attraction?.name_en ?? item.notes ?? 'Unnamed stop' }}</div>
+                        <div v-if="item.attraction?.category" class="plan-item-cat">{{ item.attraction.category }}</div>
+                        <div v-if="item.start_time || item.end_time" class="plan-item-time">
+                          🕐 {{ item.start_time ?? '?' }}<template v-if="item.end_time"> – {{ item.end_time }}</template>
+                        </div>
+                        <div v-if="item.notes && item.attraction" class="plan-item-notes">{{ item.notes }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="plan-modal-footer">
+              <button
+                class="plan-finish-btn"
+                :disabled="isFinishing || tripToView?.status === 'completed'"
+                @click="finishTrip"
+              >
+                <span v-if="isFinishing" class="mini-spinner"></span>
+                {{ isFinishing ? 'Saving…' : tripToView?.status === 'completed' ? '✓ Completed' : '✓ Finish Trip' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
+
+    <!-- ── Review Prompt Modal ──────────────────────────────────────────────── -->
+    <Teleport to="body">
+      <transition name="modal">
+        <div v-if="showReviewPrompt" class="modal-overlay" @click.self="showReviewPrompt = false">
+          <div class="modal-box">
+            <div class="modal-icon">🎉</div>
+            <h3 class="modal-title">Trip Completed!</h3>
+            <p class="modal-desc">
+              Congratulations on completing your trip!<br>
+              Would you like to leave a review for the attractions you visited?
+            </p>
+            <div class="modal-actions">
+              <button class="btn-cancel" @click="showReviewPrompt = false">Not Now</button>
+              <button
+                class="btn-confirm-delete"
+                style="background:#15803d"
+                :disabled="!finishedAttractions.length"
+                @click="goToReview"
+              >Leave a Review</button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
+
     <!-- ── Toast ─────────────────────────────────────────────────────────── -->
     <Teleport to="body">
       <transition name="toast">
@@ -280,10 +419,20 @@ import { useRouter } from 'vue-router'
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
 interface TripMember     { id: string; user_id: string; role: string }
-interface ItineraryItem  { id: string; title: string; day_index: number }
+interface ItineraryAttraction { id: string; name_en: string; name_kh?: string; category?: string }
+interface ItineraryItem {
+  id: string
+  day_index: number
+  sort_order?: number
+  notes?: string
+  start_time?: string
+  end_time?: string
+  attraction?: ItineraryAttraction
+}
 interface Trip {
   id:              string
   title:           string
+  origin?:         string
   destination?:    string
   start_date:      string
   end_date:        string
@@ -304,6 +453,7 @@ const trips       = ref<Trip[]>([])
 const isLoading   = ref(false)
 const tripToDelete = ref<Trip | null>(null)
 const tripToShare  = ref<Trip | null>(null)
+const tripToView   = ref<Trip | null>(null)
 const isDeleting  = ref(false)
 const copiedText  = ref('📋 Copy')
 const toast       = ref({ msg: '', type: 'success' })
@@ -314,17 +464,21 @@ let clockInterval: ReturnType<typeof setInterval> | null = null
 // ─── Derived ─────────────────────────────────────────────────────────────────
 const totalTrips = computed(() => trips.value.length)
 
+const undatedTrips = computed(() =>
+  trips.value.filter(t => !t.start_date || !t.end_date)
+)
 const upcomingTrips = computed(() =>
-  trips.value.filter(t => new Date(t.start_date) > now.value)
+  trips.value.filter(t => t.start_date && t.end_date && new Date(t.start_date) > now.value)
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
 )
 const ongoingTrips = computed(() =>
   trips.value.filter(t =>
+    t.start_date && t.end_date &&
     new Date(t.start_date) <= now.value && new Date(t.end_date) >= now.value
   )
 )
 const pastTrips = computed(() =>
-  trips.value.filter(t => new Date(t.end_date) < now.value)
+  trips.value.filter(t => t.start_date && t.end_date && new Date(t.end_date) < now.value)
     .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())
 )
 
@@ -341,14 +495,19 @@ const tripDuration = (trip: Trip) => {
 
 function selectInput(e: Event) { try { (e.target as HTMLInputElement).select() } catch {} }
 
-const formatDestination = (dest?: string) => {
-  if (!dest) return { from: 'Unknown', to: 'Unknown' }
-  const parts = dest.split('→').map(s => s.trim())
-  return { from: parts[0] ?? dest, to: parts[1] ?? '?' }
+const slugToName = (slug: string) =>
+  slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+const formatDestination = (trip: Trip) => {
+  if (trip.origin) {
+    return { from: slugToName(trip.origin), to: trip.destination ? slugToName(trip.destination) : '?' }
+  }
+  const parts = (trip.destination ?? '').split('→').map(s => s.trim())
+  return { from: parts[0] ? slugToName(parts[0]) : 'Unknown', to: parts[1] ? slugToName(parts[1]) : '?' }
 }
 
-const destinationEmoji = (dest?: string) => {
-  const to = formatDestination(dest).to.toLowerCase()
+const destinationEmoji = (trip: Trip) => {
+  const to = formatDestination(trip).to.toLowerCase()
   if (to.includes('angkor') || to.includes('siem'))  return '🏛️'
   if (to.includes('phnom'))                           return '🏙️'
   if (to.includes('koh kong'))                        return '🌿'
@@ -443,6 +602,86 @@ const deleteTrip = async () => {
     showToast('Failed to delete trip', 'error')
   } finally {
     isDeleting.value = false
+  }
+}
+
+// ─── Plan detail ──────────────────────────────────────────────────────────────
+const viewPlanDetail = (trip: Trip) => { tripToView.value = trip }
+
+const groupedItinerary = computed(() => {
+  if (!tripToView.value?.itinerary_items?.length) return []
+  const map = new Map<number, ItineraryItem[]>()
+  const sorted = [...tripToView.value.itinerary_items].sort(
+    (a, b) => a.day_index - b.day_index || (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  )
+  for (const item of sorted) {
+    const day = item.day_index ?? 0
+    if (!map.has(day)) map.set(day, [])
+    map.get(day)!.push(item)
+  }
+  return [...map.entries()].map(([dayIndex, items]) => ({ dayIndex, items }))
+})
+
+const categoryIcon = (cat?: string) => {
+  switch ((cat ?? '').toLowerCase()) {
+    case 'historical': return '🏛️'
+    case 'nature':     return '🌿'
+    case 'beach':      return '🏖️'
+    case 'adventure':  return '🧗'
+    case 'culture':    return '🎭'
+    case 'culinary':   return '🍽️'
+    default:           return '📍'
+  }
+}
+
+// ─── Finish Trip / Review prompt ─────────────────────────────────────────────
+const isFinishing = ref(false)
+const showReviewPrompt  = ref(false)
+const finishedAttractions = ref<Array<{ id: string; name: string; slug: string }>>([])
+
+const finishTrip = async () => {
+  if (!tripToView.value) return
+  isFinishing.value = true
+  const tripId = tripToView.value.id
+  const items  = tripToView.value.itinerary_items ?? []
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/trips/${tripId}/complete`,
+      { method: 'PATCH', headers: authHeaders() }
+    )
+    if (!res.ok) throw new Error(`${res.status}`)
+
+    // Update local list so badge appears immediately
+    const idx = trips.value.findIndex(t => t.id === tripId)
+    if (idx !== -1) trips.value[idx] = { ...trips.value[idx], status: 'completed' }
+
+    // Collect attractions for the review prompt
+    finishedAttractions.value = items
+      .filter(item => item.attraction?.id)
+      .map(item => {
+        const name = item.attraction!.name_en
+        return {
+          id:   item.attraction!.id,
+          name,
+          slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        }
+      })
+
+    tripToView.value = null
+    showReviewPrompt.value = true
+    showToast('Trip marked as completed!', 'success')
+  } catch {
+    showToast('Failed to complete trip', 'error')
+  } finally {
+    isFinishing.value = false
+  }
+}
+
+const goToReview = () => {
+  showReviewPrompt.value = false
+  if (finishedAttractions.value.length) {
+    router.push(`/attraction/${finishedAttractions.value[0].slug}`)
   }
 }
 
@@ -599,6 +838,13 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
 .ongoing-badge {
   font-size: 11px; font-weight: 600; white-space: nowrap;
   background: #fef3c7; color: #92400e;
+  padding: 3px 8px; border-radius: 999px;
+  margin-top: 2px;
+}
+.completed-badge {
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  background: #f0fdf4; color: #15803d;
+  border: 1px solid #bbf7d0;
   padding: 3px 8px; border-radius: 999px;
   margin-top: 2px;
 }
@@ -807,6 +1053,117 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
 .share-wa  { background: #25D366; }
 .share-em  { background: #ef4444; }
 .share-fb  { background: #1877f2; }
+
+/* ── Plan Detail button ───────────────────────────────────────────────────── */
+.btn-detail {
+  flex: 1; text-align: center;
+  background: #0369a1; color: white; border: none;
+  padding: 9px 16px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; font-family: 'Sora', sans-serif;
+  cursor: pointer; transition: background .15s;
+}
+.btn-detail:hover { background: #075985; }
+
+.btn-detail-sm {
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; opacity: .5; transition: opacity .15s;
+  padding: 4px;
+}
+.btn-detail-sm:hover { opacity: 1; }
+
+/* ── Plan Detail Modal ────────────────────────────────────────────────────── */
+.plan-modal-box {
+  background: white; border-radius: 24px;
+  width: 100%; max-width: 560px; max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,.22);
+  overflow: hidden; position: relative;
+}
+
+.plan-modal-header {
+  padding: 32px 32px 20px;
+  border-bottom: 1.5px solid #f0f0f0;
+  text-align: center;
+}
+.plan-modal-icon  { font-size: 36px; margin-bottom: 8px; }
+.plan-modal-title {
+  font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 800;
+  color: #0f2417; margin: 0 0 8px; line-height: 1.3;
+}
+.plan-modal-meta {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; font-size: 13px; color: #6b7280; flex-wrap: wrap;
+}
+.plan-meta-dot { color: #d1d5db; }
+
+.plan-modal-body {
+  flex: 1; overflow-y: auto; padding: 20px 24px 28px;
+}
+
+.plan-empty {
+  text-align: center; padding: 40px 20px;
+  color: #6b7280; font-size: 14px; line-height: 1.6;
+}
+
+.plan-days { display: flex; flex-direction: column; gap: 20px; }
+
+.plan-day-label {
+  font-family: 'Sora', sans-serif;
+  font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: #15803d; margin-bottom: 10px;
+}
+
+.plan-items { display: flex; flex-direction: column; gap: 8px; }
+
+.plan-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: #f9fafb; border-radius: 12px;
+  padding: 12px 14px; border: 1px solid #f0f0f0;
+  transition: box-shadow .15s;
+}
+.plan-item:hover { box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+
+.plan-item-icon {
+  font-size: 20px; flex-shrink: 0;
+  width: 36px; height: 36px;
+  background: white; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e5e7eb;
+}
+
+.plan-item-name {
+  font-family: 'Sora', sans-serif; font-size: 14px;
+  font-weight: 700; color: #0f2417; line-height: 1.3;
+}
+.plan-item-cat {
+  font-size: 11px; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: .5px; margin-top: 2px;
+}
+.plan-item-time {
+  font-size: 12px; color: #0369a1;
+  font-weight: 600; margin-top: 4px;
+}
+.plan-item-notes {
+  font-size: 12px; color: #6b7280;
+  margin-top: 4px; line-height: 1.4;
+  font-style: italic;
+}
+
+.plan-modal-footer {
+  padding: 16px 24px 24px;
+  border-top: 1.5px solid #f0f0f0;
+  display: flex; justify-content: flex-end;
+}
+.plan-finish-btn {
+  padding: 10px 24px; border-radius: 10px;
+  background: #15803d; color: white; border: none;
+  font-size: 14px; font-weight: 700; font-family: 'Sora', sans-serif;
+  cursor: pointer; transition: background .15s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.plan-finish-btn:hover:not(:disabled) { background: #166534; }
+.plan-finish-btn:disabled { opacity: .65; cursor: not-allowed; }
 
 /* ── Toast ────────────────────────────────────────────────────────────────── */
 .toast {
