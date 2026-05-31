@@ -8,6 +8,10 @@ import * as path from 'path'
 import * as fs   from 'fs'
 import { ChatService } from './chat.service'
 
+type UploadedFile = {
+  filename: string
+}
+
 @Controller('chat')
 export class ChatController {
   constructor(private readonly service: ChatService) {}
@@ -97,7 +101,7 @@ export class ChatController {
   )
   async uploadAndSend(
     @Param('id') conversationId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: UploadedFile,
     @Body() body: { senderId: string; text?: string },
   ) {
     if (!file) return { success: false, message: 'No file uploaded' }
