@@ -144,44 +144,93 @@
             <div v-else-if="!weatherLoading" class="text-xs text-gray-400 text-center py-4">Weather unavailable</div>
           </div>
 
-          <!-- ── Daily Schedule (editable) ──────────────────────────────────── -->
+          <!-- ── Daily Schedule (Timeline) ───────────────────────────────────── -->
           <div class="bg-white rounded-xl p-5 shadow-sm">
+
+            <!-- Header -->
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide">Daily Schedule</h3>
               <button v-if="schedule[selectedDay]?.length"
                 @click="clearDay(selectedDay)"
-                class="text-xs text-red-400 hover:text-red-600 transition">Clear</button>
+                class="text-xs text-red-400 hover:text-red-600 transition font-medium">
+                Clear Day
+              </button>
             </div>
 
-            <!-- Day selector -->
-            <div class="flex flex-wrap gap-2 mb-4">
+            <!-- Day selector pills -->
+            <div class="flex flex-wrap gap-1.5 mb-5">
               <button v-for="day in daysCount" :key="day" @click="selectedDay = day"
-                :class="selectedDay === day ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-500 border-gray-200 hover:border-green-400'"
-                class="px-3 py-1 rounded-full border text-xs font-semibold transition">
+                :class="selectedDay === day
+                  ? 'bg-green-700 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-500 hover:bg-green-50 hover:text-green-700'"
+                class="px-3 py-1 rounded-full text-xs font-semibold transition">
                 Day {{ day }}
               </button>
             </div>
 
-            <!-- Schedule items -->
-            <div class="flex flex-col gap-2 min-h-[80px]">
-              <div v-if="!schedule[selectedDay]?.length" class="flex flex-col items-center justify-center h-20 text-gray-300 text-xs text-center border-2 border-dashed border-gray-200 rounded-xl">
-                <span class="text-2xl mb-1">📋</span>
-                Click "+ Add to Day {{ selectedDay }}" on any attraction
-              </div>
-              <div v-for="(item, i) in schedule[selectedDay]" :key="item.placeId"
-                class="p-3 bg-green-50 rounded-lg border border-green-100 flex items-start gap-2 cursor-pointer hover:bg-green-100 transition"
-                role="button"
-                tabindex="0"
-                @click="openScheduleItemMap(item)"
-                @keydown.enter.prevent="openScheduleItemMap(item)"
-                @keydown.space.prevent="openScheduleItemMap(item)">
-                <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
-                <div class="flex-1 min-w-0">
-                  <div class="text-xs font-bold text-green-800 truncate">{{ item.name }}</div>
-                  <div class="text-xs text-gray-400 truncate">{{ item.vicinity }}</div>
+            <!-- Empty state -->
+            <div v-if="!schedule[selectedDay]?.length"
+              class="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-gray-200 rounded-xl">
+              <span class="text-3xl mb-2">🗺️</span>
+              <p class="text-xs text-gray-400 font-medium">No stops yet for Day {{ selectedDay }}</p>
+              <p class="text-xs text-gray-300 mt-0.5">Add attractions from the list below</p>
+            </div>
+
+            <!-- Timeline -->
+            <div v-else class="relative">
+              <!-- Vertical line -->
+              <div class="absolute left-[19px] top-3 bottom-3 w-0.5 bg-gradient-to-b from-green-400 via-green-200 to-green-100 rounded-full"></div>
+
+              <div class="flex flex-col gap-0">
+                <div v-for="(item, i) in schedule[selectedDay]" :key="item.placeId"
+                  class="relative flex items-start gap-3 group">
+
+                  <!-- Timeline dot -->
+                  <div class="relative z-10 flex-shrink-0 w-10 h-10 rounded-full bg-white border-2 border-green-500 flex items-center justify-center shadow-sm group-hover:border-green-700 transition-colors">
+                    <span class="text-base leading-none">{{ item.icon }}</span>
+                  </div>
+
+                  <!-- Content card -->
+                  <div
+                    class="flex-1 min-w-0 mb-4 bg-green-50 hover:bg-green-100 border border-green-100 rounded-xl p-3 cursor-pointer transition-all duration-150 shadow-xs"
+                    role="button"
+                    tabindex="0"
+                    @click="openScheduleItemMap(item)"
+                    @keydown.enter.prevent="openScheduleItemMap(item)"
+                    @keydown.space.prevent="openScheduleItemMap(item)">
+
+                    <!-- Stop number + remove -->
+                    <div class="flex items-center justify-between mb-0.5">
+                      <span class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Stop {{ i + 1 }}</span>
+                      <button
+                        @click.stop="removeFromSchedule(selectedDay, i)"
+                        class="text-gray-300 hover:text-red-400 transition text-base leading-none -mr-1 -mt-1 px-1">
+                        ×
+                      </button>
+                    </div>
+
+                    <div class="text-xs font-bold text-green-900 leading-snug truncate">{{ item.name }}</div>
+
+                    <div v-if="item.vicinity" class="text-[11px] text-gray-400 truncate mt-0.5">
+                      📍 {{ item.vicinity }}
+                    </div>
+
+                    <!-- Time badge if available -->
+                    <div v-if="item.startTime || item.endTime" class="mt-1.5 flex items-center gap-1">
+                      <span class="text-[10px] bg-green-200 text-green-800 font-semibold px-2 py-0.5 rounded-full">
+                        🕐 {{ item.startTime ?? '' }}{{ item.startTime && item.endTime ? ' – ' : '' }}{{ item.endTime ?? '' }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <button @click.stop="removeFromSchedule(selectedDay, i)"
-                  class="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-lg leading-none">×</button>
+
+                <!-- End cap -->
+                <div class="relative flex items-center gap-3">
+                  <div class="relative z-10 flex-shrink-0 w-10 h-10 rounded-full bg-green-700 flex items-center justify-center shadow-sm">
+                    <span class="text-white text-sm">🏁</span>
+                  </div>
+                  <span class="text-xs text-gray-400 font-medium">End of Day {{ selectedDay }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1189,16 +1238,31 @@ const clearDay = (day: number) => {
 }
 
 const openScheduleItemMap = (item: ScheduleItem) => {
+  // If this item came from our database, open the internal attraction detail.
+  // `placeId` for DB items is the internal `attraction_id` we saved earlier.
+  if (item.source === 'db' && item.placeId) {
+    try {
+      router.push({ name: 'AttractionDetail', params: { id: String(item.placeId) } })
+      return
+    } catch (e) {
+      // fallthrough to map fallback
+      console.warn('Failed to navigate to internal attraction detail:', e)
+    }
+  }
+
+  // If this is a Google Places item, prefer opening the place_id URL.
   if (item.placeId && item.source === 'google') {
     window.open(`https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(item.placeId)}`, '_blank')
     return
   }
 
-  if (Number.isFinite(item.latitude) && Number.isFinite(item.longitude)) {
+  // If we have coordinates, open them directly in Google Maps.
+  if (Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude))) {
     window.open(`https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`, '_blank')
     return
   }
 
+  // Last resort: search by name + vicinity.
   const query = encodeURIComponent([item.name, item.vicinity].filter(Boolean).join(', '))
   window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank')
 }
