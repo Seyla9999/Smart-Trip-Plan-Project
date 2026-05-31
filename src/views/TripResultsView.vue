@@ -251,15 +251,75 @@
             </div>
           </div>
 
-          <!-- ── Real Attractions from Google Places ────────────────────────── -->
+          <!-- ── Route attractions from backend database ───────────────────── -->
           <div class="bg-white rounded-xl p-6 shadow-sm">
             <div class="flex items-center justify-between mb-1">
               <h2 class="text-2xl font-bold text-green-800">Attractions Along Route</h2>
               <span v-if="attractionsLoading" class="w-5 h-5 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
             </div>
-            <p class="text-sm text-gray-400 mb-5">Click "+ Add" to add attractions to your daily schedule</p>
+            <p class="text-sm text-gray-400 mb-5">These are attractions from your database that sit close to the driving route.</p>
 
-            <!-- Category filter tabs -->
+            <div v-if="attractionsLoading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div v-for="n in 6" :key="n" class="animate-pulse bg-gray-100 rounded-xl h-56"></div>
+            </div>
+
+            <div v-else-if="routeAttractions.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div v-for="item in routeAttractions" :key="item.place.id"
+                class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer focus-within:ring-2 focus-within:ring-green-600 focus-within:ring-offset-2"
+                role="button"
+                tabindex="0"
+                @click="openAttraction(item.place)"
+                @keydown.enter.prevent="openAttraction(item.place)"
+                @keydown.space.prevent="openAttraction(item.place)">
+
+                <div class="relative h-40 overflow-hidden bg-gray-100" @click.stop="openAttraction(item.place)">
+                  <img v-if="item.place.image_url || item.place.images?.[0]?.url"
+                    :src="item.place.image_url ?? item.place.images?.[0]?.url" :alt="getAttractionName(item.place)"
+                    class="w-full h-full object-cover" />
+                  <div v-else class="w-full h-full flex items-center justify-center text-4xl">
+                    {{ attractionCategories.find(c => c.type.toLowerCase() === (item.place.category ?? '').toLowerCase())?.icon ?? '🏛️' }}
+                  </div>
+                  <span class="absolute top-3 right-3 bg-blue-700/90 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                    ~ {{ item.distanceKm.toFixed(1) }} km from route
+                  </span>
+                </div>
+
+                <div class="p-4 flex flex-col flex-1">
+                  <h3 class="font-bold text-green-800 mb-0.5 leading-tight hover:underline" @click.stop="openAttraction(item.place)">{{ getAttractionName(item.place) }}</h3>
+                  <p class="text-xs text-gray-400 mb-1">📍 {{ getAttractionProvince(item.place) }}</p>
+                  <p v-if="item.place.description" class="text-xs text-gray-500 leading-relaxed mb-2 line-clamp-2">{{ item.place.description }}</p>
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class="text-sm font-bold text-amber-500">⭐ {{ item.place.rating?.toFixed(1) ?? 'N/A' }}</span>
+                    <span class="text-xs text-gray-400">Route match</span>
+                  </div>
+                  <div class="mt-auto flex items-center gap-2">
+                    <select v-model="addToDayMap[String(item.place.id)]"
+                      @click.stop
+                      class="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
+                      <option v-for="d in daysCount" :key="d" :value="d">Day {{ d }}</option>
+                    </select>
+                    <button @click.stop="addToSchedule(item.place)"
+                      class="px-3 py-1.5 bg-green-700 text-white text-xs font-bold rounded-lg hover:bg-green-800 transition whitespace-nowrap">
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="py-12 text-center text-gray-400 text-sm">
+              No attractions were found near this route.
+            </div>
+          </div>
+
+          <!-- ── Province attractions from backend database ───────────────── -->
+          <div class="bg-white rounded-xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-2xl font-bold text-green-800">Attractions in {{ destinationName }}</h2>
+              <span v-if="attractionsLoading" class="w-5 h-5 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
+            </div>
+            <p class="text-sm text-gray-400 mb-5">All attractions available in the province the user selected.</p>
+
             <div class="flex gap-2 flex-wrap mb-5">
               <button v-for="cat in attractionCategories" :key="cat.type"
                 @click="selectedAttractionCategory = cat.type"
@@ -277,12 +337,16 @@
 
             <div v-else-if="filteredAttractions.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               <div v-for="place in filteredAttractions" :key="place.id"
-                class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-md transition-all duration-200 flex flex-col">
+                class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer focus-within:ring-2 focus-within:ring-green-600 focus-within:ring-offset-2"
+                role="button"
+                tabindex="0"
+                @click="openAttraction(place)"
+                @keydown.enter.prevent="openAttraction(place)"
+                @keydown.space.prevent="openAttraction(place)">
 
-                <!-- Photo -->
-                <div class="relative h-40 overflow-hidden bg-gray-100">
+                <div class="relative h-40 overflow-hidden bg-gray-100" @click.stop="openAttraction(place)">
                   <img v-if="place.image_url || place.images?.[0]?.url"
-                    :src="place.image_url ?? place.images?.[0]?.url" :alt="place.name"
+                    :src="place.image_url ?? place.images?.[0]?.url" :alt="getAttractionName(place)"
                     class="w-full h-full object-cover" />
                   <div v-else class="w-full h-full flex items-center justify-center text-4xl">
                     {{ attractionCategories.find(c => c.type.toLowerCase() === (place.category ?? '').toLowerCase())?.icon ?? '🏛️' }}
@@ -296,22 +360,20 @@
                   </span>
                 </div>
 
-                <!-- Info -->
                 <div class="p-4 flex flex-col flex-1">
-                  <h3 class="font-bold text-green-800 mb-0.5 leading-tight">{{ place.name }}</h3>
-                  <p class="text-xs text-gray-400 mb-1">📍 {{ place.province ?? '' }}</p>
+                  <h3 class="font-bold text-green-800 mb-0.5 leading-tight hover:underline" @click.stop="openAttraction(place)">{{ getAttractionName(place) }}</h3>
+                  <p class="text-xs text-gray-400 mb-1">📍 {{ getAttractionProvince(place) }}</p>
                   <p v-if="place.description" class="text-xs text-gray-500 leading-relaxed mb-2 line-clamp-2">{{ place.description }}</p>
                   <div class="flex items-center gap-2 mb-3">
                     <span class="text-sm font-bold text-amber-500">⭐ {{ place.rating?.toFixed(1) ?? 'N/A' }}</span>
                   </div>
-
-                  <!-- Add to Day selector -->
                   <div class="mt-auto flex items-center gap-2">
                     <select v-model="addToDayMap[String(place.id)]"
+                      @click.stop
                       class="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
                       <option v-for="d in daysCount" :key="d" :value="d">Day {{ d }}</option>
                     </select>
-                    <button @click="addToSchedule(place)"
+                    <button @click.stop="addToSchedule(place)"
                       class="px-3 py-1.5 bg-green-700 text-white text-xs font-bold rounded-lg hover:bg-green-800 transition whitespace-nowrap">
                       + Add
                     </button>
@@ -321,7 +383,7 @@
             </div>
 
             <div v-else class="py-12 text-center text-gray-400 text-sm">
-              No attractions found for this area.
+              No attractions found in {{ destinationName }}.
             </div>
           </div>
 
@@ -372,7 +434,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from
 import { useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import router from '@/router'
+import router from '../router'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -447,6 +509,8 @@ const allAttractions             = ref<Attraction[]>([])
 const attractionsLoading         = ref(false)
 const selectedAttractionCategory = ref('all')
 const addToDayMap                = reactive<Record<string, number>>({})
+const routeLinePoints            = ref<[number, number][]>([])
+const ROUTE_PROXIMITY_KM         = 20
 
 // POIs — fetched from your backend /api/points-of-interest
 const allPOIs      = ref<POI[]>([])
@@ -457,6 +521,7 @@ const schedule = ref<Record<number, ScheduleItem[]>>({})
 
 let leafletMap:    L.Map        | null = null
 let poiLayerGroup: L.LayerGroup | null = null
+let attractionLayerGroup: L.LayerGroup | null = null
 
 // ─── Derived ──────────────────────────────────────────────────────────────────
 const tripId      = computed(() => vueRoute.params.id      as string || '')
@@ -578,10 +643,9 @@ const fetchAttractions = async () => {
   allAttractions.value = []
   try {
     const token = localStorage.getItem('auth_token')
-    // Call your existing attractions endpoint, filtered by destination province
+    // Load the full backend attraction catalog so we can split it into route and province lists.
     const res = await fetch(
-      //`${API_BASE}/api/attractions?province=${destination.value}&limit=20`,
-      `${API_BASE}/attractions?province=${encodeURIComponent(destinationName.value)}&limit=20`,
+      `${API_BASE}/attractions?limit=500`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     if (!res.ok) throw new Error(`Attractions API error ${res.status}`)
@@ -595,11 +659,132 @@ const fetchAttractions = async () => {
 }
 
 const filteredAttractions = computed(() => {
-  if (selectedAttractionCategory.value === 'all') return allAttractions.value
-  return allAttractions.value.filter(a =>
-    (a.category ?? '').toLowerCase() === selectedAttractionCategory.value.toLowerCase()
-  )
+  const province = normalizeText(destinationName.value)
+  const provinceList = allAttractions.value.filter((attraction) => {
+    const attractionProvince = normalizeText(getAttractionProvince(attraction))
+    if (!province || !attractionProvince) return false
+    return attractionProvince === province || attractionProvince.includes(province) || province.includes(attractionProvince)
+  })
+
+  if (selectedAttractionCategory.value === 'all') return provinceList
+  return provinceList.filter(a => normalizeText(a.category ?? '') === selectedAttractionCategory.value.toLowerCase())
 })
+
+const routeAttractions = computed(() => {
+  const route = routeLinePoints.value
+  if (route.length < 2) return []
+
+  return allAttractions.value
+    .map((place) => ({ place, distanceKm: distanceToRouteKm(place, route) }))
+    .filter((item) => Number.isFinite(item.distanceKm) && item.distanceKm <= ROUTE_PROXIMITY_KM)
+    .sort((left, right) => left.distanceKm - right.distanceKm)
+})
+
+function normalizeText(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+const getAttractionName = (attraction: Attraction & Record<string, unknown>) => {
+  const name = attraction.name ?? (attraction as any).name_en ?? (attraction as any).title
+  return typeof name === 'string' && name.trim() ? name : 'Untitled attraction'
+}
+
+const getAttractionProvince = (attraction: Attraction & Record<string, unknown>) => {
+  const province = attraction.province ?? (attraction as any).province_name ?? (attraction as any).province?.name ?? (attraction as any).province?.name_en
+  return typeof province === 'string' ? province : ''
+}
+
+function getAttractionCoords(attraction: Attraction & Record<string, unknown>): { lat: number; lng: number } | null {
+  const lat = Number(attraction.latitude ?? (attraction as any).lat)
+  const lng = Number(attraction.longitude ?? (attraction as any).lng)
+
+  if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+    return { lat, lng }
+  }
+
+  const location = (attraction as any).location
+  if (!location) return null
+
+  if (typeof location === 'string') {
+    const match = location.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/i)
+    if (match) {
+      const parsedLng = Number(match[1])
+      const parsedLat = Number(match[2])
+      if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) return { lat: parsedLat, lng: parsedLng }
+    }
+    return null
+  }
+
+  if (location.coordinates?.length >= 2) {
+    return { lng: Number(location.coordinates[0]), lat: Number(location.coordinates[1]) }
+  }
+
+  if (location.longitude !== undefined && location.latitude !== undefined) {
+    return { lng: Number(location.longitude), lat: Number(location.latitude) }
+  }
+
+  return null
+}
+
+function projectPointToPlane(point: { lat: number; lng: number }, referenceLat: number) {
+  const earthRadiusKm = 6371
+  const latRad = point.lat * Math.PI / 180
+  const lngRad = point.lng * Math.PI / 180
+  const refRad = referenceLat * Math.PI / 180
+
+  return {
+    x: earthRadiusKm * lngRad * Math.cos(refRad),
+    y: earthRadiusKm * latRad,
+  }
+}
+
+function pointToSegmentDistanceKm(
+  point: { lat: number; lng: number },
+  start: { lat: number; lng: number },
+  end: { lat: number; lng: number },
+) {
+  const referenceLat = (point.lat + start.lat + end.lat) / 3
+  const projectedPoint = projectPointToPlane(point, referenceLat)
+  const projectedStart = projectPointToPlane(start, referenceLat)
+  const projectedEnd = projectPointToPlane(end, referenceLat)
+
+  const segmentX = projectedEnd.x - projectedStart.x
+  const segmentY = projectedEnd.y - projectedStart.y
+  const segmentLengthSquared = segmentX ** 2 + segmentY ** 2
+
+  if (segmentLengthSquared === 0) {
+    return Math.hypot(projectedPoint.x - projectedStart.x, projectedPoint.y - projectedStart.y)
+  }
+
+  const projection = ((projectedPoint.x - projectedStart.x) * segmentX + (projectedPoint.y - projectedStart.y) * segmentY) / segmentLengthSquared
+  const t = Math.max(0, Math.min(1, projection))
+
+  const closestX = projectedStart.x + t * segmentX
+  const closestY = projectedStart.y + t * segmentY
+
+  return Math.hypot(projectedPoint.x - closestX, projectedPoint.y - closestY)
+}
+
+function distanceToRouteKm(attraction: Attraction & Record<string, unknown>, route: [number, number][]) {
+  const coords = getAttractionCoords(attraction)
+  if (!coords || route.length < 2) return Number.POSITIVE_INFINITY
+
+  let shortestDistance = Number.POSITIVE_INFINITY
+  for (let index = 0; index < route.length - 1; index += 1) {
+    const segmentDistance = pointToSegmentDistanceKm(
+      coords,
+      { lat: route[index][0], lng: route[index][1] },
+      { lat: route[index + 1][0], lng: route[index + 1][1] },
+    )
+    if (segmentDistance < shortestDistance) shortestDistance = segmentDistance
+  }
+
+  return shortestDistance
+}
+
+const openAttraction = (attraction: Attraction) => {
+  router.push({ name: 'AttractionDetail', params: { id: String(attraction.id) } })
+}
 
 // ─── Schedule management ──────────────────────────────────────────────────────
 const addToSchedule = (attraction: Attraction) => {
@@ -859,10 +1044,12 @@ const initMap = async () => {
   leafletMap.fitBounds(L.latLngBounds([oC, dC]), { padding: [60, 60] })
 
   poiLayerGroup = L.layerGroup().addTo(leafletMap)
+  attractionLayerGroup = L.layerGroup().addTo(leafletMap)
 
   isLoadingRoute.value = true
   const coords = await fetchRoadRoute(oC, dC)
   isLoadingRoute.value = false
+  routeLinePoints.value = coords
   if (!leafletMap) return
 
   const line = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.9, lineJoin: 'round', lineCap: 'round' }).addTo(leafletMap)
@@ -883,24 +1070,28 @@ const updatePoiMarkers = () => {
   })
 }
 
-// Pin attraction markers on map when loaded
-watch(allAttractions, (places) => {
-  if (!leafletMap || !poiLayerGroup) return
-  places.slice(0, 10).forEach(p => {
-    if (!p.latitude || !p.longitude) return
+// Pin route attractions on the map when loaded
+watch(routeAttractions, (places) => {
+  if (!leafletMap || !attractionLayerGroup) return
+  attractionLayerGroup.clearLayers()
+
+  places.slice(0, 10).forEach(({ place, distanceKm }) => {
+    const coords = getAttractionCoords(place)
+    if (!coords) return
     const catIcon = attractionCategories.find(c =>
-      c.type.toLowerCase() === (p.category ?? '').toLowerCase()
+      c.type.toLowerCase() === (place.category ?? '').toLowerCase()
     )?.icon ?? '📍'
-    L.marker([p.latitude, p.longitude], {
+    L.marker([coords.lat, coords.lng], {
       icon: L.divIcon({ html: `<div class="lf-poi">${catIcon}</div>`, className: '', iconSize: [36,36], iconAnchor: [18,18] })
     }).bindPopup(
-      `<div class="lf-popup"><b>${catIcon} ${p.name}</b><br/>
-       <span style="color:#666;font-size:12px">⭐ ${p.rating?.toFixed(1) ?? 'N/A'}</span><br/>
-       <span style="color:#999;font-size:11px">📍 ${p.province ?? ''}</span></div>`,
-      { maxWidth: 200 }
-    ).addTo(poiLayerGroup!)
+      `<div class="lf-popup"><b>${catIcon} ${getAttractionName(place)}</b><br/>
+       <span style="color:#666;font-size:12px">⭐ ${place.rating?.toFixed(1) ?? 'N/A'}</span><br/>
+       <span style="color:#999;font-size:11px">📍 ${getAttractionProvince(place)}</span><br/>
+       <span style="color:#1a73e8;font-size:11px">~ ${distanceKm.toFixed(1)} km from route</span></div>`,
+      { maxWidth: 220 }
+    ).addTo(attractionLayerGroup!)
   })
-})
+}, { deep: true, immediate: true })
 
 watch(filteredPOIs, updatePoiMarkers, { deep: true })
 
@@ -922,7 +1113,7 @@ onMounted(async () => {
   await initMap()
   await Promise.all([fetchWeather(), fetchAttractions(), fetchPOIs()])
 })
-onUnmounted(() => { leafletMap?.remove(); leafletMap = null })
+onUnmounted(() => { leafletMap?.remove(); leafletMap = null; attractionLayerGroup = null; poiLayerGroup = null })
 </script>
 
 <style>

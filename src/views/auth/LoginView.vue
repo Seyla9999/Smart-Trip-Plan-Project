@@ -1,6 +1,6 @@
 <template>
   <AuthLayout imagePosition="right">
-    <div class="form">
+    <form class="form" @submit.prevent="handleLogin">
       <h1>Welcome Back</h1>
 
       <input v-model="email" placeholder="Email" :class="{ invalid: emailError }" />
@@ -28,7 +28,7 @@
       </div>
       <p v-if="passwordError" class="field-error">{{ passwordError }}</p>
 
-      <button :disabled="loading" @click="handleLogin">
+      <button type="submit" :disabled="loading">
         {{ loading ? 'Signing in...' : 'Sign in' }}
       </button>
 
@@ -37,7 +37,7 @@
       <p @click="$router.push('/register')" class="link">
         Don’t have account? Sign up
       </p>
-    </div>
+    </form>
     <div v-if="dialogVisible" class="dialog-overlay">
       <div class="dialog-box">
         

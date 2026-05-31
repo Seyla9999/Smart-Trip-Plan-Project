@@ -1,6 +1,6 @@
 <template>
   <AuthLayout imagePosition="left" class="">
-    <div class="form">
+    <form class="form" @submit.prevent="handleRegister">
       <h1>Create Account</h1>
 
       <input
@@ -44,7 +44,6 @@
         <input
           :type="showConfirm ? 'text' : 'password'"
           v-model="confirmPassword"
-          type="password"
           placeholder="Confirm Password"
           :class="{ invalid: confirmError }"
         />
@@ -62,8 +61,8 @@
       </p>
 
       <button
+        type="submit"
         :disabled="loading || !formValid"
-        @click="handleRegister"
       >
         {{ loading ? 'Creating...' : 'Sign up' }}
       </button>
@@ -71,7 +70,7 @@
       <p class="link" @click="$router.push('/login')">
         Already have account? Sign in
       </p>
-    </div>
+    </form>
   </AuthLayout>
 </template>
 
