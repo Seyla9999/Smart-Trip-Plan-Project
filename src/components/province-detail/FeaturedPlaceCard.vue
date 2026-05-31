@@ -47,9 +47,8 @@ function shortDescription(text: string, max = 180) {
 
     <div class="featured-content">
       <div class="featured-meta">
-        <span class="rating"
-          >★ {{ place.rating }} · {{ place.reviews }} REVIEWS</span
-        >
+        <span class="rating-stars">★ {{ place.rating }}</span>
+        <span class="review-text">· {{ place.reviews }} REVIEWS</span>
       </div>
 
       <h2 class="featured-title" @click="handleSelect">
@@ -65,8 +64,6 @@ function shortDescription(text: string, max = 180) {
           {{ tag }}
         </span>
       </div>
-
-      <button class="trip-btn" type="button">+ Add to my trip</button>
     </div>
   </article>
 </template>
@@ -129,10 +126,21 @@ function shortDescription(text: string, max = 180) {
 
 .featured-meta {
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.rating {
-  color: #7f87a0;
+.rating-stars {
+  color: #c69214;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.review-text {
+  color: #7d8492;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -158,7 +166,6 @@ function shortDescription(text: string, max = 180) {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 26px;
 }
 
 .tag-pill {
@@ -170,19 +177,6 @@ function shortDescription(text: string, max = 180) {
   color: #5d7966;
   font-size: 14px;
   font-weight: 600;
-}
-
-.trip-btn {
-  align-self: flex-start;
-  min-width: 220px;
-  border: none;
-  border-radius: 999px;
-  padding: 18px 26px;
-  background: #15543f;
-  color: white;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 @media (max-width: 1024px) {
