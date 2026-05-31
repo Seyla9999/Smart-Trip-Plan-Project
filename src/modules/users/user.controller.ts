@@ -12,11 +12,14 @@ import {
   UploadedFile,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-type MulterFile = Express.Multer.File
 import { diskStorage } from 'multer'
 import * as path from 'path'
 import * as fs from 'fs'
 import { UsersService } from './users.service'
+
+type MulterFile = {
+  filename: string
+}
 
 @Controller('users')
 export class UsersController {
