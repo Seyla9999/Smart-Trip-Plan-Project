@@ -14,7 +14,7 @@ import {
 import { TripsService } from './trips.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-import { CreateTripDto }    from './dto/create-trip.dto';
+import { CreateTripDto, ItineraryItemDto } from './dto/create-trip.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
 
 @Controller('api/trips')
@@ -33,6 +33,15 @@ export class TripsController {
   @Get()
   findAll(@Request() req) {
     return this.tripsService.findAll(req.user.id);
+  }
+
+  // GET /api/trips/can-review/:attractionId — check if user can review this attraction
+  // NOTE: MUST be declared before ':id' to avoid NestJS matching "can-review" as an id
+  @Get('can-review/:attractionId')
+  canReview(@Request() req, @Param('attractionId') attractionId: string) {
+    return this.tripsService
+      .canReview(attractionId, req.user.id)
+      .then((allowed) => ({ allowed }));
   }
 
   // GET /api/trips/:id — get a single trip (members only)
@@ -59,6 +68,16 @@ export class TripsController {
     return this.tripsService.joinByToken(token, req.user.id);
   }
 
+  // POST /api/trips/:id/itinerary-items — append one item to existing trip
+  @Post(':id/itinerary-items')
+  addItineraryItem(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: ItineraryItemDto,
+  ) {
+    return this.tripsService.addItineraryItem(id, req.user.id, dto);
+  }
+
   // PATCH /api/trips/:id/packing/:itemId/toggle — toggle a packing list item
   @Patch(':id/packing/:itemId/toggle')
   togglePacking(
@@ -67,6 +86,12 @@ export class TripsController {
     @Param('itemId') itemId: string,
   ) {
     return this.tripsService.togglePacking(id, itemId, req.user.id);
+  }
+
+  // PATCH /api/trips/:id/complete — mark trip as completed
+  @Patch(':id/complete')
+  complete(@Request() req, @Param('id') id: string) {
+    return this.tripsService.complete(id, req.user.id);
   }
 
   // DELETE /api/trips/:id — delete trip (owner only)

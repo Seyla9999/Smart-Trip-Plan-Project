@@ -13,7 +13,7 @@ import { ItineraryItem } from './itinerary-item.entity';
 import { PackingListItem } from './packing-list-item.entity';
 import { Province } from '../provinces/province.entity';
 
-import { CreateTripDto } from './dto/create-trip.dto';
+import { CreateTripDto, ItineraryItemDto } from './dto/create-trip.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
 import { TogglePackingDto } from './dto/toggle-packing.dto';
 
@@ -95,9 +95,13 @@ export class TripsService {
       return trimmed === '' ? undefined : trimmed;
     };
 
+    const dayIndex = item.day_number != null
+      ? item.day_number - 1          // day_number is 1-based from the DTO → convert to 0-based
+      : (item.day_index ?? 0)
+
     return {
       trip_id: tripId,
-      day_index: item.day_number ?? item.day_index ?? 0,
+      day_index: dayIndex,
       attraction_id: item.attraction_id ?? undefined,
       sort_order: item.sort_order ?? fallbackSortOrder,
       start_time: normalizeTime(item.start_time),
@@ -270,11 +274,64 @@ export class TripsService {
     return this.packingRepo.save(item);
   }
 
+  // ─── Append a single item to an existing trip ────────────────────────────
+
+  async addItineraryItem(
+    tripId: string,
+    userId: string,
+    item: ItineraryItemDto,
+  ): Promise<ItineraryItem> {
+    await this.assertMember(tripId, userId);
+
+    const newItem = this.itineraryRepo.create({
+      trip_id:      tripId,
+      day_index:    (item.day_number ?? 1) - 1,
+      attraction_id: item.attraction_id ?? undefined,
+      sort_order:   item.sort_order ?? 0,
+      notes:        item.notes ?? item.description ?? item.title ?? undefined,
+      start_time:   item.start_time ?? undefined,
+      end_time:     item.end_time   ?? undefined,
+    } as Partial<ItineraryItem>);
+
+    return this.itineraryRepo.save(newItem);
+  }
+
+  // ─── Mark trip as completed ───────────────────────────────────────────────
+
+  async complete(tripId: string, userId: string): Promise<Trip | null> {
+    await this.assertMember(tripId, userId);
+    await this.tripRepo.update(tripId, { status: 'completed', updated_at: new Date() });
+    return this.tripRepo.findOne({
+      where: { id: tripId },
+      relations: {
+        members: true,
+        itinerary_items: { attraction: { province: true } },
+        packing_list: true,
+      },
+    }).then((trip) => this.attachDerivedProvince(trip));
+  }
+
+  /** Returns true if the user has ≥1 completed trip that includes the given attraction. */
+  async canReview(attractionId: string, userId: string): Promise<boolean> {
+    const count = await this.tripRepo
+      .createQueryBuilder('trip')
+      .innerJoin('trip.members', 'member', 'member.user_id = :userId', { userId })
+      .innerJoin('trip.itinerary_items', 'item', 'item.attraction_id = :attractionId', { attractionId })
+      .where('trip.status = :status', { status: 'completed' })
+      .getCount();
+    return count > 0;
+  }
+
   // ─── Delete Trip ──────────────────────────────────────────────────────────
 
   async remove(tripId: string, userId: string): Promise<{ message: string }> {
     await this.assertOwner(tripId, userId);
-    await this.tripRepo.delete(tripId);
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(PackingListItem, { trip_id: tripId });
+      await manager.delete(ItineraryItem,   { trip_id: tripId });
+      await manager.delete(TripMember,      { trip_id: tripId });
+      await manager.delete(Trip,            tripId);
+    });
     return { message: 'Trip deleted successfully' };
   }
 }
