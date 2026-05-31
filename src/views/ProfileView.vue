@@ -8,6 +8,7 @@
         <p class="cover-username" v-if="user.username">@{{ user.username }}</p>
       </div>
     </div>
+
     <div class="profile-header-wrap">
       <div class="container profile-header">
         <div class="avatar-outer">
@@ -18,23 +19,30 @@
                    :alt="user.full_name" class="avatar-img" />
               <span v-else class="avatar-initials">{{ initials }}</span>
             </div>
-            <label class="camera-btn" title="Change photo">
+            <label v-if="isOwnProfile" class="camera-btn" title="Change photo">
               📷
               <input type="file" accept="image/*" class="file-input" @change="onAvatarChange" />
             </label>
           </div>
           <div class="role-badge" :class="user.role">{{ formatRole(user.role) }}</div>
         </div>
+
         <div class="header-right">
           <div class="profile-stats">
             <div class="pstat"><span class="pstat-num">{{ stats.trips }}</span><span class="pstat-lbl">Trips</span></div>
             <div class="pstat"><span class="pstat-num">{{ stats.stories }}</span><span class="pstat-lbl">Stories</span></div>
-            <div class="pstat"><span class="pstat-num">{{ stats.bookmarks }}</span><span class="pstat-lbl">Saved</span></div>
+            <div class="pstat" v-if="isOwnProfile"><span class="pstat-num">{{ stats.bookmarks }}</span><span class="pstat-lbl">Saved</span></div>
           </div>
           <p class="profile-bio" v-if="user.bio">{{ user.bio }}</p>
         </div>
+
         <div class="profile-actions">
-          <button class="btn-edit" @click="activeTab = 'settings'">✏️ Edit Profile</button>
+          <button v-if="isOwnProfile" class="btn-edit" @click="activeTab = 'settings'">
+            Edit Profile
+          </button>
+          <button v-else class="btn-message" @click="startChat">
+            Message
+          </button>
         </div>
       </div>
     </div>
@@ -42,7 +50,7 @@
     <div class="tabs-bar">
       <div class="container">
         <div class="tabs">
-          <button v-for="tab in tabs" :key="tab.key" class="tab"
+          <button v-for="tab in visibleTabs" :key="tab.key" class="tab"
             :class="{ active: activeTab === tab.key }"
             @click="activeTab = tab.key">
             {{ tab.icon }} {{ tab.label }}
@@ -52,6 +60,8 @@
     </div>
 
     <div class="tab-content container">
+
+      <!-- MY TRIPS -->
       <div v-if="activeTab === 'trips'">
         <div class="trips-tab-header">
           <span class="trips-tab-count" v-if="!tripsLoading">{{ trips.length }} {{ trips.length === 1 ? 'trip' : 'trips' }}</span>
@@ -61,8 +71,9 @@
         <div v-else-if="trips.length === 0" class="empty-state">
           <div class="es-emoji">🗺️</div>
           <h3 class="es-title">No trips yet</h3>
-          <p class="es-desc">You haven't planned any trips yet.<br>Start exploring Cambodia and plan your first adventure!</p>
-          <a href="/plan-trip" class="es-btn">+ Plan a Trip</a>
+          <p class="es-desc" v-if="isOwnProfile">You haven't planned any trips yet.<br>Start exploring Cambodia!</p>
+          <p class="es-desc" v-else>{{ user.full_name }} hasn't shared any trips yet.</p>
+          <a v-if="isOwnProfile" href="/plan-trip" class="es-btn">+ Plan a Trip</a>
         </div>
         <div v-else class="trips-grid">
           <div v-for="t in trips" :key="t.id" class="trip-card">
@@ -83,13 +94,16 @@
         <div v-else-if="stories.length === 0" class="empty-state">
           <div class="es-emoji">📖</div>
           <h3 class="es-title">No stories yet</h3>
-          <p class="es-desc">You haven't shared any travel stories yet.<br>Share your experiences and inspire other travelers!</p>
-          <a href="/community" class="es-btn">+ Write a Story</a>
+          <p class="es-desc" v-if="isOwnProfile">You haven't shared any travel stories yet.</p>
+          <p class="es-desc" v-else>{{ user.full_name }} hasn't shared any stories yet.</p>
+          <a v-if="isOwnProfile" href="/community" class="es-btn">+ Write a Story</a>
         </div>
         <div v-else class="stories-grid">
-          <div v-for="s in stories" :key="s.id" class="story-card">
+          <div v-for="s in stories" :key="s.id" class="story-card"
+               @click="goToStory(s.id)" style="cursor:pointer">
             <div class="sc-img" :style="{ backgroundImage: s.image_url ? `url(${s.image_url})` : 'none', backgroundColor: '#2D6A4F' }" />
             <div class="sc-body">
+
               <div class="sc-status" :class="s.status">{{ s.status }}</div>
               <div class="sc-title">{{ s.title }}</div>
               <div class="sc-date">{{ formatDate(s.created_at) }}</div>
@@ -99,12 +113,12 @@
         </div>
       </div>
 
-      <div v-if="activeTab === 'bookmarks'">
+      <div v-if="activeTab === 'bookmarks' && isOwnProfile">
         <div v-if="bookmarksLoading" class="loading-state"><div class="spinner" /> Loading bookmarks...</div>
         <div v-else-if="bookmarks.length === 0" class="empty-state">
           <div class="es-emoji">🔖</div>
           <h3 class="es-title">No saved places yet</h3>
-          <p class="es-desc">You haven't saved any attractions yet.<br>Explore Cambodia and save places you want to visit!</p>
+          <p class="es-desc">You haven't saved any attractions yet.</p>
           <a href="/discover" class="es-btn">Discover Places</a>
         </div>
         <div v-else class="bookmarks-grid">
@@ -121,7 +135,7 @@
         </div>
       </div>
 
-      <div v-if="activeTab === 'settings'" class="settings-section">
+      <div v-if="activeTab === 'settings' && isOwnProfile" class="settings-section">
         <h2 class="settings-title">Edit Profile</h2>
         <div class="avatar-upload-row">
           <div class="aus-avatar" :style="{ background: avatarColor }">
@@ -167,7 +181,6 @@
             <span v-if="saveMsg" class="save-msg" :class="saveMsgType">{{ saveMsg }}</span>
           </div>
         </div>
-
         <div class="settings-divider" />
         <h3 class="settings-subtitle">Change Password</h3>
         <div class="settings-form">
@@ -190,7 +203,6 @@
             <span v-if="pwMsg" class="save-msg" :class="pwMsgType">{{ pwMsg }}</span>
           </div>
         </div>
-
         <div class="settings-divider" />
         <div class="danger-zone">
           <h3 class="danger-title">⚠️ Danger Zone</h3>
@@ -213,6 +225,13 @@
     </div>
   </div>
 
+
+  <div v-else-if="loadingOtherProfile" class="loading-full">
+    <div class="spinner" />
+    <p>Loading profile...</p>
+  </div>
+
+
   <div v-else class="not-logged-in">
     <div class="nli-icon">🔒</div>
     <h2 class="nli-title">Please log in to view your profile</h2>
@@ -225,24 +244,27 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
-const API_URL    = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-const COLORS     = ['#1D3557','#2D6A4F','#C8922A','#5C4B8A','#AE2012','#2196A6','#6B4C3B']
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const COLORS  = ['#1D3557','#2D6A4F','#C8922A','#5C4B8A','#AE2012','#2196A6','#6B4C3B']
 
 export default defineComponent({
   name: 'ProfileView',
   setup() {
-    const router     = useRouter()
+    const router = useRouter()
+    const route  = useRoute()
+
     const user       = ref<any>(null)
     const activeTab  = ref('trips')
     const previewUrl = ref('')
+    const loadingOtherProfile = ref(false)
 
-    const tabs = [
-      { key: 'trips',     label: 'My Trips',   icon: '🗺️' },
-      { key: 'stories',   label: 'My Stories', icon: '📖' },
-      { key: 'bookmarks', label: 'Bookmarks',  icon: '🔖' },
-      { key: 'settings',  label: 'Settings',   icon: '⚙️' },
+    const allTabs = [
+      { key: 'trips',     label: 'Trips',      icon: '🗺️', ownOnly: false },
+      { key: 'stories',   label: 'Stories',    icon: '📖', ownOnly: false },
+      { key: 'bookmarks', label: 'Bookmarks',  icon: '🔖', ownOnly: true },
+      { key: 'settings',  label: 'Settings',   icon: '⚙️', ownOnly: true },
     ]
 
     const trips     = ref<any[]>([])
@@ -258,37 +280,46 @@ export default defineComponent({
     const saving   = ref(false)
     const pwSaving = ref(false)
     const saveMsg  = ref('')
-    const saveMsgType  = ref('success')
+    const saveMsgType = ref('success')
     const pwMsg    = ref('')
-    const pwMsgType    = ref('success')
-    const uploadMsg    = ref('')
+    const pwMsgType   = ref('success')
+    const uploadMsg   = ref('')
     const confirmDelete = ref(false)
+
+    const viewingUserId = computed(() => route.params.userId as string || null)
+    const loggedInUserId = computed(() => {
+      const raw = localStorage.getItem('user_data') || localStorage.getItem('user')
+      if (!raw) return null
+      try { return JSON.parse(raw).id } catch { return null }
+    })
+    const isOwnProfile = computed(() =>
+      !viewingUserId.value || viewingUserId.value === loggedInUserId.value
+    )
+    const visibleTabs = computed(() =>
+      allTabs.filter(t => !t.ownOnly || isOwnProfile.value)
+    )
 
     const initials = computed(() => {
       if (!user.value?.full_name) return '?'
       return user.value.full_name.trim().split(/\s+/).map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     })
-
     const avatarColor = computed(() => {
       if (!user.value?.full_name) return COLORS[0]
       return COLORS[user.value.full_name.charCodeAt(0) % COLORS.length]
     })
 
     function formatRole(role: string): string {
-      if (!role) return 'Traveler'
       const map: Record<string, string> = {
-        traveler:  '✈️ Traveler',
-        admin:     '⚙️ Admin',
-        moderator: '🛡️ Moderator',
+        traveler: '✈️ Traveler', admin: '⚙️ Admin', moderator: '🛡️ Moderator',
       }
-      return map[role.toLowerCase()] || role
+      return map[role?.toLowerCase()] || role || 'Traveler'
     }
 
     function getAvatarSrc(url: string | null): string {
       if (!url) return ''
-      if (url.startsWith('data:'))   return url              
-      if (url.startsWith('http'))    return url               
-      if (url.startsWith('/uploads')) return `${API_URL}${url}` 
+      if (url.startsWith('data:'))    return url
+      if (url.startsWith('http'))     return url
+      if (url.startsWith('/uploads')) return `${API_URL}${url}`
       return url
     }
 
@@ -302,7 +333,6 @@ export default defineComponent({
           || sessionStorage.getItem('token')
           || ''
     }
-
     function getHeaders(isJson = true) {
       const token = getToken()
       return {
@@ -310,63 +340,103 @@ export default defineComponent({
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       }
     }
-
     function getStorageKey(): string {
-      if (localStorage.getItem('user_data')) return 'user_data'
-      if (localStorage.getItem('user'))      return 'user'
-      return 'user_data'
+      return localStorage.getItem('user_data') ? 'user_data' : 'user'
     }
-
     function saveUserLocally(updated: any) {
       localStorage.setItem(getStorageKey(), JSON.stringify(updated))
       user.value = { ...updated }
       window.dispatchEvent(new Event('user-updated'))
     }
 
-    async function loadProfile() {
-      const raw = localStorage.getItem('user_data')
-                || localStorage.getItem('user')
-                || localStorage.getItem('currentUser')
-      if (!raw) { user.value = null; return }
-
+    async function startChat() {
+      if (!user.value?.id || !loggedInUserId.value) {
+        router.push('/login'); return
+      }
       try {
-        const localUser = JSON.parse(raw)
-        user.value = localUser
+        const res = await fetch(`${API_URL}/chat/conversations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            createdBy:  loggedInUserId.value,
+            type:       'direct',
+            memberIds:  [user.value.id],
+          }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          router.push('/chat')
+        }
+      } catch {
+        router.push('/chat')
+      }
+    }
+
+    function goToStory(storyId: string) {
+      router.push(`/community/stories/${storyId}`)
+    }
+
+    async function loadProfile() {
+      if (isOwnProfile.value) {
+        const raw = localStorage.getItem('user_data')
+                  || localStorage.getItem('user')
+                  || localStorage.getItem('currentUser')
+        if (!raw) { user.value = null; return }
 
         try {
-          const freshRes = await fetch(`${API_URL}/users/${localUser.id}`)
-          if (freshRes.ok) {
-            const freshData = await freshRes.json()
-            if (freshData.success && freshData.data) {
-              const updated = {
-                ...localUser,
-                ...freshData.data,
-                avatar_url: freshData.data.avatar_url || localUser.avatar_url,
+          const localUser = JSON.parse(raw)
+          user.value = localUser
+
+          try {
+            const freshRes = await fetch(`${API_URL}/users/${localUser.id}`)
+            if (freshRes.ok) {
+              const freshData = await freshRes.json()
+              if (freshData.success && freshData.data) {
+                const updated = {
+                  ...localUser, ...freshData.data,
+                  avatar_url: freshData.data.avatar_url || localUser.avatar_url,
+                }
+                localStorage.setItem(getStorageKey(), JSON.stringify(updated))
+                user.value = updated
               }
-              localStorage.setItem(getStorageKey(), JSON.stringify(updated))
-              user.value = updated
             }
+          } catch {}
+
+          form.value = {
+            full_name: user.value.full_name || '',
+            username:  user.value.username  || '',
+            email:     user.value.email     || '',
+            bio:       user.value.bio       || '',
           }
-        } catch { }
 
-        form.value = {
-          full_name: user.value.full_name || '',
-          username:  user.value.username  || '',
-          email:     user.value.email     || '',
-          bio:       user.value.bio       || '',
-        }
+          const path = route.path
+          if (path.includes('/trips'))     activeTab.value = 'trips'
+          if (path.includes('/stories'))   activeTab.value = 'stories'
+          if (path.includes('/bookmarks')) activeTab.value = 'bookmarks'
+          if (path.includes('/settings'))  activeTab.value = 'settings'
 
-        const path = router.currentRoute.value.path
-        if (path.includes('/trips'))     activeTab.value = 'trips'
-        if (path.includes('/stories'))   activeTab.value = 'stories'
-        if (path.includes('/bookmarks')) activeTab.value = 'bookmarks'
-        if (path.includes('/settings'))  activeTab.value = 'settings'
+          await Promise.allSettled([loadTrips(), loadStories(), loadBookmarks()])
+        } catch { user.value = null }
 
-        await Promise.allSettled([loadTrips(), loadStories(), loadBookmarks()])
-      } catch { user.value = null }
+      } else {
+        loadingOtherProfile.value = true
+        activeTab.value = 'stories'
+        try {
+          const res  = await fetch(`${API_URL}/users/${viewingUserId.value}`)
+          const data = await res.json()
+          if (data.success && data.data) {
+            user.value = data.data
+            await loadStories() 
+          } else {
+            user.value = null
+          }
+        } catch { user.value = null }
+        finally { loadingOtherProfile.value = false }
+      }
     }
 
     async function loadTrips() {
+      if (!isOwnProfile.value) return 
       tripsLoading.value = true
       try {
         // Use the same API prefix as TripResultsView (backend uses /api)
@@ -384,16 +454,26 @@ export default defineComponent({
     async function loadStories() {
       storiesLoading.value = true
       try {
-        const res = await fetch(`${API_URL}/users/${user.value.id}/stories`, { headers: getHeaders() })
+        const userId = isOwnProfile.value ? user.value?.id : viewingUserId.value
+        const res = await fetch(`${API_URL}/users/${userId}/stories`, { headers: getHeaders() })
         if (res.ok) {
-          const data          = await res.json()
-          stories.value       = Array.isArray(data) ? data : (data.data || data.stories || [])
+          const data    = await res.json()
+          let allStories = Array.isArray(data) ? data : (data.data || data.stories || [])
+
+          if (!isOwnProfile.value) {
+            allStories = allStories.filter((s: any) =>
+              s.status === 'approved' || s.status === 'published'
+            )
+          }
+
+          stories.value       = allStories
           stats.value.stories = stories.value.length
         }
       } catch { stories.value = [] } finally { storiesLoading.value = false }
     }
 
     async function loadBookmarks() {
+      if (!isOwnProfile.value) return
       bookmarksLoading.value = true
       try {
         const res = await fetch(`${API_URL}/bookmarks`, { headers: getHeaders() })
@@ -406,17 +486,11 @@ export default defineComponent({
     }
 
     async function saveProfile() {
-      saving.value  = true
-      saveMsg.value = ''
+      saving.value = true; saveMsg.value = ''
       try {
         const res = await fetch(`${API_URL}/users/${user.value.id}`, {
-          method: 'PUT',
-          headers: getHeaders(),
-          body: JSON.stringify({
-            full_name: form.value.full_name,
-            username:  form.value.username,
-            bio:       form.value.bio,
-          }),
+          method: 'PUT', headers: getHeaders(),
+          body: JSON.stringify({ full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }),
         })
         if (res.ok) {
           const data    = await res.json()
@@ -425,19 +499,14 @@ export default defineComponent({
           form.value.full_name = updated.full_name || ''
           form.value.username  = updated.username  || ''
           form.value.bio       = updated.bio       || ''
-          saveMsg.value     = '✅ Profile updated successfully!'
-          saveMsgType.value = 'success'
+          saveMsg.value = '✅ Profile updated successfully!'; saveMsgType.value = 'success'
         } else {
-          const updated = { ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }
-          saveUserLocally(updated)
-          saveMsg.value     = '⚠️ Saved locally. Backend error'
-          saveMsgType.value = 'error'
+          saveUserLocally({ ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio })
+          saveMsg.value = '⚠️ Saved locally. Backend error'; saveMsgType.value = 'error'
         }
       } catch {
-        const updated = { ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }
-        saveUserLocally(updated)
-        saveMsg.value     = '✅ Saved locally!'
-        saveMsgType.value = 'success'
+        saveUserLocally({ ...user.value, full_name: form.value.full_name, username: form.value.username, bio: form.value.bio })
+        saveMsg.value = '✅ Saved locally!'; saveMsgType.value = 'success'
       } finally {
         saving.value = false
         setTimeout(() => { saveMsg.value = '' }, 5000)
@@ -448,30 +517,21 @@ export default defineComponent({
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
       if (file.size > 5 * 1024 * 1024) { uploadMsg.value = '❌ Max 5MB'; return }
-
       const reader = new FileReader()
       reader.onload = ev => { previewUrl.value = ev.target?.result as string }
       reader.readAsDataURL(file)
-
       uploadMsg.value = '⏳ Uploading...'
       try {
-        const fd    = new FormData()
-        fd.append('file', file)
+        const fd = new FormData(); fd.append('file', file)
         const token = getToken()
-        const res   = await fetch(`${API_URL}/users/${user.value.id}/upload-avatar`, {
-          method:  'POST',
+        const res = await fetch(`${API_URL}/users/${user.value.id}/upload-avatar`, {
+          method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body:    fd,
+          body: fd,
         })
-        if (res.ok) {
-          const data      = await res.json()
-          const avatarUrl = data.avatar_url || previewUrl.value
-          saveUserLocally({ ...user.value, avatar_url: avatarUrl })
-          uploadMsg.value = '✅ Photo updated!'
-        } else {
-          saveUserLocally({ ...user.value, avatar_url: previewUrl.value })
-          uploadMsg.value = '✅ Photo saved!'
-        }
+        const avatarUrl = res.ok ? ((await res.json()).avatar_url || previewUrl.value) : previewUrl.value
+        saveUserLocally({ ...user.value, avatar_url: avatarUrl })
+        uploadMsg.value = '✅ Photo updated!'
       } catch {
         saveUserLocally({ ...user.value, avatar_url: previewUrl.value })
         uploadMsg.value = '✅ Photo saved!'
@@ -480,16 +540,14 @@ export default defineComponent({
     }
 
     async function changePassword() {
-      if (pwForm.value.newPw !== pwForm.value.confirm) {
-        pwMsg.value = '❌ Passwords do not match!'; pwMsgType.value = 'error'; return
-      }
+      if (pwForm.value.newPw !== pwForm.value.confirm) { pwMsg.value = '❌ Passwords do not match!'; pwMsgType.value = 'error'; return }
       pwSaving.value = true; pwMsg.value = ''
       try {
         const res = await fetch(`${API_URL}/users/${user.value.id}/change-password`, {
           method: 'POST', headers: getHeaders(),
           body: JSON.stringify({ current_password: pwForm.value.current, new_password: pwForm.value.newPw }),
         })
-        pwMsg.value     = res.ok ? '✅ Password updated!' : '❌ Wrong current password.'
+        pwMsg.value = res.ok ? '✅ Password updated!' : '❌ Wrong current password.'
         pwMsgType.value = res.ok ? 'success' : 'error'
         if (res.ok) pwForm.value = { current: '', newPw: '', confirm: '' }
       } catch { pwMsg.value = '❌ Network error.'; pwMsgType.value = 'error' }
@@ -498,12 +556,8 @@ export default defineComponent({
 
     async function deleteAccount() {
       try {
-        await fetch(`${API_URL}/users/${user.value.id}/delete-account`, {
-          method: 'POST', headers: getHeaders(),
-        })
-      } finally {
-        localStorage.clear(); sessionStorage.clear(); router.push('/')
-      }
+        await fetch(`${API_URL}/users/${user.value.id}/delete-account`, { method: 'POST', headers: getHeaders() })
+      } finally { localStorage.clear(); sessionStorage.clear(); router.push('/') }
     }
 
     async function removeBookmark(id: string) {
@@ -518,7 +572,6 @@ export default defineComponent({
       if (!d) return ''
       return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     }
-
     function truncate(text: string, max: number): string {
       if (!text) return ''
       return text.length > max ? text.slice(0, max) + '...' : text
@@ -527,7 +580,8 @@ export default defineComponent({
     onMounted(loadProfile)
 
     return {
-      user, activeTab, tabs, previewUrl,
+      user, activeTab, visibleTabs, previewUrl, loadingOtherProfile,
+      isOwnProfile,
       trips, stories, bookmarks, stats,
       tripsLoading, storiesLoading, bookmarksLoading,
       form, pwForm, saving, pwSaving,
@@ -536,6 +590,7 @@ export default defineComponent({
       formatRole, getAvatarSrc,
       saveProfile, changePassword, deleteAccount,
       removeBookmark, onAvatarChange, formatDate, truncate,
+      startChat, goToStory,
     }
   },
 })
@@ -570,9 +625,11 @@ export default defineComponent({
 .pstat-num { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; color: #2D6A4F; line-height: 1; }
 .pstat-lbl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
 .profile-bio { font-size: 14px; color: #4a4a4a; line-height: 1.6; max-width: 480px; margin: 0; }
-.profile-actions { padding: 4px 0; flex-shrink: 0; }
+.profile-actions { padding: 4px 0; flex-shrink: 0; display: flex; gap: 10px; }
 .btn-edit { padding: 9px 20px; background: #1a2340; border: none; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s; }
 .btn-edit:hover { background: #2D6A4F; }
+.btn-message { padding: 9px 20px; background: #2D6A4F; border: none; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s; }
+.btn-message:hover { background: #1e4d39; }
 .tabs-bar { background: #fff; border-bottom: 1px solid #E0DDD6; }
 .tabs { display: flex; max-width: 1100px; margin: 0 auto; padding: 0 48px; }
 .tab { padding: 14px 20px; background: none; border: none; border-bottom: 2px solid transparent; font-size: 13px; font-weight: 500; color: #6B6B6B; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
@@ -580,13 +637,14 @@ export default defineComponent({
 .tab.active { color: #2D6A4F; border-bottom-color: #2D6A4F; font-weight: 600; }
 .tab-content { padding: 36px 48px; }
 .loading-state { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 60px; color: #888; }
+.loading-full  { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 40vh; gap: 12px; color: #888; }
 .spinner { width: 20px; height: 20px; border: 2px solid #E0DDD6; border-top-color: #2D6A4F; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { text-align: center; padding: 80px 20px; }
 .es-emoji { font-size: 56px; margin-bottom: 16px; }
 .es-title { font-family: 'Cinzel', serif; font-size: 22px; color: #1a1a1a; margin-bottom: 10px; }
 .es-desc  { font-size: 14px; color: #6B6B6B; line-height: 1.7; margin-bottom: 24px; }
-.es-btn   { display: inline-block; padding: 12px 28px; background: #2D6A4F; color: #fff; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s; }
+.es-btn   { display: inline-block; padding: 12px 28px; background: #2D6A4F; color: #fff; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; }
 .es-btn:hover { background: #1e4d39; }
 .trips-tab-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -613,12 +671,14 @@ export default defineComponent({
 .tc-type  { font-size: 12px; color: #C8922A; font-weight: 500; margin-bottom: 4px; text-transform: capitalize; }
 .tc-desc  { font-size: 12px; color: #888; line-height: 1.5; margin-top: 4px; }
 .stories-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
-.story-card { background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #E0DDD6; }
+.story-card { background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #E0DDD6; transition: transform 0.2s; }
+.story-card:hover { transform: translateY(-2px); }
 .sc-img { height: 130px; background-size: cover; background-position: center; }
 .sc-body { padding: 14px; }
 .sc-status { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
-.sc-status.published { color: #3B6D11; }
+.sc-status.published,.sc-status.approved { color: #3B6D11; }
 .sc-status.pending   { color: #854F0B; }
+.sc-status.flagged   { color: #AE2012; }
 .sc-title   { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; line-height: 1.4; }
 .sc-date    { font-size: 11px; color: #888; margin-bottom: 6px; }
 .sc-preview { font-size: 12px; color: #666; line-height: 1.5; }

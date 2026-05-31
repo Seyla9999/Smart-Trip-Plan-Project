@@ -26,6 +26,10 @@
         <template v-else>
           <a href="/chat" class="icon-btn" title="Messages">
             <span>💬</span>
+            <span v-if="chatUnread > 0" class="notif-badge chat-badge">
+              {{ chatUnread > 9 ? '9+' : chatUnread }}
+            </span>
+
           </a>
           <div class="notif-wrap" ref="notifRef">
             <button class="icon-btn" @click="toggleNotif" title="Notifications">
@@ -143,6 +147,7 @@
 
           <a href="/chat" class="mobile-dd-link" @click="mobileOpen = false">
             💬 Messages
+            <span v-if="chatUnread > 0" class="mobile-badge-inline">{{ chatUnread > 9 ? '9+' : chatUnread }}</span>
           </a>
           <div class="mobile-dd-link mobile-notif-toggle" @click="showMobileNotif = !showMobileNotif">
             🔔 Notifications
@@ -191,7 +196,9 @@ export default defineComponent({
 
     const notifications = ref<any[]>([])
     const unreadCount   = ref(0)
+    const chatUnread    = ref(0)
     let   notifInterval: any = null
+    let chatInterval: any = null
 
     function loadUser() {
       const raw = localStorage.getItem('user_data')
@@ -201,12 +208,25 @@ export default defineComponent({
         try {
           user.value = JSON.parse(raw)
           loadNotifications()
+          loadChatUnread()
         } catch { user.value = null }
       } else {
         user.value          = null
         notifications.value = []
         unreadCount.value   = 0
+        chatUnread.value = 0
       }
+      
+    }
+    async function loadChatUnread() {
+      if (!user.value?.id) return
+      try{
+        const res = await fetch(`${API_URL}/chat/unread?userId=${user.value.id}`)
+        if (res.ok) {
+          const data       = await res.json()
+          chatUnread.value = data.unread || 0
+        }
+      } catch {chatUnread.value = 0}
     }
 
     function getAvatarSrc(url: string | null): string {
@@ -310,6 +330,8 @@ export default defineComponent({
       window.addEventListener('storage',        loadUser)
       window.addEventListener('user-updated',   loadUser)
       notifInterval = setInterval(loadNotifications, 60000)
+      chatInterval = setInterval(loadChatUnread, 10000)
+      
     })
 
     onUnmounted(() => {
@@ -318,12 +340,13 @@ export default defineComponent({
       window.removeEventListener('storage',        loadUser)
       window.removeEventListener('user-updated',   loadUser)
       if (notifInterval) clearInterval(notifInterval)
+      if (chatInterval) clearInterval(chatInterval)
     })
 
     return {
       mobileOpen, menuOpen, notifOpen, showMobileNotif,
       menuRef, notifRef, currentPath, user,
-      notifications, unreadCount,
+      notifications, unreadCount,chatUnread,
       getInitials, getAvatarSrc, onAvatarError, handleLogout,
       toggleNotif, markAllRead, getNotifIcon, formatTime,
     }
