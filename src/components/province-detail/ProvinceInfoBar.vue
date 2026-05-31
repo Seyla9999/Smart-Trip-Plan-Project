@@ -3,6 +3,14 @@ defineProps<{
   provinceName: string;
   totalPlaces: number;
 }>();
+
+const emit = defineEmits<{
+  (e: "open-map"): void;
+}>();
+
+function openMapView() {
+  emit("open-map");
+}
 </script>
 
 <template>
@@ -12,7 +20,10 @@ defineProps<{
         {{ totalPlaces }} attractions found in {{ provinceName }} — view them
         all on the map
       </p>
-      <a href="#" class="map-link">OPEN MAP VIEW →</a>
+
+      <button class="map-link" type="button" @click="openMapView">
+        OPEN MAP VIEW →
+      </button>
     </div>
   </section>
 </template>
@@ -39,8 +50,11 @@ defineProps<{
 
 .map-link {
   color: #ffcb4d;
-  text-decoration: none;
+  background: transparent;
+  border: none;
   font-weight: 700;
+  cursor: pointer;
+  padding: 0;
 }
 
 @media (max-width: 640px) {
