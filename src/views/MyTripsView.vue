@@ -687,7 +687,7 @@ const goToReview = () => {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 const goToTrip = (trip: Trip) => {
-  router.push({ name: 'trip-results-saved', params: { id: trip.id } })
+  router.push({ name: 'trip-results', params: { id: trip.id } })
 }
 
 // ─── Share ────────────────────────────────────────────────────────────────────

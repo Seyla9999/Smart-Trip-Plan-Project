@@ -93,7 +93,7 @@ const router = createRouter({
       component: TripPlannerView,
       children: [
         { path: '',        name: 'trip',         component: TripFormView },
-        { path: 'results', name: 'trip-results', component: TripResultsView },
+        { path: 'results/:id?', name: 'trip-results', component: TripResultsView },
       ],
     },
     { path: '/plan-trip', redirect: '/trip' },
@@ -119,6 +119,11 @@ const router = createRouter({
       path: '/profile',           
       name: 'profile',           
       component: ProfileView 
+    },
+    {
+      path: '/my-trips',
+      name: 'my-trips',
+      component: MyTripsView,
     },
     { 
       path: '/profile/trips',     
@@ -206,27 +211,12 @@ router.beforeEach((to, _from, next) => {
     }
   }
 
-  const publicRoutes = [
-    "home",
-    "login",
-    "register",
-    "verify",
-    "discover",
-    "map",
-    "trip",
-    "trip-results",
-    "province-detail",
-    "place-detail",
-    "AttractionDetail",
-
-  ];
-  const routeName = typeof to.name === "string" ? to.name : "";
-
-  if (!token && !publicRoutes.includes(routeName) && !authRoutes.includes(to.path)) {
-    next("/login");
-  } else {
-    next();
+  if (authRoutes.includes(to.path) && token) {
+    next(isAdminUser ? '/admin' : '/')
+    return
   }
+
+  next()
 });
 
 export default router

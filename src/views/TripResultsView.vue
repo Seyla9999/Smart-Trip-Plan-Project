@@ -169,13 +169,18 @@
                 Click "+ Add to Day {{ selectedDay }}" on any attraction
               </div>
               <div v-for="(item, i) in schedule[selectedDay]" :key="item.placeId"
-                class="p-3 bg-green-50 rounded-lg border border-green-100 flex items-start gap-2">
+                class="p-3 bg-green-50 rounded-lg border border-green-100 flex items-start gap-2 cursor-pointer hover:bg-green-100 transition"
+                role="button"
+                tabindex="0"
+                @click="openScheduleItemMap(item)"
+                @keydown.enter.prevent="openScheduleItemMap(item)"
+                @keydown.space.prevent="openScheduleItemMap(item)">
                 <span class="text-lg flex-shrink-0">{{ item.icon }}</span>
                 <div class="flex-1 min-w-0">
                   <div class="text-xs font-bold text-green-800 truncate">{{ item.name }}</div>
                   <div class="text-xs text-gray-400 truncate">{{ item.vicinity }}</div>
                 </div>
-                <button @click="removeFromSchedule(selectedDay, i)"
+                <button @click.stop="removeFromSchedule(selectedDay, i)"
                   class="text-gray-300 hover:text-red-400 transition flex-shrink-0 text-lg leading-none">×</button>
               </div>
             </div>
@@ -210,7 +215,7 @@
               <div class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5 text-sm font-semibold">
                 <span class="text-green-700">{{ originName }}</span>
                 <span class="text-gray-400">→</span>
-                <span class="text-blue-600">{{ destinationName }}</span>
+                <span class="text-blue-600">{{ qPlanMode === 'attraction' && qAttractionName ? qAttractionName : destinationName }}</span>
               </div>
             </div>
 
@@ -244,7 +249,8 @@
                 <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Map Key</p>
                 <div class="flex flex-col gap-2 text-xs text-gray-600">
                   <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-700 ring-2 ring-green-700 ring-offset-1 flex-shrink-0"></span>Start</div>
-                  <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-500 ring-offset-1 flex-shrink-0"></span>Destination</div>
+                  <div v-if="qPlanMode === 'attraction'" class="flex items-center gap-2"><span class="text-base leading-none">⭐</span>Selected Attraction</div>
+                  <div v-else class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-500 ring-offset-1 flex-shrink-0"></span>Destination</div>
                   <div class="flex items-center gap-2"><span class="inline-block w-6 h-1 bg-blue-500 rounded flex-shrink-0"></span>Route</div>
                 </div>
               </div>
@@ -255,16 +261,16 @@
           <div class="bg-white rounded-xl p-6 shadow-sm">
             <div class="flex items-center justify-between mb-1">
               <h2 class="text-2xl font-bold text-green-800">Attractions Along Route</h2>
-              <span v-if="attractionsLoading" class="w-5 h-5 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
+              <span v-if="routeAttractionsLoading" class="w-5 h-5 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
             </div>
-            <p class="text-sm text-gray-400 mb-5">These are attractions from your database that sit close to the driving route.</p>
+            <p class="text-sm text-gray-400 mb-5">These are attractions found by Google near the driving route.</p>
 
-            <div v-if="attractionsLoading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div v-if="routeAttractionsLoading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               <div v-for="n in 6" :key="n" class="animate-pulse bg-gray-100 rounded-xl h-56"></div>
             </div>
 
             <div v-else-if="routeAttractions.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              <div v-for="item in routeAttractions" :key="item.place.id"
+              <div v-for="item in routeAttractions" :key="item.place.place_id ?? item.place.id"
                 class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer focus-within:ring-2 focus-within:ring-green-600 focus-within:ring-offset-2"
                 role="button"
                 tabindex="0"
@@ -273,11 +279,12 @@
                 @keydown.space.prevent="openAttraction(item.place)">
 
                 <div class="relative h-40 overflow-hidden bg-gray-100" @click.stop="openAttraction(item.place)">
-                  <img v-if="item.place.image_url || item.place.images?.[0]?.url"
-                    :src="item.place.image_url ?? item.place.images?.[0]?.url" :alt="getAttractionName(item.place)"
+                  <img v-if="getAttractionPhoto(item.place)"
+                    :src="getAttractionPhoto(item.place) || ''" :alt="getAttractionName(item.place)"
+                    @error="markImageError(item.place)"
                     class="w-full h-full object-cover" />
                   <div v-else class="w-full h-full flex items-center justify-center text-4xl">
-                    {{ attractionCategories.find(c => c.type.toLowerCase() === (item.place.category ?? '').toLowerCase())?.icon ?? '🏛️' }}
+                    {{ getCategoryIcon(item.place) }}
                   </div>
                   <span class="absolute top-3 right-3 bg-blue-700/90 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
                     ~ {{ item.distanceKm.toFixed(1) }} km from route
@@ -298,6 +305,14 @@
                       class="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
                       <option v-for="d in daysCount" :key="d" :value="d">Day {{ d }}</option>
                     </select>
+                    <button @click.stop="openAttraction(item.place)"
+                      class="px-3 py-1.5 border border-green-200 text-green-700 text-xs font-bold rounded-lg hover:bg-green-50 transition whitespace-nowrap">
+                      Detail
+                    </button>
+                    <button @click.stop="openInGoogleMaps(item.place)"
+                      class="px-3 py-1.5 border border-blue-200 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-50 transition whitespace-nowrap">
+                      Open
+                    </button>
                     <button @click.stop="addToSchedule(item.place)"
                       class="px-3 py-1.5 bg-green-700 text-white text-xs font-bold rounded-lg hover:bg-green-800 transition whitespace-nowrap">
                       + Add
@@ -308,7 +323,7 @@
             </div>
 
             <div v-else class="py-12 text-center text-gray-400 text-sm">
-              No attractions were found near this route.
+              No Google attractions were found along this route.
             </div>
           </div>
 
@@ -345,14 +360,15 @@
                 @keydown.space.prevent="openAttraction(place)">
 
                 <div class="relative h-40 overflow-hidden bg-gray-100" @click.stop="openAttraction(place)">
-                  <img v-if="place.image_url || place.images?.[0]?.url"
-                    :src="place.image_url ?? place.images?.[0]?.url" :alt="getAttractionName(place)"
+                  <img v-if="getAttractionPhoto(place)"
+                    :src="getAttractionPhoto(place) || ''" :alt="getAttractionName(place)"
+                    @error="markImageError(place)"
                     class="w-full h-full object-cover" />
                   <div v-else class="w-full h-full flex items-center justify-center text-4xl">
-                    {{ attractionCategories.find(c => c.type.toLowerCase() === (place.category ?? '').toLowerCase())?.icon ?? '🏛️' }}
+                    {{ getCategoryIcon(place) }}
                   </div>
                   <span class="absolute top-3 right-3 bg-green-800/90 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-                    {{ place.category ?? 'Attraction' }}
+                    {{ getCategoryIcon(place) }} {{ place.category ?? 'Attraction' }}
                   </span>
                   <span v-if="isAddedToAnyDay(String(place.id))"
                     class="absolute top-3 left-3 bg-yellow-400 text-gray-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
@@ -362,10 +378,11 @@
 
                 <div class="p-4 flex flex-col flex-1">
                   <h3 class="font-bold text-green-800 mb-0.5 leading-tight hover:underline" @click.stop="openAttraction(place)">{{ getAttractionName(place) }}</h3>
-                  <p class="text-xs text-gray-400 mb-1">📍 {{ getAttractionProvince(place) }}</p>
+                  <p class="text-xs text-gray-400 mb-1">📍 {{ place.vicinity || getAttractionProvince(place) }}</p>
                   <p v-if="place.description" class="text-xs text-gray-500 leading-relaxed mb-2 line-clamp-2">{{ place.description }}</p>
                   <div class="flex items-center gap-2 mb-3">
-                    <span class="text-sm font-bold text-amber-500">⭐ {{ Number(place.average_rating ?? place.rating ?? 0).toFixed(1) }}</span>
+                    <span class="text-sm font-bold text-amber-500">⭐ {{ Number(place.rating ?? place.average_rating ?? 0).toFixed(1) }}</span>
+                    <span v-if="place.user_ratings_total" class="text-xs text-gray-400">({{ place.user_ratings_total.toLocaleString() }})</span>
                   </div>
                   <div class="mt-auto flex items-center gap-2">
                     <select v-model="addToDayMap[String(place.id)]"
@@ -373,6 +390,14 @@
                       class="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-green-500">
                       <option v-for="d in daysCount" :key="d" :value="d">Day {{ d }}</option>
                     </select>
+                    <button @click.stop="openAttraction(place)"
+                      class="px-3 py-1.5 border border-green-200 text-green-700 text-xs font-bold rounded-lg hover:bg-green-50 transition whitespace-nowrap">
+                      Detail
+                    </button>
+                    <button @click.stop="openInGoogleMaps(place)"
+                      class="px-3 py-1.5 border border-blue-200 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-50 transition whitespace-nowrap">
+                      Open
+                    </button>
                     <button @click.stop="addToSchedule(place)"
                       class="px-3 py-1.5 bg-green-700 text-white text-xs font-bold rounded-lg hover:bg-green-800 transition whitespace-nowrap">
                       + Add
@@ -434,7 +459,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from
 import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import router from '../router'
+import API from '@/api/axios'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -463,12 +488,46 @@ interface TripMember     { id: string; user_id: string; role: string }
 interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
 interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
-// Matches your NestJS /attractions response
-interface AttractionProvince { name_en?: string }
-interface Attraction   { id: string | number; name_en: string; name?: string; description?: string; province?: AttractionProvince | string; province_id?: string; image_url?: string; hero_image?: string; images?: { url: string }[]; average_rating?: number; rating?: number; category?: string; latitude?: number; longitude?: number }
+// Google Places shape (returned by /api/places proxy)
+interface PlacePhoto { photo_reference: string; width: number; height: number }
+interface Attraction {
+  // Google Places fields
+  place_id?: string
+  vicinity?: string
+  types?: string[]
+  user_ratings_total?: number
+  geometry?: { location: { lat: number; lng: number } }
+  photos?: PlacePhoto[]
+  // shared / compat
+  id: string | number
+  name: string
+  name_en?: string
+  description?: string
+  province?: string | { name_en?: string; nameEn?: string }
+  province_id?: string
+  image_url?: string
+  hero_image?: string
+  average_rating?: number
+  review_count?: number
+  rating?: number
+  category?: string
+  latitude?: number
+  longitude?: number
+  __source?: 'db' | 'google'
+}
 // Matches your NestJS /api/points-of-interest response
 interface POI          { id: string | number; name: string; type: string; icon?: string; description?: string; distance?: string; latitude?: number; longitude?: number }
-interface ScheduleItem { placeId: string; name: string; vicinity: string; icon: string; startTime?: string; endTime?: string }
+interface ScheduleItem {
+  placeId: string
+  name: string
+  vicinity: string
+  icon: string
+  source?: 'db' | 'google'
+  latitude?: number
+  longitude?: number
+  startTime?: string
+  endTime?: string
+}
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -514,12 +573,16 @@ const allAttractions             = ref<Attraction[]>([])
 const attractionsLoading         = ref(false)
 const selectedAttractionCategory = ref('all')
 const addToDayMap                = reactive<Record<string, number>>({})
+const imageLoadErrorMap          = reactive<Record<string, boolean>>({})
 const routeLinePoints            = ref<[number, number][]>([])
 const ROUTE_PROXIMITY_KM         = 20
 
+// Exact coords for the selected attraction (attraction mode only)
+const selectedAttractionCoords = ref<{ lat: number; lng: number } | null>(null)
+
 // POIs — fetched from your backend /api/points-of-interest
-const allPOIs      = ref<POI[]>([])
-const poisLoading  = ref(false)
+const allPOIs     = ref<POI[]>([])
+const poisLoading = ref(false)
 
 // Schedule: day → list of ScheduleItems
 const schedule = ref<Record<number, ScheduleItem[]>>({})
@@ -527,6 +590,7 @@ const schedule = ref<Record<number, ScheduleItem[]>>({})
 let leafletMap:    L.Map        | null = null
 let poiLayerGroup: L.LayerGroup | null = null
 let attractionLayerGroup: L.LayerGroup | null = null
+let attractionMarkers: Map<string, L.Marker> = new Map()
 
 // ─── Derived ──────────────────────────────────────────────────────────────────
 const tripId      = computed(() => vueRoute.params.id      as string || '')
@@ -534,6 +598,9 @@ const qOrigin     = computed(() => vueRoute.query.origin   as string || '')
 const qDest = computed(() => (vueRoute.query.dest as string) || (vueRoute.query.destination as string) || '')
 const qStart      = computed(() => vueRoute.query.from     as string || '')
 const qEnd        = computed(() => vueRoute.query.to       as string || '')
+const qAttractionId   = computed(() => vueRoute.query.attractionId   as string || '')
+const qAttractionName = computed(() => vueRoute.query.attractionName as string || '')
+const qPlanMode       = computed(() => vueRoute.query.mode           as string || 'province')
 const travelType  = computed(() => tripData.value?.travel_type || vueRoute.query.type as string || 'friends')
 
 const origin = computed(() => {
@@ -638,74 +705,328 @@ function selectInput(e: Event) {
   try { (e.target as HTMLInputElement).select() } catch {}
 }
 
-// ─── Attractions — fetched from YOUR backend ──────────────────────────────────
-const attractionCategories = [
-  { type: 'all',       label: 'All',        icon: '🗺️' },
-  { type: 'Cultural',  label: 'Cultural',   icon: '🏛️' },
-  { type: 'Nature',    label: 'Nature',     icon: '🌿' },
-  { type: 'Adventure', label: 'Adventure',  icon: '🧗' },
-  { type: 'Food',      label: 'Food',       icon: '🍽️' },
-  { type: 'History',   label: 'History',    icon: '🏺' },
+// ─── Attractions — Google Places via backend proxy ────────────────────────────
+
+// Google Places type → our category label/icon
+const GOOGLE_TYPE_MAP: { type: string; label: string; icon: string }[] = [
+  { type: 'tourist_attraction', label: 'Attraction', icon: '🏛️' },
+  { type: 'natural_feature',    label: 'Nature',     icon: '🌿' },
+  { type: 'park',               label: 'Nature',     icon: '🌿' },
+  { type: 'museum',             label: 'Cultural',   icon: '🏺' },
+  { type: 'place_of_worship',   label: 'Cultural',   icon: '⛩️' },
+  { type: 'restaurant',         label: 'Food',       icon: '🍽️' },
+  { type: 'lodging',            label: 'Hotel',      icon: '🏨' },
 ]
+
+const attractionCategories = [
+  { type: 'all',         label: 'All',        icon: '🗺️' },
+  { type: 'Attraction',  label: 'Attraction',  icon: '🏛️' },
+  { type: 'Nature',      label: 'Nature',      icon: '🌿' },
+  { type: 'Cultural',    label: 'Cultural',    icon: '🏺' },
+  { type: 'Food',        label: 'Food',        icon: '🍽️' },
+]
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
+type ProvinceLookup = { id: number; nameEn: string }
+
+async function resolveProvinceLookup(slug: string): Promise<ProvinceLookup | null> {
+  try {
+    const response = await API.get('/provinces')
+    const rawProvinces = Array.isArray(response.data)
+      ? response.data
+      : (response.data?.provinces ?? response.data?.data ?? [])
+
+    const provinces = (Array.isArray(rawProvinces) ? rawProvinces : [])
+      .map((province: any) => ({
+        id: Number(province.id ?? province.province_id ?? province.provinceId),
+        nameEn: String(province.nameEn ?? province.name_en ?? province.name ?? ''),
+      }))
+      .filter((province: ProvinceLookup) => province.id && province.nameEn)
+
+    const matched = provinces.find((province) => slugify(province.nameEn) === slug)
+    if (matched) return matched
+  } catch (error) {
+    console.warn('Failed to resolve province lookup from database:', error)
+  }
+
+  return null
+}
+
+function normalizeDatabaseAttraction(raw: any, provinceName: string): Attraction | null {
+  if (!raw) return null
+
+  const id = raw.id ?? raw.attraction_id
+  const name = String(raw.nameEn ?? raw.name_en ?? raw.name ?? '').trim()
+
+  if (!id || !name) return null
+
+  const rating = Number(raw.averageRating ?? raw.average_rating ?? raw.rating ?? 0)
+  const reviews = Number(raw.reviewCount ?? raw.review_count ?? raw.reviews_count ?? 0)
+  const category = String(raw.category ?? raw.main_category ?? 'Attraction')
+
+  return {
+    id,
+    name,
+    name_en: name,
+    description: String(raw.description ?? 'No description available yet.'),
+    province: raw.province?.nameEn ?? raw.province?.name_en ?? raw.province_name ?? provinceName,
+    province_id: String(raw.provinceId ?? raw.province_id ?? ''),
+    image_url: raw.heroImage ?? raw.hero_image ?? raw.imageUrl ?? raw.image_url ?? null,
+    hero_image: raw.heroImage ?? raw.hero_image ?? null,
+    average_rating: rating,
+    review_count: reviews,
+    rating,
+    category,
+    latitude: raw.latitude ?? raw.lat ?? null,
+    longitude: raw.longitude ?? raw.lng ?? null,
+    // mark as coming from our database
+    __source: 'db',
+  }
+}
+
+async function fetchProvinceAttractionsFromDatabase(destinationSlug: string) {
+  const provinceLookup = await resolveProvinceLookup(destinationSlug)
+
+  if (!provinceLookup) {
+    throw new Error('Unable to resolve province from database.')
+  }
+
+  const response = await API.get(`/attractions/province/${provinceLookup.id}`)
+  const rawAttractions = Array.isArray(response.data)
+    ? response.data
+    : (response.data?.attractions ?? response.data?.data ?? response.data ?? [])
+
+  return (Array.isArray(rawAttractions) ? rawAttractions : [])
+    .map((item: any) => normalizeDatabaseAttraction(item, provinceLookup.nameEn))
+    .filter(Boolean) as Attraction[]
+}
+
+function googleTypeToCategory(types: string[] = []): string {
+  for (const t of types) {
+    const match = GOOGLE_TYPE_MAP.find(m => m.type === t)
+    if (match) return match.label
+  }
+  return 'Attraction'
+}
+
+function googleTypeToCategoryIcon(types: string[] = []): string {
+  for (const t of types) {
+    const match = GOOGLE_TYPE_MAP.find(m => m.type === t)
+    if (match) return match.icon
+  }
+  return '📍'
+}
+
+/** Build a proxied photo URL from a Google photo_reference */
+function googlePhotoUrl(ref: string, maxwidth = 400): string {
+  return `${API_BASE}/api/places/photo?ref=${encodeURIComponent(ref)}&maxwidth=${maxwidth}`
+}
+
+/** Normalize a Google Places result into our Attraction shape */
+function mapGooglePlace(p: any): Attraction {
+  return {
+    id:        p.place_id,
+    place_id:  p.place_id,
+    name:      p.name,
+    name_en:   p.name,
+    vicinity:  p.vicinity ?? '',
+    rating:    p.rating,
+    average_rating: p.rating,
+    user_ratings_total: p.user_ratings_total,
+    types:     p.types ?? [],
+    category:  googleTypeToCategory(p.types),
+    geometry:  p.geometry,
+    photos:    p.photos ?? [],
+    image_url: p.photos?.[0]?.photo_reference
+      ? googlePhotoUrl(p.photos[0].photo_reference)
+      : undefined,
+    latitude:  p.geometry?.location?.lat,
+    longitude: p.geometry?.location?.lng,
+    province:  destinationName.value,
+    // mark as from Google Places (not our DB)
+    __source: 'google',
+  }
+}
+
+// Province attractions — fetched from the backend database
+const provinceAttractions    = ref<Attraction[]>([])
+// Route attractions — discovered from Google Places along the route polyline
+const routeAttractionsGoogle = ref<{ place: Attraction; distanceKm: number }[]>([])
+const routeAttractionsLoading = ref(false)
+
+/** Call /api/places once and return normalized results */
+async function fetchGooglePlaces(lat: number, lng: number, type = 'tourist_attraction', radius = 20000): Promise<Attraction[]> {
+  const token = localStorage.getItem('auth_token')
+  const res = await fetch(
+    `${API_BASE}/api/places?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`,
+    { headers: { Authorization: `Bearer ${token ?? ''}` } }
+  )
+  if (!res.ok) throw new Error(`Places API ${res.status}`)
+  const data = await res.json()
+  return (data.results ?? []).map(mapGooglePlace)
+}
+
+/** Sample N evenly-spaced points along the route polyline */
+function sampleRoutePoints(route: [number, number][], count: number): [number, number][] {
+  if (route.length <= count) return route
+  const step = (route.length - 1) / (count - 1)
+  return Array.from({ length: count }, (_, i) => route[Math.round(i * step)])
+}
 
 const fetchAttractions = async () => {
   if (!destination.value) return
   attractionsLoading.value = true
   allAttractions.value = []
+  provinceAttractions.value = []
+  routeAttractionsGoogle.value = []
+
   try {
-    const token = localStorage.getItem('auth_token')
-    // Load the full backend attraction catalog so we can split it into route and province lists.
-    const res = await fetch(
-      `${API_BASE}/attractions?limit=500`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    if (!res.ok) throw new Error(`Attractions API error ${res.status}`)
-    const data = await res.json()
-    allAttractions.value = Array.isArray(data) ? data : (data.data ?? data.attractions ?? [])
+    // ① Province attractions — database-backed attractions for the selected province
+    const provPlaces = await fetchProvinceAttractionsFromDatabase(destination.value)
+    provinceAttractions.value = provPlaces
+    allAttractions.value = provPlaces
   } catch (e) {
-    console.error('fetchAttractions failed:', e)
+    console.error('fetchAttractions (database) failed:', e)
+
+    const destCoords = provinceCoords[destination.value]
+    if (destCoords) {
+      try {
+        const fallbackPlaces = await fetchGooglePlaces(destCoords[0], destCoords[1], 'tourist_attraction', 25000)
+        provinceAttractions.value = fallbackPlaces
+        allAttractions.value = fallbackPlaces
+      } catch (fallbackError) {
+        console.error('Province attractions fallback failed:', fallbackError)
+      }
+    }
   } finally {
     attractionsLoading.value = false
   }
 }
 
-const filteredAttractions = computed(() => {
-  const province = normalizeText(destinationName.value)
-  const provinceList = allAttractions.value.filter((attraction) => {
-    const attractionProvince = normalizeText(getAttractionProvince(attraction))
-    if (!province || !attractionProvince) return false
-    return attractionProvince === province || attractionProvince.includes(province) || province.includes(attractionProvince)
-  })
-
-  if (selectedAttractionCategory.value === 'all') return provinceList
-  return provinceList.filter(a => normalizeText(a.category ?? '') === selectedAttractionCategory.value.toLowerCase())
-})
-
-const routeAttractions = computed(() => {
+async function fetchRouteAttractionsFromGoogle() {
   const route = routeLinePoints.value
-  if (route.length < 2) return []
+  if (route.length < 2) {
+    routeAttractionsGoogle.value = []
+    return
+  }
 
-  return allAttractions.value
-    .map((place) => ({ place, distanceKm: distanceToRouteKm(place, route) }))
-    .filter((item) => Number.isFinite(item.distanceKm) && item.distanceKm <= ROUTE_PROXIMITY_KM)
-    .sort((left, right) => left.distanceKm - right.distanceKm)
+  routeAttractionsLoading.value = true
+  try {
+    const sampledPoints = sampleRoutePoints(route, Math.min(5, route.length))
+    const requests: Promise<Attraction[]>[] = []
+
+    for (const [lat, lng] of sampledPoints) {
+      for (const type of ['tourist_attraction', 'natural_feature', 'park']) {
+        requests.push(fetchGooglePlaces(lat, lng, type, 15000).catch(() => []))
+      }
+    }
+
+    const results = await Promise.all(requests)
+    const merged = results.reduce((all, items) => all.concat(items), [] as Attraction[])
+    const deduped = new Map<string, Attraction>()
+
+    for (const place of merged) {
+      const key = String(place.place_id ?? place.id ?? getAttractionName(place))
+      if (!deduped.has(key)) deduped.set(key, place)
+    }
+
+    routeAttractionsGoogle.value = [...deduped.values()]
+      .map((place) => ({ place, distanceKm: distanceToRouteKm(place, route) }))
+      .filter((item) => Number.isFinite(item.distanceKm) && item.distanceKm <= ROUTE_PROXIMITY_KM)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 12)
+  } catch (error) {
+    console.error('Failed to fetch Google route attractions:', error)
+    routeAttractionsGoogle.value = []
+  } finally {
+    routeAttractionsLoading.value = false
+  }
+}
+
+watch(routeLinePoints, () => {
+  void fetchRouteAttractionsFromGoogle()
 })
+
+const filteredAttractions = computed(() => {
+  if (selectedAttractionCategory.value === 'all') return provinceAttractions.value
+  return provinceAttractions.value.filter(a =>
+    normalizeText(a.category ?? '') === normalizeText(selectedAttractionCategory.value)
+  )
+})
+
+const routeAttractions = computed(() => routeAttractionsGoogle.value)
 
 function normalizeText(value: unknown): string {
   return String(value ?? '').trim().toLowerCase()
 }
 
-const getAttractionName = (attraction: Attraction & Record<string, unknown>) => {
+const getAttractionName = (attraction: Attraction) => {
   const name = attraction.name ?? (attraction as any).name_en ?? (attraction as any).title
   return typeof name === 'string' && name.trim() ? name : 'Untitled attraction'
 }
 
-const getAttractionProvince = (attraction: Attraction & Record<string, unknown>) => {
+const getAttractionKey = (attraction: Attraction) =>
+  String(attraction.id ?? attraction.place_id ?? getAttractionName(attraction))
+
+const normalizeMediaUrl = (value: unknown): string | null => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  if (/^https?:\/\//i.test(raw)) return raw
+  if (raw.startsWith('/')) return `${API_BASE}${raw}`
+  return `${API_BASE}/${raw}`
+}
+
+const markImageError = (attraction: Attraction) => {
+  imageLoadErrorMap[getAttractionKey(attraction)] = true
+}
+
+/** Get a display photo URL — prefers already-resolved image_url, then builds proxy URL */
+// Small inline SVG placeholder (encoded) used when no image is available
+const DEFAULT_PLACEHOLDER_SVG = encodeURIComponent(`
+  <svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>
+    <rect width='100%' height='100%' fill='#f3f4f6'/>
+    <g fill='#d1d5db' font-family='Arial, Helvetica, sans-serif' font-size='140' text-anchor='middle'>
+      <text x='50%' y='50%' dy='0.35em'>🏛️</text>
+    </g>
+  </svg>
+`)
+
+const getAttractionPhoto = (attraction: Attraction): string | null => {
+  const key = getAttractionKey(attraction)
+  if (imageLoadErrorMap[key]) return null
+
+  const direct = normalizeMediaUrl(attraction.image_url)
+  if (direct) return direct
+
+  const hero = normalizeMediaUrl((attraction as any).hero_image)
+  if (hero) return hero
+
+  const photos = (attraction as any).photos as PlacePhoto[] | undefined
+  if (photos?.[0]?.photo_reference) return googlePhotoUrl(photos[0].photo_reference)
+  // Fallback to an inline SVG placeholder so the card always shows an image
+  return `data:image/svg+xml;utf8,${DEFAULT_PLACEHOLDER_SVG}`
+}
+
+/** Category icon for a Google Place */
+const getCategoryIcon = (attraction: Attraction): string => {
+  return googleTypeToCategoryIcon((attraction as any).types ?? [])
+}
+
+const getAttractionProvince = (attraction: Attraction) => {
   const province = attraction.province ?? (attraction as any).province_name ?? (attraction as any).province?.name ?? (attraction as any).province?.name_en
   return typeof province === 'string' ? province : ''
 }
 
-function getAttractionCoords(attraction: Attraction & Record<string, unknown>): { lat: number; lng: number } | null {
+function getAttractionCoords(attraction: Attraction): { lat: number; lng: number } | null {
   const lat = Number(attraction.latitude ?? (attraction as any).lat)
   const lng = Number(attraction.longitude ?? (attraction as any).lng)
 
@@ -776,7 +1097,7 @@ function pointToSegmentDistanceKm(
   return Math.hypot(projectedPoint.x - closestX, projectedPoint.y - closestY)
 }
 
-function distanceToRouteKm(attraction: Attraction & Record<string, unknown>, route: [number, number][]) {
+function distanceToRouteKm(attraction: Attraction, route: [number, number][]) {
   const coords = getAttractionCoords(attraction)
   if (!coords || route.length < 2) return Number.POSITIVE_INFINITY
 
@@ -793,8 +1114,39 @@ function distanceToRouteKm(attraction: Attraction & Record<string, unknown>, rou
   return shortestDistance
 }
 
+const openInGoogleMaps = (attraction: Attraction) => {
+  // Prefer place_id when available
+  const placeId = (attraction as any).place_id ?? null
+  if (placeId) {
+    const url = `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(String(placeId))}`
+    window.open(url, '_blank')
+    return
+  }
+
+  // Fallback to coordinates
+  const coords = getAttractionCoords(attraction)
+  if (coords) {
+    const url = `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`
+    window.open(url, '_blank')
+    return
+  }
+
+  // Last resort: search by name
+  const q = encodeURIComponent(getAttractionName(attraction))
+  window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank')
+}
+
 const openAttraction = (attraction: Attraction) => {
-  router.push({ name: 'AttractionDetail', params: { id: String(attraction.id) } })
+  // If attraction came from our DB, navigate to in-app detail.
+  // If it came from Google Places, open Google Maps (hybrid behavior).
+  const src = (attraction as any).__source ?? null
+  if (src === 'db') {
+    router.push({ name: 'AttractionDetail', params: { id: String(attraction.id) } })
+    return
+  }
+
+  // For google or unknown sources, open Google Maps
+  openInGoogleMaps(attraction)
 }
 
 // ─── Schedule management ──────────────────────────────────────────────────────
@@ -807,20 +1159,22 @@ const addToSchedule = (attraction: Attraction) => {
     showToast('Already added to Day ' + day, 'error')
     return
   }
-  const categoryIcon = attractionCategories.find(c =>
-    c.type.toLowerCase() === (attraction.category ?? '').toLowerCase()
-  )?.icon ?? '📍'
+  const categoryIcon = getCategoryIcon(attraction as any)
 
   const attractionName = attraction.name_en ?? attraction.name ?? ''
   const provinceName = typeof attraction.province === 'object'
     ? (attraction.province?.name_en ?? '')
     : (attraction.province ?? '')
+  const coords = getAttractionCoords(attraction)
 
   schedule.value[day].push({
     placeId:  key,
     name:     attractionName,
     vicinity: provinceName,
     icon:     categoryIcon,
+    source:   (attraction as any).__source === 'google' ? 'google' : 'db',
+    latitude: coords?.lat,
+    longitude: coords?.lng,
   })
   selectedDay.value = day
   showToast(`Added to Day ${day}: ${attractionName}`, 'success')
@@ -832,6 +1186,21 @@ const removeFromSchedule = (day: number, idx: number) => {
 
 const clearDay = (day: number) => {
   schedule.value[day] = []
+}
+
+const openScheduleItemMap = (item: ScheduleItem) => {
+  if (item.placeId && item.source === 'google') {
+    window.open(`https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(item.placeId)}`, '_blank')
+    return
+  }
+
+  if (Number.isFinite(item.latitude) && Number.isFinite(item.longitude)) {
+    window.open(`https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`, '_blank')
+    return
+  }
+
+  const query = encodeURIComponent([item.name, item.vicinity].filter(Boolean).join(', '))
+  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank')
 }
 
 const isAddedToAnyDay = (id: string) =>
@@ -854,7 +1223,7 @@ const savePlan = async () => {
       items.forEach((item, idx) => {
         const itineraryItem: {
           day_number: number
-          attraction_id: string
+          attraction_id?: string
           title: string
           description: string
           sort_order: number
@@ -865,7 +1234,10 @@ const savePlan = async () => {
           title:         item.name,
           description:   '',
           sort_order:    idx,
-          attraction_id: item.placeId,
+        }
+
+        if (item.source !== 'google') {
+          itineraryItem.attraction_id = item.placeId
         }
 
         if (item.startTime) itineraryItem.start_time = item.startTime
@@ -876,7 +1248,7 @@ const savePlan = async () => {
       return acc
     }, [] as Array<{
       day_number: number
-      attraction_id: string
+      attraction_id?: string
       title: string
       description: string
       sort_order: number
@@ -959,14 +1331,21 @@ const fetchTrip = async () => {
         const day = item.day_number ?? (item.day_index ?? 0) + 1
         if (!restored[day]) restored[day] = []
         const name = item.attraction?.name_en ?? item.notes ?? item.title ?? 'Unnamed stop'
-        const catIcon = attractionCategories.find(c =>
-          c.type.toLowerCase() === (item.attraction?.category ?? '').toLowerCase()
-        )?.icon ?? '📍'
+        const catIcon = '📍'
+        const savedAttraction = item.attraction ? {
+          ...item.attraction,
+          latitude: (item.attraction as any).latitude ?? (item.attraction as any).lat,
+          longitude: (item.attraction as any).longitude ?? (item.attraction as any).lng,
+        } : null
+        const coords = savedAttraction ? getAttractionCoords(savedAttraction as any) : null
         restored[day].push({
           placeId: String(item.attraction_id ?? item.id),
           name,
           vicinity: item.attraction?.province ?? item.location ?? '',
           icon: catIcon,
+          source: item.attraction_id ? 'db' : 'google',
+          latitude: coords?.lat,
+          longitude: coords?.lng,
           startTime: item.start_time,
           endTime: item.end_time,
         })
@@ -994,10 +1373,10 @@ const togglePacking = async (itemId: string) => {
 
 // ─── Filters / POIs — fetched from YOUR backend ───────────────────────────────
 const filters = ref<Filter[]>([
-  { id: 'hospital',   label: 'Hospital',   icon: '🏥', active: false  },
-  { id: 'police',     label: 'Police',     icon: '🚔', active: false  },
-  { id: 'atm',        label: 'ATM',        icon: '💰', active: false  },
-  { id: 'restaurant', label: 'Restaurant', icon: '🍽️', active: false },
+  { id: 'hospital',   label: 'Hospital',   icon: '🏥', active: true  },
+  { id: 'police',     label: 'Police',     icon: '🚔', active: true  },
+  { id: 'atm',        label: 'ATM',        icon: '💰', active: true  },
+  { id: 'restaurant', label: 'Restaurant', icon: '🍽️', active: true },
 ])
 
 const fetchPOIs = async () => {
@@ -1005,6 +1384,16 @@ const fetchPOIs = async () => {
   poisLoading.value = false
   allPOIs.value = []
 }
+
+/** After allAttractions loads, resolve the exact lat/lng of the chosen attraction */
+const resolveSelectedAttractionCoords = () => {
+  if (qPlanMode.value !== 'attraction' || !qAttractionId.value) return
+  const found = allAttractions.value.find(a => String(a.id) === qAttractionId.value)
+  if (found) {
+    selectedAttractionCoords.value = getAttractionCoords(found as any)
+  }
+}
+watch(allAttractions, resolveSelectedAttractionCoords)
 
 const filteredPOIs = computed(() => {
   const activeTypes = filters.value.filter(f => f.active).map(f => f.id)
@@ -1035,17 +1424,49 @@ const fetchRoadRoute = async (o: [number, number], d: [number, number]): Promise
 
 const initMap = async () => {
   if (!mapContainer.value) return
-  const oC: [number, number] = provinceCoords[origin.value]      || [11.5564, 104.9282]
-  const dC: [number, number] = provinceCoords[destination.value] || [13.3671, 103.8448]
+  const oC: [number, number] = provinceCoords[origin.value] || [11.5564, 104.9282]
+
+  // ── Resolve destination pin ───────────────────────────────────────────────
+  // In attraction mode: use the attraction's exact coords (or province centroid
+  // as a fallback while the catalog is still loading).
+  // In province mode: use the province centroid as before.
+  let dC: [number, number] = provinceCoords[destination.value] || [13.3671, 103.8448]
+  let destLabel = destinationName.value
+  let isAttractionMode = qPlanMode.value === 'attraction'
+
+  if (isAttractionMode && selectedAttractionCoords.value) {
+    dC = [selectedAttractionCoords.value.lat, selectedAttractionCoords.value.lng]
+    destLabel = qAttractionName.value || destinationName.value
+  }
 
   leafletMap = L.map(mapContainer.value, { zoomControl: true, scrollWheelZoom: true })
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>', maxZoom: 18,
   }).addTo(leafletMap)
 
-  const mkIcon = (html: string) => L.divIcon({ html, className: '', iconSize: [0,0], iconAnchor: [0,0] })
-  L.marker(oC, { icon: mkIcon(`<div class="lf-marker lf-origin"><div class="lf-pin lf-pin-green"></div><div class="lf-label">${originName.value}</div></div>`) }).addTo(leafletMap)
-  L.marker(dC, { icon: mkIcon(`<div class="lf-marker lf-dest"><div class="lf-pin lf-pin-blue"></div><div class="lf-label">${destinationName.value}</div></div>`) }).addTo(leafletMap)
+  const mkIcon = (html: string) => L.divIcon({ html, className: '', iconSize: [0, 0], iconAnchor: [0, 0] })
+
+  // Origin marker (green)
+  L.marker(oC, {
+    icon: mkIcon(`<div class="lf-marker lf-origin"><div class="lf-pin lf-pin-green"></div><div class="lf-label">${originName.value}</div></div>`)
+  }).addTo(leafletMap)
+
+  // Destination marker — star pin for attraction mode, normal blue for province mode
+  if (isAttractionMode) {
+    L.marker(dC, {
+      icon: mkIcon(
+        `<div class="lf-marker lf-dest">` +
+        `<div class="lf-star-pin">⭐</div>` +
+        `<div class="lf-label lf-label-attraction">${destLabel}</div>` +
+        `</div>`
+      )
+    }).addTo(leafletMap)
+  } else {
+    L.marker(dC, {
+      icon: mkIcon(`<div class="lf-marker lf-dest"><div class="lf-pin lf-pin-blue"></div><div class="lf-label">${destLabel}</div></div>`)
+    }).addTo(leafletMap)
+  }
+
   leafletMap.fitBounds(L.latLngBounds([oC, dC]), { padding: [60, 60] })
 
   poiLayerGroup = L.layerGroup().addTo(leafletMap)
@@ -1061,6 +1482,49 @@ const initMap = async () => {
   L.polyline(coords, { color: '#fff', weight: 2, opacity: 0.45, dashArray: '8 14', lineJoin: 'round' }).addTo(leafletMap)
   leafletMap.fitBounds(line.getBounds(), { padding: [60, 60] })
 }
+
+// Track route polylines explicitly so we can remove/redraw without touching other layers
+let routePolylines: L.Polyline[] = []
+
+/**
+ * Re-draw the route when the selected attraction's coords become available
+ * (i.e. after allAttractions finishes loading, later than initMap).
+ */
+watch(selectedAttractionCoords, async (coords) => {
+  if (!coords || !leafletMap || qPlanMode.value !== 'attraction') return
+
+  const oC: [number, number] = provinceCoords[origin.value] || [11.5564, 104.9282]
+  const dC: [number, number] = [coords.lat, coords.lng]
+
+  // Remove previously drawn route lines only
+  routePolylines.forEach(p => { try { p.remove() } catch {} })
+  routePolylines = []
+
+  // Fetch road route to the exact attraction coords
+  isLoadingRoute.value = true
+  const routeCoords = await fetchRoadRoute(oC, dC)
+  isLoadingRoute.value = false
+  routeLinePoints.value = routeCoords
+
+  if (!leafletMap) return
+
+  const solidLine = L.polyline(routeCoords, { color: '#1a73e8', weight: 5, opacity: 0.9, lineJoin: 'round', lineCap: 'round' }).addTo(leafletMap)
+  const dashLine  = L.polyline(routeCoords, { color: '#fff',    weight: 2, opacity: 0.45, dashArray: '8 14', lineJoin: 'round' }).addTo(leafletMap)
+  routePolylines = [solidLine, dashLine]
+  leafletMap.fitBounds(solidLine.getBounds(), { padding: [60, 60] })
+
+  // Drop the star pin on the exact attraction location
+  const destLabel = qAttractionName.value || destinationName.value
+  const mkIcon = (html: string) => L.divIcon({ html, className: '', iconSize: [0, 0], iconAnchor: [0, 0] })
+  L.marker(dC, {
+    icon: mkIcon(
+      `<div class="lf-marker lf-dest">` +
+      `<div class="lf-star-pin">⭐</div>` +
+      `<div class="lf-label lf-label-attraction">${destLabel}</div>` +
+      `</div>`
+    )
+  }).addTo(leafletMap)
+})
 
 const updatePoiMarkers = () => {
   if (!leafletMap || !poiLayerGroup) return
@@ -1079,22 +1543,31 @@ const updatePoiMarkers = () => {
 watch(routeAttractions, (places) => {
   if (!leafletMap || !attractionLayerGroup) return
   attractionLayerGroup.clearLayers()
+  attractionMarkers.forEach(m => { try { m.remove() } catch {} })
+  attractionMarkers.clear()
 
   places.slice(0, 10).forEach(({ place, distanceKm }) => {
     const coords = getAttractionCoords(place)
     if (!coords) return
-    const catIcon = attractionCategories.find(c =>
-      c.type.toLowerCase() === (place.category ?? '').toLowerCase()
-    )?.icon ?? '📍'
-    L.marker([coords.lat, coords.lng], {
+    const catIcon = getCategoryIcon(place as any)
+    const marker = L.marker([coords.lat, coords.lng], {
       icon: L.divIcon({ html: `<div class="lf-poi">${catIcon}</div>`, className: '', iconSize: [36,36], iconAnchor: [18,18] })
     }).bindPopup(
       `<div class="lf-popup"><b>${catIcon} ${getAttractionName(place)}</b><br/>
        <span style="color:#666;font-size:12px">⭐ ${place.rating?.toFixed(1) ?? 'N/A'}</span><br/>
-       <span style="color:#999;font-size:11px">📍 ${getAttractionProvince(place)}</span><br/>
+       <span style="color:#999;font-size:11px">📍 ${ (place as any).vicinity || getAttractionProvince(place)}</span><br/>
        <span style="color:#1a73e8;font-size:11px">~ ${distanceKm.toFixed(1)} km from route</span></div>`,
       { maxWidth: 220 }
     ).addTo(attractionLayerGroup!)
+
+    try {
+      const key = String(place.id)
+      attractionMarkers.set(key, marker)
+      if (qAttractionId.value && key === qAttractionId.value) {
+        marker.openPopup()
+        try { leafletMap?.flyTo([coords.lat, coords.lng], 12, { animate: true }) } catch {}
+      }
+    } catch (e) { /* ignore marker store failures */ }
   })
 }, { deep: true, immediate: true })
 
@@ -1113,10 +1586,15 @@ const shareToFacebook = () => window.open(`https://www.facebook.com/sharer/share
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 onMounted(async () => {
-  await fetchTrip()
-  await nextTick()
-  await initMap()
-  await Promise.all([fetchWeather(), fetchAttractions(), fetchPOIs()])
+  try {
+    await fetchTrip()
+    await nextTick()
+    await initMap()
+    await Promise.all([fetchWeather(), fetchAttractions(), fetchPOIs()])
+  } catch (err: any) {
+    console.error('[TripResultsView] onMounted error:', err)
+    apiError.value = err?.message || 'Something went wrong loading the trip results.'
+  }
 })
 onUnmounted(() => { leafletMap?.remove(); leafletMap = null; attractionLayerGroup = null; poiLayerGroup = null })
 </script>
@@ -1130,6 +1608,8 @@ onUnmounted(() => { leafletMap?.remove(); leafletMap = null; attractionLayerGrou
 .lf-label      { background:white; font-size:12px; font-weight:700; padding:3px 9px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,.18); white-space:nowrap; }
 .lf-origin .lf-label { border-left:3px solid #15803d; }
 .lf-dest   .lf-label { border-left:3px solid #1a73e8; }
+.lf-label-attraction  { border-left:3px solid #f59e0b !important; color:#92400e; }
+.lf-star-pin   { width:32px; height:32px; background:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 3px 10px rgba(0,0,0,.3); border:3px solid #f59e0b; flex-shrink:0; }
 .lf-poi        { width:36px; height:36px; background:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 3px 10px rgba(0,0,0,.25); border:2px solid #e5e7eb; cursor:pointer; transition:transform .15s; }
 .lf-poi:hover  { transform:scale(1.15); }
 .lf-popup      { font-size:13px; line-height:1.5; }
