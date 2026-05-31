@@ -19,7 +19,6 @@ async function bootstrap() {
     prefix: '/uploads',
   });
 
-  // CORS configuration
   app.enableCors({
     origin: [
       'http://localhost:5173',
@@ -28,7 +27,7 @@ async function bootstrap() {
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id'],  // ← added x-user-id
   });
 
   await app.listen(process.env.PORT ?? 3000);
