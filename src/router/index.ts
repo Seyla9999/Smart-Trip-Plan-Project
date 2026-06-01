@@ -152,6 +152,7 @@ router.beforeEach((to, _from, next) => {
     "province-detail",
     "place-detail",
     "AttractionDetail",
+    "about",
   ];
   const routeName = typeof to.name === "string" ? to.name : "";
 
