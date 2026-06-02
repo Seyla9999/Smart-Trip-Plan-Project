@@ -97,7 +97,7 @@
             <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide mb-4">Trip Details</h3>
             <div class="divide-y divide-gray-50">
               <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">From</span><span class="font-semibold text-gray-700">{{ originName }}</span></div>
-              <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">To</span><span class="font-semibold text-gray-700">{{ destinationName }}</span></div>
+              <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">To</span><span class="font-semibold text-gray-700">{{ tripDetailsDestinationLabel }}</span></div>
               <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">Duration</span><span class="font-semibold text-gray-700">{{ daysCount }} days</span></div>
               <div class="flex justify-between py-2.5 text-sm"><span class="text-gray-400">Travel Type</span><span class="font-semibold text-gray-700 capitalize">{{ travelType }}</span></div>
             </div>
@@ -264,7 +264,7 @@
               <div class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5 text-sm font-semibold">
                 <span class="text-green-700">{{ originName }}</span>
                 <span class="text-gray-400">→</span>
-                <span class="text-blue-600">{{ qPlanMode === 'attraction' && qAttractionName ? qAttractionName : destinationName }}</span>
+                <span class="text-blue-600">{{ effectivePlanMode === 'attraction' && effectiveAttractionName ? effectiveAttractionName : destinationName }}</span>
               </div>
             </div>
 
@@ -298,7 +298,7 @@
                 <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Map Key</p>
                 <div class="flex flex-col gap-2 text-xs text-gray-600">
                   <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-700 ring-2 ring-green-700 ring-offset-1 flex-shrink-0"></span>Start</div>
-                  <div v-if="qPlanMode === 'attraction'" class="flex items-center gap-2"><span class="text-base leading-none">⭐</span>Selected Attraction</div>
+                  <div v-if="effectivePlanMode === 'attraction'" class="flex items-center gap-2"><span class="text-base leading-none">⭐</span>Selected Attraction</div>
                   <div v-else class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-500 ring-offset-1 flex-shrink-0"></span>Destination</div>
                   <div class="flex items-center gap-2"><span class="inline-block w-6 h-1 bg-blue-500 rounded flex-shrink-0"></span>Route</div>
                 </div>
@@ -518,7 +518,7 @@ L.Icon.Default.mergeOptions({
 })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface ItineraryAttraction { id: string; name_en: string; category?: string; province?: string }
+interface ItineraryAttraction { id: string; name_en: string; category?: string; province?: string | { name_en?: string; nameEn?: string; name?: string } }
 interface ItineraryItem  {
   id: string
   title?: string
@@ -578,6 +578,27 @@ interface ScheduleItem {
   endTime?: string
 }
 
+interface SavedScheduleMeta {
+  placeId?: string
+  source?: 'db' | 'google'
+  name?: string
+  vicinity?: string
+  icon?: string
+  latitude?: number
+  longitude?: number
+}
+
+interface PersistedTripViewMeta {
+  mode: 'province' | 'attraction'
+  attractionId?: string
+  attractionName?: string
+  attractionLat?: number
+  attractionLng?: number
+}
+
+const SCHEDULE_META_PREFIX = '[schedule-meta]'
+const TRIP_VIEW_META_STORAGE_PREFIX = 'trip_results_view_meta:'
+
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 // ─── Province data ────────────────────────────────────────────────────────────
@@ -611,6 +632,7 @@ const selectedDay       = ref(1)
 const mapContainer      = ref<HTMLElement | null>(null)
 const toastMsg          = ref('')
 const toastType         = ref<'success' | 'error'>('success')
+const savedTripViewMeta = ref<PersistedTripViewMeta | null>(null)
 
 // Weather
 const weatherForecast   = ref<DayWeather[]>([])
@@ -640,6 +662,7 @@ let leafletMap:    L.Map        | null = null
 let poiLayerGroup: L.LayerGroup | null = null
 let attractionLayerGroup: L.LayerGroup | null = null
 let attractionMarkers: Map<string, L.Marker> = new Map()
+let destinationMarker: L.Marker | null = null
 
 // ─── Derived ──────────────────────────────────────────────────────────────────
 const tripId      = computed(() => vueRoute.params.id      as string || '')
@@ -651,6 +674,19 @@ const qAttractionId   = computed(() => vueRoute.query.attractionId   as string |
 const qAttractionName = computed(() => vueRoute.query.attractionName as string || '')
 const qPlanMode       = computed(() => vueRoute.query.mode           as string || 'province')
 const travelType  = computed(() => tripData.value?.travel_type || vueRoute.query.type as string || 'friends')
+
+const effectivePlanMode = computed<'province' | 'attraction'>(() => {
+  if (qPlanMode.value === 'attraction' && !!qAttractionId.value) return 'attraction'
+  return savedTripViewMeta.value?.mode === 'attraction' ? 'attraction' : 'province'
+})
+
+const effectiveAttractionId = computed(() =>
+  qAttractionId.value || savedTripViewMeta.value?.attractionId || ''
+)
+
+const effectiveAttractionName = computed(() =>
+  qAttractionName.value || savedTripViewMeta.value?.attractionName || ''
+)
 
 const origin = computed(() => {
   if (tripData.value?.origin) return tripData.value.origin
@@ -665,6 +701,12 @@ const endDate     = computed(() => tripData.value?.end_date   || qEnd.value)
 
 const originName      = computed(() => provinceNames[origin.value]      || origin.value      || 'Starting Point')
 const destinationName = computed(() => provinceNames[destination.value] || destination.value || 'Destination')
+const tripDetailsDestinationLabel = computed(() => {
+  if (effectivePlanMode.value === 'attraction' && effectiveAttractionName.value) {
+    return `${effectiveAttractionName.value} (${destinationName.value})`
+  }
+  return destinationName.value
+})
 
 const displayDateRange = computed(() => {
   if (!startDate.value || !endDate.value) return 'Select dates'
@@ -677,6 +719,49 @@ const daysCount = computed(() => {
   if (!startDate.value || !endDate.value) return 3
   return Math.max(1, Math.ceil((new Date(endDate.value).getTime() - new Date(startDate.value).getTime()) / 86_400_000))
 })
+
+function tripViewMetaStorageKey(id: string): string {
+  return `${TRIP_VIEW_META_STORAGE_PREFIX}${id}`
+}
+
+function readTripViewMeta(id: string): PersistedTripViewMeta | null {
+  if (!id) return null
+  const raw = localStorage.getItem(tripViewMetaStorageKey(id))
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as PersistedTripViewMeta
+    if (!parsed || typeof parsed !== 'object') return null
+    if (parsed.mode !== 'province' && parsed.mode !== 'attraction') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeTripViewMeta(id: string, meta: PersistedTripViewMeta): void {
+  if (!id) return
+  try {
+    localStorage.setItem(tripViewMetaStorageKey(id), JSON.stringify(meta))
+  } catch {
+    // Ignore storage failures (private mode / quota issues)
+  }
+}
+
+function buildCurrentTripViewMeta(): PersistedTripViewMeta {
+  if (effectivePlanMode.value !== 'attraction') {
+    return { mode: 'province' }
+  }
+
+  const coords = selectedAttractionCoords.value
+  return {
+    mode: 'attraction',
+    attractionId: effectiveAttractionId.value || undefined,
+    attractionName: effectiveAttractionName.value || undefined,
+    attractionLat: coords?.lat,
+    attractionLng: coords?.lng,
+  }
+}
 
 // ─── Weather — Open-Meteo (free, no key needed) ───────────────────────────────
 const WMO_CODES: Record<number, { label: string; icon: string }> = {
@@ -1018,6 +1103,93 @@ function normalizeText(value: unknown): string {
   return String(value ?? '').trim().toLowerCase()
 }
 
+function normalizeScheduleVicinity(value: unknown): string {
+  if (value == null) return ''
+
+  if (typeof value === 'string') {
+    const raw = value.trim()
+    if (!raw) return ''
+
+    const looksLikeJson = (raw.startsWith('{') && raw.endsWith('}')) || (raw.startsWith('[') && raw.endsWith(']'))
+    if (!looksLikeJson) return raw
+
+    try {
+      return normalizeScheduleVicinity(JSON.parse(raw))
+    } catch {
+      return raw
+    }
+  }
+
+  if (typeof value === 'object') {
+    const rec = value as Record<string, unknown>
+    const candidate = [
+      rec.province,
+      rec.vicinity,
+      rec.location,
+      rec.name_en,
+      rec.nameEn,
+      rec.name,
+      rec.title,
+    ]
+
+    for (const item of candidate) {
+      if (typeof item === 'string' && item.trim()) return item.trim()
+    }
+    return ''
+  }
+
+  return String(value)
+}
+
+function parseSavedScheduleMeta(description?: string): SavedScheduleMeta | null {
+  if (!description) return null
+
+  const raw = String(description).trim()
+  if (!raw) return null
+
+  const payload = raw.startsWith(SCHEDULE_META_PREFIX)
+    ? raw.slice(SCHEDULE_META_PREFIX.length)
+    : raw
+
+  try {
+    const parsed = JSON.parse(payload) as SavedScheduleMeta
+    if (!parsed || typeof parsed !== 'object') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function extractReadableStopText(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const raw = value.trim()
+  if (!raw) return ''
+  if (raw.startsWith(SCHEDULE_META_PREFIX)) return ''
+
+  const looksLikeJson = (raw.startsWith('{') && raw.endsWith('}')) || (raw.startsWith('[') && raw.endsWith(']'))
+  if (looksLikeJson) return ''
+
+  return raw
+}
+
+function buildSavedScheduleMeta(item: ScheduleItem): string {
+  const hasLat = Number.isFinite(Number(item.latitude))
+  const hasLng = Number.isFinite(Number(item.longitude))
+
+  const meta: SavedScheduleMeta = {
+    placeId: item.placeId,
+    source: item.source,
+    name: item.name,
+    vicinity: normalizeScheduleVicinity(item.vicinity),
+    icon: item.icon,
+  }
+
+  if (hasLat) meta.latitude = Number(item.latitude)
+  if (hasLng) meta.longitude = Number(item.longitude)
+
+  return `${SCHEDULE_META_PREFIX}${JSON.stringify(meta)}`
+}
+
 const getAttractionName = (attraction: Attraction) => {
   const name = attraction.name ?? (attraction as any).name_en ?? (attraction as any).title
   return typeof name === 'string' && name.trim() ? name : 'Untitled attraction'
@@ -1296,7 +1468,7 @@ const savePlan = async () => {
         } = {
           day_number:    parseInt(day),
           title:         item.name,
-          description:   '',
+          description:   buildSavedScheduleMeta(item),
           sort_order:    idx,
         }
 
@@ -1354,6 +1526,11 @@ const savePlan = async () => {
     }
 
     const data = await res.json()
+    const persistedTripId = tripId.value || String(data.id ?? '')
+    if (persistedTripId) {
+      writeTripViewMeta(persistedTripId, buildCurrentTripViewMeta())
+    }
+
     if (!tripId.value && data.id) {
        window.history.replaceState({}, '', `/trip/results/${data.id}`)
     }
@@ -1377,9 +1554,20 @@ const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
 
 // ─── Trip API fetch ────────────────────────────────────────────────────────────
 const fetchTrip = async () => {
-  if (!tripId.value) return
   isPageLoading.value = true
   apiError.value = null
+  // If there's no trip id (query-only load), synthesize an empty schedule
+  // scaffold so the Daily schedule UI renders the same day-based layout
+  // as when loading a saved trip with `itinerary_items`.
+  if (!tripId.value) {
+    savedTripViewMeta.value = null
+    const scaffold: Record<number, ScheduleItem[]> = {}
+    const n = daysCount.value || 3
+    for (let i = 1; i <= n; i++) scaffold[i] = []
+    schedule.value = scaffold
+    isPageLoading.value = false
+    return
+  }
   try {
     const token = localStorage.getItem('auth_token')
     const res = await fetch(`${API_BASE}/api/trips/${tripId.value}`, {
@@ -1388,34 +1576,78 @@ const fetchTrip = async () => {
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`) }
     tripData.value = await res.json()
 
+    const persistedMeta = readTripViewMeta(tripId.value)
+    if (qPlanMode.value === 'attraction' && qAttractionId.value) {
+      savedTripViewMeta.value = {
+        mode: 'attraction',
+        attractionId: qAttractionId.value,
+        attractionName: qAttractionName.value || persistedMeta?.attractionName,
+        attractionLat: persistedMeta?.attractionLat,
+        attractionLng: persistedMeta?.attractionLng,
+      }
+    } else {
+      savedTripViewMeta.value = persistedMeta
+    }
+
+    if (
+      savedTripViewMeta.value?.mode === 'attraction'
+      && Number.isFinite(savedTripViewMeta.value.attractionLat)
+      && Number.isFinite(savedTripViewMeta.value.attractionLng)
+    ) {
+      selectedAttractionCoords.value = {
+        lat: Number(savedTripViewMeta.value.attractionLat),
+        lng: Number(savedTripViewMeta.value.attractionLng),
+      }
+    }
+
     // Restore schedule from existing itinerary items
+    const restored: Record<number, ScheduleItem[]> = {}
+
     if (tripData.value?.itinerary_items?.length) {
-      const restored: Record<number, ScheduleItem[]> = {}
       for (const item of tripData.value.itinerary_items) {
         const day = item.day_number ?? (item.day_index ?? 0) + 1
         if (!restored[day]) restored[day] = []
-        const name = item.attraction?.name_en ?? item.notes ?? item.title ?? 'Unnamed stop'
-        const catIcon = '📍'
+        const meta = parseSavedScheduleMeta(item.description)
+          ?? parseSavedScheduleMeta(item.notes)
+          ?? parseSavedScheduleMeta(typeof item.location === 'string' ? item.location : undefined)
+
+        const fallbackTitle = extractReadableStopText(item.title)
+          || extractReadableStopText(item.notes)
+          || 'Unnamed stop'
+        const name = item.attraction?.name_en ?? meta?.name ?? fallbackTitle
+        const catIcon = meta?.icon ?? '📍'
         const savedAttraction = item.attraction ? {
           ...item.attraction,
           latitude: (item.attraction as any).latitude ?? (item.attraction as any).lat,
           longitude: (item.attraction as any).longitude ?? (item.attraction as any).lng,
         } : null
         const coords = savedAttraction ? getAttractionCoords(savedAttraction as any) : null
+        const placeId = meta?.placeId
+          || (item.attraction_id ? String(item.attraction_id) : '')
+          || String(item.id)
+        const vicinity = normalizeScheduleVicinity(
+          meta?.vicinity ?? item.attraction?.province ?? item.location ?? ''
+        )
         restored[day].push({
-          placeId: String(item.attraction_id ?? item.id),
+          placeId,
           name,
-          vicinity: item.attraction?.province ?? item.location ?? '',
+          vicinity,
           icon: catIcon,
-          source: item.attraction_id ? 'db' : 'google',
-          latitude: coords?.lat,
-          longitude: coords?.lng,
+          source: meta?.source ?? (item.attraction_id ? 'db' : 'google'),
+          latitude: meta?.latitude ?? coords?.lat,
+          longitude: meta?.longitude ?? coords?.lng,
           startTime: item.start_time,
           endTime: item.end_time,
         })
       }
-      schedule.value = restored
     }
+
+    // Keep the same day-tab behavior for both saved and query-only flows.
+    const totalDays = daysCount.value || 3
+    for (let day = 1; day <= totalDays; day += 1) {
+      if (!restored[day]) restored[day] = []
+    }
+    schedule.value = restored
   } catch (err: any) {
     apiError.value = err.message || 'Failed to load trip'
   } finally {
@@ -1437,10 +1669,10 @@ const togglePacking = async (itemId: string) => {
 
 // ─── Filters / POIs — fetched from YOUR backend ───────────────────────────────
 const filters = ref<Filter[]>([
-  { id: 'hospital',   label: 'Hospital',   icon: '🏥', active: true  },
-  { id: 'police',     label: 'Police',     icon: '🚔', active: true  },
-  { id: 'atm',        label: 'ATM',        icon: '💰', active: true  },
-  { id: 'restaurant', label: 'Restaurant', icon: '🍽️', active: true },
+  { id: 'hospital',   label: 'Hospital',   icon: '🏥', active: false },
+  { id: 'police',     label: 'Police',     icon: '🚔', active: false },
+  { id: 'atm',        label: 'ATM',        icon: '💰', active: false },
+  { id: 'restaurant', label: 'Restaurant', icon: '🍽️', active: false },
 ])
 
 const fetchPOIs = async () => {
@@ -1451,13 +1683,45 @@ const fetchPOIs = async () => {
 
 /** After allAttractions loads, resolve the exact lat/lng of the chosen attraction */
 const resolveSelectedAttractionCoords = () => {
-  if (qPlanMode.value !== 'attraction' || !qAttractionId.value) return
-  const found = allAttractions.value.find(a => String(a.id) === qAttractionId.value)
-  if (found) {
-    selectedAttractionCoords.value = getAttractionCoords(found as any)
+  if (effectivePlanMode.value !== 'attraction') {
+    selectedAttractionCoords.value = null
+    return
+  }
+
+  const targetAttractionId = effectiveAttractionId.value
+  if (targetAttractionId) {
+    const found = allAttractions.value.find(a => {
+      const idMatch = String(a.id) === targetAttractionId
+      const placeIdMatch = String((a as any).place_id ?? '') === targetAttractionId
+      return idMatch || placeIdMatch
+    })
+    if (found) {
+      selectedAttractionCoords.value = getAttractionCoords(found as any)
+      return
+    }
+  }
+
+  if (
+    savedTripViewMeta.value?.mode === 'attraction'
+    && Number.isFinite(savedTripViewMeta.value.attractionLat)
+    && Number.isFinite(savedTripViewMeta.value.attractionLng)
+  ) {
+    selectedAttractionCoords.value = {
+      lat: Number(savedTripViewMeta.value.attractionLat),
+      lng: Number(savedTripViewMeta.value.attractionLng),
+    }
   }
 }
 watch(allAttractions, resolveSelectedAttractionCoords)
+
+watch(
+  [tripId, effectivePlanMode, effectiveAttractionId, effectiveAttractionName, selectedAttractionCoords],
+  () => {
+    if (!tripId.value) return
+    writeTripViewMeta(tripId.value, buildCurrentTripViewMeta())
+  },
+  { immediate: false }
+)
 
 const filteredPOIs = computed(() => {
   const activeTypes = filters.value.filter(f => f.active).map(f => f.id)
@@ -1496,11 +1760,12 @@ const initMap = async () => {
   // In province mode: use the province centroid as before.
   let dC: [number, number] = provinceCoords[destination.value] || [13.3671, 103.8448]
   let destLabel = destinationName.value
-  let isAttractionMode = qPlanMode.value === 'attraction'
+  let isAttractionMode = effectivePlanMode.value === 'attraction'
+  const hasResolvedAttractionDestination = isAttractionMode && !!selectedAttractionCoords.value
 
-  if (isAttractionMode && selectedAttractionCoords.value) {
+  if (hasResolvedAttractionDestination && selectedAttractionCoords.value) {
     dC = [selectedAttractionCoords.value.lat, selectedAttractionCoords.value.lng]
-    destLabel = qAttractionName.value || destinationName.value
+    destLabel = effectiveAttractionName.value || destinationName.value
   }
 
   leafletMap = L.map(mapContainer.value, { zoomControl: true, scrollWheelZoom: true })
@@ -1515,26 +1780,36 @@ const initMap = async () => {
     icon: mkIcon(`<div class="lf-marker lf-origin"><div class="lf-pin lf-pin-green"></div><div class="lf-label">${originName.value}</div></div>`)
   }).addTo(leafletMap)
 
-  // Destination marker — star pin for attraction mode, normal blue for province mode
-  if (isAttractionMode) {
-    L.marker(dC, {
-      icon: mkIcon(
-        `<div class="lf-marker lf-dest">` +
-        `<div class="lf-star-pin">⭐</div>` +
-        `<div class="lf-label lf-label-attraction">${destLabel}</div>` +
-        `</div>`
-      )
-    }).addTo(leafletMap)
+  // Destination marker — in attraction mode, only render after exact attraction
+  // coords are resolved; never fall back to province marker.
+  if (!isAttractionMode || hasResolvedAttractionDestination) {
+    if (isAttractionMode) {
+      destinationMarker = L.marker(dC, {
+        icon: mkIcon(
+          `<div class="lf-marker lf-dest">` +
+          `<div class="lf-star-pin">⭐</div>` +
+          `<div class="lf-label lf-label-attraction">${destLabel}</div>` +
+          `</div>`
+        )
+      }).addTo(leafletMap)
+    } else {
+      destinationMarker = L.marker(dC, {
+        icon: mkIcon(`<div class="lf-marker lf-dest"><div class="lf-pin lf-pin-blue"></div><div class="lf-label">${destLabel}</div></div>`)
+      }).addTo(leafletMap)
+    }
+    leafletMap.fitBounds(L.latLngBounds([oC, dC]), { padding: [60, 60] })
   } else {
-    L.marker(dC, {
-      icon: mkIcon(`<div class="lf-marker lf-dest"><div class="lf-pin lf-pin-blue"></div><div class="lf-label">${destLabel}</div></div>`)
-    }).addTo(leafletMap)
+    destinationMarker = null
+    leafletMap.setView(oC, 8)
   }
-
-  leafletMap.fitBounds(L.latLngBounds([oC, dC]), { padding: [60, 60] })
 
   poiLayerGroup = L.layerGroup().addTo(leafletMap)
   attractionLayerGroup = L.layerGroup().addTo(leafletMap)
+
+  if (isAttractionMode && !hasResolvedAttractionDestination) {
+    routeLinePoints.value = []
+    return
+  }
 
   isLoadingRoute.value = true
   const coords = await fetchRoadRoute(oC, dC)
@@ -1555,7 +1830,7 @@ let routePolylines: L.Polyline[] = []
  * (i.e. after allAttractions finishes loading, later than initMap).
  */
 watch(selectedAttractionCoords, async (coords) => {
-  if (!coords || !leafletMap || qPlanMode.value !== 'attraction') return
+  if (!coords || !leafletMap || effectivePlanMode.value !== 'attraction') return
 
   const oC: [number, number] = provinceCoords[origin.value] || [11.5564, 104.9282]
   const dC: [number, number] = [coords.lat, coords.lng]
@@ -1578,9 +1853,13 @@ watch(selectedAttractionCoords, async (coords) => {
   leafletMap.fitBounds(solidLine.getBounds(), { padding: [60, 60] })
 
   // Drop the star pin on the exact attraction location
-  const destLabel = qAttractionName.value || destinationName.value
+  const destLabel = effectiveAttractionName.value || destinationName.value
   const mkIcon = (html: string) => L.divIcon({ html, className: '', iconSize: [0, 0], iconAnchor: [0, 0] })
-  L.marker(dC, {
+  if (destinationMarker) {
+    try { destinationMarker.remove() } catch {}
+    destinationMarker = null
+  }
+  destinationMarker = L.marker(dC, {
     icon: mkIcon(
       `<div class="lf-marker lf-dest">` +
       `<div class="lf-star-pin">⭐</div>` +
@@ -1627,7 +1906,7 @@ watch(routeAttractions, (places) => {
     try {
       const key = String(place.id)
       attractionMarkers.set(key, marker)
-      if (qAttractionId.value && key === qAttractionId.value) {
+      if (effectiveAttractionId.value && key === effectiveAttractionId.value) {
         marker.openPopup()
         try { leafletMap?.flyTo([coords.lat, coords.lng], 12, { animate: true }) } catch {}
       }
@@ -1660,7 +1939,13 @@ onMounted(async () => {
     apiError.value = err?.message || 'Something went wrong loading the trip results.'
   }
 })
-onUnmounted(() => { leafletMap?.remove(); leafletMap = null; attractionLayerGroup = null; poiLayerGroup = null })
+onUnmounted(() => {
+  leafletMap?.remove()
+  leafletMap = null
+  destinationMarker = null
+  attractionLayerGroup = null
+  poiLayerGroup = null
+})
 </script>
 
 <style>
