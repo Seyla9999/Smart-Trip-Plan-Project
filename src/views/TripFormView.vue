@@ -58,6 +58,7 @@
           <div v-else class="form-group full-width attraction-picker">
             <label for="attraction-search">Search Attraction</label>
             <input
+              ref="attractionInput"
               id="attraction-search"
               v-model="attractionSearch"
               type="text"
@@ -158,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter }     from 'vue-router'
 import { getAttractions } from '../services/attractions.service'
 import { getProvinces } from '../services/home.service'
@@ -232,6 +233,7 @@ const showAttractionDropdown = ref(false)
 const attractionsCatalog = ref<AttractionSearchItem[]>([])
 const selectedAttraction = ref<AttractionSearchItem | null>(null)
 const provinceCatalog = ref<ProvinceCatalogItem[]>([])
+const attractionInput = ref<HTMLInputElement | null>(null)
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -320,10 +322,18 @@ const tripDuration = computed(() => {
 })
 
 watch(attractionSearch, (value) => {
-  if (normalizeText(value) !== normalizeText(getAttractionName(selectedAttraction.value))) {
+  const typed = normalizeText(value)
+  const selectedName = normalizeText(getAttractionName(selectedAttraction.value))
+  const isExactSelectedValue = !!selectedAttraction.value && typed === selectedName
+
+  if (!isExactSelectedValue) {
     selectedAttraction.value = null
+    showAttractionDropdown.value = formData.value.planMode === 'attraction'
+    return
   }
-  showAttractionDropdown.value = formData.value.planMode === 'attraction'
+
+  // Keep dropdown closed once a result is explicitly selected.
+  showAttractionDropdown.value = false
 })
 
 watch(() => formData.value.planMode, (mode) => {
@@ -334,6 +344,10 @@ watch(() => formData.value.planMode, (mode) => {
     selectedAttraction.value = null
   } else {
     formData.value.destination = ''
+    void nextTick(() => {
+      attractionInput.value?.focus()
+      attractionInput.value?.select()
+    })
   }
 })
 
