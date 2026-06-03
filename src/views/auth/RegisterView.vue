@@ -75,14 +75,16 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { register } from '@/services/auth.service'
 
 const router = useRouter()
+const route = useRoute()
+const REDIRECT_KEY = 'post_auth_redirect'
 
 const email = ref('')
 const full_name = ref('')
@@ -163,10 +165,15 @@ const handleRegister = async () => {
 
     localStorage.setItem('verify_email', email.value)
 
+    const redirectPath = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    if (redirectPath) {
+      localStorage.setItem(REDIRECT_KEY, redirectPath)
+    }
+
     isSuccess.value = true
     message.value = res.data.message
     setTimeout(() => {
-      router.push('/verify')
+      router.push({ path: '/verify', query: redirectPath ? { redirect: redirectPath } : {} })
     }, 800)
   } catch (err) {
     console.error('ERROR:', err)

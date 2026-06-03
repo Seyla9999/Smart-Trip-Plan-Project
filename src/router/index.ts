@@ -20,6 +20,7 @@ import AttractionDetail from '../components/AttractionDetail.vue'
 import TripPlannerView from '../views/TripPlannerView.vue'
 import TripFormView from '../views/TripFormView.vue'
 import TripResultsView from '../views/TripResultsView.vue'
+import TripJoinView from '../views/TripJoinView.vue'
 import MapView from '../views/MapView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import MyTripsView from '../views/MyTripsView.vue'
@@ -96,6 +97,11 @@ const router = createRouter({
         { path: 'results/:id?', name: 'trip-results', component: TripResultsView },
       ],
     },
+    {
+      path: '/trip/join/:token',
+      name: 'trip-join',
+      component: TripJoinView,
+    },
     { path: '/plan-trip', redirect: '/trip' },
 
     { 
@@ -165,7 +171,7 @@ router.beforeEach((to, _from, next) => {
     'home', 'login', 'register', 'verify',
     'about',           
     'discover',
-    'trip', 'trip-results',
+    'trip', 'trip-results', 'trip-join',
     'province-detail', 'place-detail', 'AttractionDetail',
     'profile',         
     'user-profile',    

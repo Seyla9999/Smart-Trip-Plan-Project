@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 px-5 py-10">
+  <div class="min-h-screen bg-gray-50 px-5 py-10" style="isolation: isolate;">
 
     <!-- Loading -->
     <div v-if="isPageLoading" class="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -34,7 +34,7 @@
             <span v-if="isSaving" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             {{ saveLabel }}
           </button>
-          <button @click="showShareModal = true"
+          <button @click="openShareModal"
             class="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition shadow-sm">
             🔗 Invite Friends
           </button>
@@ -59,15 +59,21 @@
 
       <!-- Share Modal -->
       <Teleport to="body">
-        <div v-if="showShareModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        <div v-if="showShareModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4 pt-20"
           @click.self="showShareModal = false">
-          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center px-6 py-5 border-b border-gray-100">
               <h3 class="text-lg font-bold text-green-800">Invite Friends</h3>
               <button @click="showShareModal = false" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
-            <div class="p-6 flex flex-col gap-5">
+            <div class="p-6 flex flex-col gap-5 overflow-y-auto">
               <p class="text-sm text-gray-500">Share this trip with your friends</p>
+              <div v-if="isGeneratingToken"
+                class="flex items-center gap-2 text-xs text-gray-400">
+                <span class="w-3 h-3 border-2 border-gray-300 border-t-green-600
+                            rounded-full animate-spin"></span>
+                Generating invite link…
+              </div>
               <div class="flex gap-2">
                 <input :value="shareLink" readonly @focus="selectInput($event)"
                   class="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-500 bg-gray-50" />
@@ -1917,11 +1923,50 @@ watch(routeAttractions, (places) => {
 watch(filteredPOIs, updatePoiMarkers, { deep: true })
 
 // ─── Share ────────────────────────────────────────────────────────────────────
-const shareLink = computed(() =>
-  tripData.value?.invite_token
-    ? `${window.location.origin}/trip/join/${tripData.value.invite_token}`
-    : `${window.location.origin}/trip/results?origin=${origin.value}&destination=${destination.value}&from=${startDate.value}&to=${endDate.value}&type=${travelType.value}`
-)
+const inviteToken = ref(tripData.value?.invite_token ?? '')
+watch(tripData, (t) => { if (t?.invite_token) inviteToken.value = t.invite_token })
+
+const shareLink = computed(() => {
+  if (inviteToken.value)
+    return `${window.location.origin}/trip/join/${inviteToken.value}`
+  if (tripId.value)
+    return `${window.location.origin}/trip/results/${tripId.value}`
+  return `${window.location.origin}/trip/results?origin=${origin.value}&dest=...` // ← fixed ?dest=
+})
+
+const isGeneratingToken = ref(false)
+const openShareModal = async () => {
+  showShareModal.value = true
+  if (inviteToken.value || !tripId.value) return  // already have one
+  const authToken = localStorage.getItem('auth_token')
+  if (!authToken) return
+  isGeneratingToken.value = true
+  try {
+    const endpoints = [
+      `/api/trips/${tripId.value}/invite-token`,
+      `/api/trips/${tripId.value}/invite`,
+      `/api/trips/${tripId.value}/share`,
+    ]
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(`${API_BASE}${ep}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     Authorization: `Bearer ${authToken}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const generated = data?.invite_token ?? data?.token
+                          ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
+          if (generated) { inviteToken.value = String(generated); break }
+        }
+      } catch { /* try next */ }
+    }
+  } catch { /* ignore */ } finally {
+    isGeneratingToken.value = false
+  }
+}
+
 const copyToClipboard = async () => { await navigator.clipboard.writeText(shareLink.value).catch(()=>{}); copiedText.value = '✓ Copied!'; setTimeout(() => { copiedText.value = '📋 Copy' }, 2000) }
 const shareToWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(`My trip: ${originName.value} → ${destinationName.value} — ${shareLink.value}`)}`, '_blank')
 const shareToEmail    = () => window.open(`mailto:?subject=${encodeURIComponent(`Trip: ${originName.value} → ${destinationName.value}`)}&body=${encodeURIComponent(shareLink.value)}`)

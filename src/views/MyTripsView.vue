@@ -301,6 +301,9 @@
             <div class="modal-icon">🔗</div>
             <h3 class="modal-title">Invite Friends</h3>
             <p class="modal-desc">Share this link so friends can join your trip</p>
+            <div v-if="isGeneratingShareToken" class="share-generating">
+              <span class="mini-spinner"></span> Generating invite link…
+            </div>
             <div class="share-link-row">
               <input :value="shareLink" readonly class="share-input" @focus="selectInput($event)" />
               <button class="btn-copy" @click="copyLink">{{ copiedText }}</button>
@@ -698,7 +701,42 @@ const shareLink = computed(() => {
     : `${window.location.origin}/trip/results/${tripToShare.value.id}`
 })
 
-const shareTrip     = (trip: Trip)  => { tripToShare.value = trip }
+const isGeneratingShareToken = ref(false)   
+
+const shareTrip = async (trip: Trip) => {
+  tripToShare.value = trip
+  if (!trip.invite_token && trip.id) {     
+    isGeneratingShareToken.value = true
+    try {
+      const endpoints = [
+        `/api/trips/${trip.id}/invite-token`,
+        `/api/trips/${trip.id}/invite`,
+        `/api/trips/${trip.id}/share`,
+      ]
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(`${API_BASE}${ep}`, {
+            method: 'POST',
+            headers: { ...authHeaders() },
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const generated = data?.invite_token ?? data?.token
+                            ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
+            if (generated) {
+              trip.invite_token = String(generated)  // patch local object
+              tripToShare.value = { ...trip }         // trigger reactivity
+              break
+            }
+          }
+        } catch { /* try next */ }
+      }
+    } catch { /* ignore */ } finally {
+      isGeneratingShareToken.value = false
+    }
+  }
+}
+
 const copyLink      = async ()      => {
   await navigator.clipboard.writeText(shareLink.value).catch(() => {})
   copiedText.value = '✓ Copied!'
@@ -1180,6 +1218,15 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
   border: 2px solid rgba(255,255,255,.4);
   border-top-color: white; border-radius: 50%;
   animation: spin .7s linear infinite;
+}
+
+.share-generating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 4px;
 }
 
 /* ── Animations ───────────────────────────────────────────────────────────── */

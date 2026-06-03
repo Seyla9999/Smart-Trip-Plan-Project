@@ -54,8 +54,8 @@
 </template>
 
 <script setup>
-import { ref, computed} from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { login } from '@/services/auth.service'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
@@ -72,6 +72,8 @@ const dialogMessage = ref('')
 const dialogType = ref('success') 
 
 const router = useRouter()
+const route = useRoute()
+const REDIRECT_KEY = 'post_auth_redirect'
 
 const getNormalizedRole = (user) => {
   const role = user?.role || user?.user_role || ''
@@ -116,7 +118,12 @@ const handleLogin = async () => {
     success.value = res.data.message
 
     setTimeout(() => {
-      const nextRoute = getNormalizedRole(res.data.user) === 'admin' ? '/admin' : '/'
+      const redirectPath = typeof route.query.redirect === 'string'
+        ? route.query.redirect
+        : localStorage.getItem(REDIRECT_KEY) || ''
+      if (redirectPath) localStorage.removeItem(REDIRECT_KEY)
+
+      const nextRoute = redirectPath || (getNormalizedRole(res.data.user) === 'admin' ? '/admin' : '/')
       router.replace(nextRoute)
     }, 1200)
 
