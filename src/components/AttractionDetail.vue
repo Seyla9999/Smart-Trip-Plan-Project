@@ -244,6 +244,23 @@
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import API from '../api/axios'
+import { getProvinces } from '../services/home.service'
+
+function toSlug(value: string) {
+  if (!value) return ''
+  return value.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')
+}
+
+interface PlaceSummary {
+  name: string
+  category: string
+  province: string
+  rating: number
+  reviews: number
+  description: string
+  image: string
+  tags: string[]
+}
 
 const route  = useRoute()
 const router = useRouter()
@@ -296,9 +313,9 @@ const mapCoords = computed(() => {
 
 // Normalise raw DB fields into the shape the template needs
 function normalizeAttraction(data: any) {
-  const provinceSlug = (data.province?.name_en || '')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
+  if (!data) return null
+  return normalizeAttractionData(data, data.id || '')
+}
 
 function toProvinceObject(province: any) {
   if (!province) {
@@ -318,12 +335,12 @@ function normalizeNearbyPlaces(nearbyPlaces: any, provinceName: string) {
 
   return nearbyPlaces
     .map((item: any, index: number) => {
-      const name = item?.name ?? item?.title ?? `Nearby Place ${index + 1}`
+      const name = item?.name ?? item?.title ?? "Nearby Place " + (index + 1)
       return {
         name,
-        slug: item?.slug ?? toSlug(name),
+        slug: item?.slug ?? "",
         location: item?.location ?? provinceName.toUpperCase(),
-        image: item?.image ?? item?.image_url ?? item?.url ?? '',
+        image: item?.image ?? item?.image_url ?? "",
       }
     })
     .filter((item: any) => Boolean(item.name))
@@ -465,7 +482,7 @@ function getPlaceFromRoute() {
   return null
 }
 
-function buildGenericAttraction(place: PlaceSummary, provinceSlug: string, placeSlug: string) {
+function buildGenericAttraction(place, provinceSlug, placeSlug) {
   const nearby = (provincePlaceMap[provinceSlug] || [])
     .filter((item) => toSlug(item.name) !== placeSlug)
     .slice(0, 5)
@@ -475,81 +492,31 @@ function buildGenericAttraction(place: PlaceSummary, provinceSlug: string, place
       location: place.province.toUpperCase(),
       image: item.image,
     }))
-    .replace(/[^a-z0-9-]/g, '')
-
-  const badges: string[] = []
-  if (data.is_hidden_gem) badges.push('HIDDEN GEM')
-  if (data.category)      badges.push(data.category.toUpperCase())
-  if (Number(data.average_rating) >= 4.5) badges.push('TOP RATED')
-
-  // Prefer curated nearby_images JSONB over the generic province query
-  const nearby = data.nearby_images?.length
-    ? data.nearby_images.map((n: any) => ({
-        name:     n.name,
-        slug:     n.slug || (n.name || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        location: n.location || '',
-        image:    n.image,
-      }))
-    : (data.nearby || []).map((n: any) => ({
-        name:     n.name_en,
-        slug:     (n.name_en || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        location: (n.province?.name_en || '').toUpperCase(),
-        image:    n.hero_image || '',
-      }))
-
-  const slug = (data.name_en || '')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
 
   return {
-    id:          data.id,
-    slug,
-    name:        data.name_en,
-    name_kh:     data.name_kh,
-    province:    {
-      nameEn: data.province?.name_en || '',
-      nameKh: data.province?.name_kh || '',
-    },
+    id: placeSlug,
+    slug: placeSlug,
+    name: place.name,
+    province: { nameEn: place.province },
     provinceSlug,
-    rating:      Number(data.average_rating) || 0,
-    reviewCount: data.reviews?.length || 0,
-    heroImage:   data.hero_image,
-    badges,
-    tags:        data.category ? [data.category] : [],
-    about:       data.description
-      ? data.description.split('\n\n').filter(Boolean)
-      : ['No description available yet.'],
-    photos:      data.photos || [],
-    location:    data.location,
+    rating: place.rating,
+    reviewCount: place.reviews,
+    heroImage: place.image,
+    badges: ['ATTRACTION', place.category.toUpperCase()],
+    tags: place.tags,
+    about: [place.description],
+    photos: [place.image],
     info: {
-      bestTime:   'Year-round',
-      duration:   '2Ã¢â‚¬â€œ4 hours',
-      difficulty: 'Moderate',
-      bestFor:    'All travelers',
-      province:   data.province?.name_en || '',
+      bestTime: 'Year-round',
+      duration: '2-4 hours',
+      difficulty: 'Easy',
+      bestFor: 'Everyone',
+      province: place.province,
     },
     nearby,
   }
 }
 
-function loadAttraction() {
-  loading.value = true
-  error.value = null
-
-  const provinceSlug = (route.params.slug as string) || 'koh-kong'
-  const placeSlug = (route.params.placeSlug as string) || (route.params.id as string)
-
-  // Direct /attraction/:id routes should be resolved by the API fetch below.
-  if (!route.params.placeSlug && route.params.id) {
-    attraction.value = null
-    nearbyPOIs.value = null
-    void fetchAttraction()
-    return
-  }
-
-  if (!placeSlug) {
-    attraction.value = null
 async function loadAttraction() {
   loading.value    = true
   error.value      = null
@@ -561,6 +528,8 @@ async function loadAttraction() {
   showAllReviews.value = false
   newReview.value    = { rating: 5, title: '', comment: '' }
   reviewSuccess.value = false
+
+  await loadProvinceNames()
 
   // Support both /province/:slug/:placeSlug and /attraction/:id
   const identifier = (route.params.placeSlug as string) || (route.params.id as string)
@@ -639,33 +608,6 @@ async function toggleFavorite() {
       })
       bookmarkId.value = data.id
     }
-
-    await loadProvinceNames()
-
-    const response = await API.get(`/attractions/${attractionId}`)
-    const attractionPayload = response.data?.data ?? response.data
-    
-    if (attractionPayload) {
-      attraction.value = normalizeAttractionData(attractionPayload, attractionId)
-      nearbyPOIs.value = attractionPayload.nearbyPOIs || null
-    }
-  } catch (err: any) {
-    console.error('API Error:', err)
-
-    const fallbackAttraction = mockAttractions.find(
-      (item) => String(item.id) === String(route.params.id),
-    )
-    if (fallbackAttraction) {
-      attraction.value = normalizeAttractionData(fallbackAttraction, String(route.params.id || ''))
-      nearbyPOIs.value = null
-      error.value = null
-      return
-    }
-    
-    if (err.response?.status === 404) {
-      error.value = `Attraction "${route.params.id}" not found`
-    } else if (err.code === 'ECONNREFUSED') {
-      error.value = 'Cannot connect to backend server. Make sure it\'s running on port 3000'
   } catch (e: any) {
     // Revert on failure
     isFavorited.value = prevFavorited
@@ -789,6 +731,7 @@ watch(
   () => {
     loadAttraction()
   },
+)
 // Initialise map once attraction data (and the map div) are ready
 watch(
   () => [attraction.value, nearbyPOIs.value],

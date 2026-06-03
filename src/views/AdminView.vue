@@ -4,6 +4,7 @@
     <main class="admin-content flex-1 p-6 md:p-8 overflow-auto">
       <router-view />
     </main>
+    <AdminToast />
   </div>
 </template>
             
@@ -11,8 +12,9 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import AdminSideBar from '../components/Admin_SideBar.vue'
+import AdminToast from '../components/AdminToast.vue'
 
 export default defineComponent({
-  components: { AdminSideBar },
+  components: { AdminSideBar, AdminToast },
 })
 </script>

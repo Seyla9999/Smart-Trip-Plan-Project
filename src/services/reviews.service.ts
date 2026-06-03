@@ -1,12 +1,3 @@
-import API from '@/api/axios'
-
-export const getReviews = () => API.get('/reviews')
-
-export const getReviewsByAttraction = (attractionId: string) =>
-  API.get(`/reviews/attraction/${attractionId}`)
-
-export const createReview = (reviewData: any) =>
-  API.post('/reviews', reviewData)
 import api from '@/api/axios'
 
 export interface Review {
@@ -26,6 +17,11 @@ export interface CreateReviewPayload {
   authorName: string
   title?: string
 }
+
+export const getReviews = () => api.get('/reviews')
+
+export const getReviewsByAttraction = (attractionId: string) =>
+  api.get(`/reviews/attraction/${attractionId}`)
 
 export async function getReviewsBySlug(attractionSlug: string): Promise<Review[]> {
   const { data } = await api.get(`/reviews/attraction/${attractionSlug}`)

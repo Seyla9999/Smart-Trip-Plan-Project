@@ -737,7 +737,9 @@ import { computed, onMounted, ref } from 'vue'
 import { createAttraction, getAttractionById, getAttractions, updateAttraction } from '@/services/attractions.service'
 import { getProvinces, createProvince } from '@/services/home.service'
 import { getReviewsByAttraction } from '@/services/reviews.service'
+import { useAdminToast } from '@/composables/useAdminToast'
 
+const { showAdminToast } = useAdminToast()
 const searchQuery = ref('')
 const attractions = ref([])
 const provinces = ref([])
@@ -1121,6 +1123,11 @@ const handleAddProvince = async () => {
     if (data) {
       // Refresh provinces list
       await loadProvinces()
+      showAdminToast({
+        message: 'Province added',
+        detail: `${newProvince.value.name_en} has been created.`,
+        tone: 'success'
+      })
       closeAddProvinceModal()
     }
   } catch (error) {
@@ -1163,6 +1170,11 @@ const createAttractionSubmit = async () => {
       if (normalized) {
         attractions.value = [normalized, ...attractions.value]
       }
+      showAdminToast({
+        message: 'Attraction created',
+        detail: `${newAttraction.value.name_en} is now live.`,
+        tone: 'success'
+      })
     }
     closeCreateModal()
   } catch (error) {
@@ -1217,6 +1229,10 @@ const saveAttraction = async () => {
     attractions.value = attractions.value.map((item) =>
       item.id === selectedAttraction.value.id ? { ...item, ...localUpdate } : item,
     )
+    showAdminToast({
+      message: 'Attraction updated',
+      tone: 'update'
+    })
   } catch (error) {
     const message = error?.response?.data?.message
     saveError.value = message || 'Unable to update attraction.'
