@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -171,25 +172,29 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    console.log('LOGIN DTO:', dto);
+    const email = dto.email?.trim().toLowerCase();
+    const password = dto.password;
 
-    const user = await this.userRepo.findOne({
-      where: { email: dto.email },
-    });
-    console.log('USER:', user);
-
-    if (!user) {
-      throw new Error('User not found');
+    if (!email || !password) {
+      throw new BadRequestException('Email and password are required');
     }
 
-    const isMatch = await bcrypt.compare(dto.password, user.password_hash);
+    const user = await this.userRepo.findOne({
+      where: { email },
+    });
+
+    if (!user || !user.password_hash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
-      throw new Error('Invalid password');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!user.is_verified) {
-      throw new Error('Please verify your email first');
+      throw new BadRequestException('Please verify your email first');
     }
 
     // Generate JWT token

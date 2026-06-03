@@ -20,11 +20,14 @@ import { NearbyImagesModule } from './nearby-images/nearby-images.module';
 import { SponsorsModule } from './modules/sponsors/sponsors.module';
 import { WeatherModule } from './modules/weather/weather.module';
 import { TripsModule } from './modules/trips/trips.module';
-import { ReviewsModule } from './modules/reviews/reviews.module';
+
+import { ChatModule } from './modules/chat/chat.module';
 
 // Entities
 import { Attraction } from './modules/attractions/attraction.entity';
 import { Province } from './modules/provinces/province.entity';
+import { Story } from './community-stories/entities/story.entity';
+import { StoryComment } from './community-stories/entities/story-comment.entity';
 import { Bookmark } from './modules/bookmarks/bookmark.entity';
 import { NearbyImage } from './modules/nearby-images/nearby-image.entity';
 import { UserPreferences } from './modules/users/user-preferences.entity';
@@ -33,6 +36,12 @@ import { Story as CommunityStory } from './community-stories/entities/story.enti
 import { StoryComment } from './community-stories/entities/story-comment.entity';
 import { Trip } from './modules/trips/trip.entity';
 import { Sponsor } from './modules/sponsors/sponsor.entity';
+import { Conversation } from './modules/chat/entities/conversation.entity';
+import { ChatMessage } from './modules/chat/entities/chat-message.entity';
+import { ConversationRead } from './modules/chat/entities/conversation-read.entity';
+import { ConversationMember } from './modules/chat/entities/conversation-member.entity';
+
+import { ReviewsModule } from './modules/reviews/reviews.module';
 
 @Module({
   imports: [
@@ -101,6 +110,12 @@ import { Sponsor } from './modules/sponsors/sponsor.entity';
     BookmarksModule,
     ReviewsModule,
     TripsModule,
+    ChatModule,
+    Conversation,
+    ChatMessage,
+    ConversationRead,
+    ConversationMember,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
@@ -12,27 +13,60 @@ import { User } from '../users/user.entity';
 import { TripMember } from './trip-member.entity';
 import { ItineraryItem } from './itinerary-item.entity';
 import { PackingListItem } from './packing-list-item.entity';
+import { Province } from '../provinces/province.entity';
 
 @Entity('trips')
 export class Trip {
-  @PrimaryGeneratedColumn('uuid') id!: string;
-  @Column() owner_id!: string;
-  @Column() title!: string;
-  @Column({ nullable: true }) description!: string;
-  @Column({ type: 'date' }) start_date!: Date;
-  @Column({ type: 'date' }) end_date!: Date;
-  @Column({ nullable: true }) destination?: string;
-  @Column({ nullable: true }) origin?: string;
-  @Column({ nullable: true }) travel_type?: string;
-  @Column({ default: 'planning' }) status!: string;
-  @Column({ nullable: true, type: 'text' }) ai_summary?: string;
-  @Column({ nullable: true }) invite_token?: string;
-  @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' }) created_at!: Date;
-  @UpdateDateColumn({ type: 'timestamptz', nullable: true }) updated_at?: Date;
-  @DeleteDateColumn({ type: 'timestamptz', nullable: true }) deleted_at?: Date;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  title!: string;
+
+  @Column({ nullable: true })
+  origin?: string;
+
+  province?: Province;
+
+  @Column({ nullable: true })
+  destination?: string;
+
+  @Column({ nullable: true })
+  description!: string;
+
+  @Column({ nullable: true })
+  travel_type?: string;
+
+  @Column({ type: 'text', nullable: true })
+  ai_summary?: string;
+
+  @Column({ nullable: true })
+  start_date!: Date;
+
+  @Column({ nullable: true })
+  end_date!: Date;
 
   @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'owner_id' })
   owner!: User;
+
+  @Column()
+  owner_id!: string;
+
+  @Column({ type: 'uuid', unique: true })
+  invite_token!: string;
+
+  @Column({ default: 'active' })
+  status!: string;
+
+  @Column({ default: () => 'CURRENT_TIMESTAMP' })
+  created_at!: Date;
+
+  @Column({ nullable: true })
+  updated_at!: Date;
+
+  @Column({ nullable: true })
+  deleted_at!: Date;
 
   @OneToMany(() => TripMember, (m) => m.trip)
   members!: TripMember[];
@@ -42,7 +76,4 @@ export class Trip {
 
   @OneToMany(() => PackingListItem, (p) => p.trip)
   packing_list!: PackingListItem[];
-
-  @Column('json', { nullable: true })
-  locations?: { lat: number; lng: number; name: string }[];
 }

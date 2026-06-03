@@ -59,9 +59,7 @@ export class UsersService {
     if (password) {
       user.password_hash = await bcrypt.hash(password, 10);
     }
-
-    // Default to active and verified for admin-created users
-    user.status = 'active';
+    user.status      = 'active';
     user.is_verified = true;
 
     return this.repo.save(user);
@@ -107,24 +105,24 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    user.status = normalizedStatus;
+    user.status     = normalizedStatus;
     user.updated_at = new Date();
     await this.repo.save(user);
 
     return {
-      id: user.id,
-      email: user.email,
-      full_name: user.full_name,
-      username: user.username,
-      avatar_url: user.avatar_url,
-      bio: user.bio,
-      role: user.role,
-      last_login: user.last_login,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      deleted_at: user.deleted_at,
+      id:          user.id,
+      email:       user.email,
+      full_name:   user.full_name,
+      username:    user.username,
+      avatar_url:  user.avatar_url,
+      bio:         user.bio,
+      role:        user.role,
+      last_login:  user.last_login,
+      created_at:  user.created_at,
+      updated_at:  user.updated_at,
+      deleted_at:  user.deleted_at,
       is_verified: user.is_verified,
-      status: user.status,
+      status:      user.status,
     };
   }
 
@@ -132,27 +130,24 @@ export class UsersService {
     return this.repo.count();
   }
 
-  async updateProfile(
-    id: string,
-    data: {
-      full_name?: string;
-      username?: string;
-      bio?: string;
-      avatar_url?: string;
-    },
-  ) {
-    const user = await this.repo.findOne({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
+  async updateProfile(id: string, data: {
+    full_name?:  string
+    username?:   string
+    bio?:        string
+    avatar_url?: string
+  }) {
+    const user = await this.repo.findOne({ where: { id } })
+    if (!user) throw new NotFoundException('User not found')
 
-    if (data.full_name !== undefined) user.full_name = data.full_name;
-    if (data.username !== undefined) user.username = data.username;
-    if (data.bio !== undefined) user.bio = data.bio;
-    if (data.avatar_url !== undefined) user.avatar_url = data.avatar_url;
-    user.updated_at = new Date();
+    if (data.full_name  !== undefined) user.full_name  = data.full_name
+    if (data.username   !== undefined) user.username   = data.username
+    if (data.bio        !== undefined) user.bio        = data.bio
+    if (data.avatar_url !== undefined) user.avatar_url = data.avatar_url
+    user.updated_at = new Date()
 
-    const saved = await this.repo.save(user);
-    const { password_hash, verification_code, ...safe } = saved as any;
-    return safe;
+    const saved = await this.repo.save(user)
+    const { password_hash, verification_code, ...safe } = saved as any
+    return safe
   }
 
   async changePassword(
@@ -183,7 +178,7 @@ export class UsersService {
 
   async getUserStories(id: string) {
     const stories = await this.repo.manager.query(
-      `SELECT s.*, 
+      `SELECT s.*,
         COALESCE(
           json_agg(json_build_object('url', att.url, 'file_type', att.file_type))
           FILTER (WHERE att.id IS NOT NULL), '[]'
@@ -197,16 +192,17 @@ export class UsersService {
     );
     return { success: true, data: stories };
   }
+
   async getNotifications(userId: string) {
     const data = await this.repo.manager.query(
-      `SELECT * FROM notifications 
-      WHERE user_id = $1 
-      ORDER BY created_at DESC 
-      LIMIT 20`,
-      [userId],
-    );
-    const unread = data.filter((n: any) => !n.is_read).length;
-    return { success: true, data, unread };
+      `SELECT * FROM notifications
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [userId]
+    )
+    const unread = data.filter((n: any) => !n.is_read).length
+    return { success: true, data, unread }
   }
 
   async markNotificationsRead(userId: string) {
@@ -215,5 +211,21 @@ export class UsersService {
       [userId],
     );
     return { success: true };
+  }
+
+  async searchUsers(q: string) {
+    if (!q || q.length < 2) return { success: true, data: [] }
+    const users = await this.repo.manager.query(`
+      SELECT id, full_name, username, email, avatar_url, role, last_seen
+      FROM users
+      WHERE deleted_at IS NULL
+        AND (
+          email     ILIKE $1
+          OR username   ILIKE $1
+          OR full_name  ILIKE $1
+        )
+      LIMIT 10
+    `, [`%${q}%`])
+    return { success: true, data: users }
   }
 }

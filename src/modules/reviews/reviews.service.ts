@@ -24,15 +24,16 @@ export class ReviewsService {
     });
   }
 
-  async create(dto: CreateReviewDto, userId?: string) {
-    const review: DeepPartial<Review> = {
+  create(dto: CreateReviewDto, userId?: string) {
+    const review = this.reviewRepo.create({
       attractionId: dto.attraction_id,
-      userId: userId ?? undefined,
       rating: dto.rating,
       comment: dto.comment,
-      authorName: dto.author_name || 'Anonymous',
-      title: dto.title ?? undefined,
-    };
-    return this.reviewRepo.save(review);
+      authorName: dto.author_name ?? 'Anonymous',
+      title: dto.title ?? null,
+      userId: userId ?? null,
+    } as any)
+
+    return this.reviewRepo.save(review)
   }
 }

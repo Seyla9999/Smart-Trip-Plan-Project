@@ -1,7 +1,22 @@
+import { IsString, IsNumber, IsOptional, IsUUID, Min, Max } from 'class-validator'
+
 export class CreateReviewDto {
-  attraction_id!: string;
-  rating!: number;
-  comment!: string;
-  author_name?: string;
-  title?: string;
+  @IsUUID()
+  attraction_id!: string
+
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  rating!: number
+
+  @IsString()
+  comment!: string
+
+  @IsString()
+  @IsOptional()
+  author_name?: string
+
+  @IsString()
+  @IsOptional()
+  title?: string
 }

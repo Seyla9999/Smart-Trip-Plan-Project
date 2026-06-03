@@ -10,42 +10,32 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import * as path from 'path';
-import * as fs from 'fs';
-import { UsersService } from './users.service';
+  Query,
+} from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { diskStorage } from 'multer'
+import * as path from 'path'
+import * as fs from 'fs'
+import { UsersService } from './users.service'
+
+type MulterFile = {
+  filename: string
+}
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly service: UsersService) {}
 
-  @Get()
-  async findAll() {
-    const data = await this.service.findAllForAdmin();
-    return { success: true, data };
-  }
-
-  @Post()
-  async create(@Body() body: any) {
-    const data = await this.service.createWithPassword(body);
-    return { success: true, data };
-  }
-
-  @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body() body: { status: string },
-  ) {
-    const data = await this.service.updateStatus(id, body.status);
-    return { success: true, data };
-  }
-
+  // GET /users/count
   @Get('count')
   async count() {
-    const count = await this.service.countAll();
-    return { success: true, count };
+    const count = await this.service.countAll()
+    return { success: true, count }
+  }
+
+  @Get('search')
+  async searchUsers(@Query('q') q: string) {
+    return this.service.searchUsers(q)
   }
 
   // GET /users/:id
@@ -57,6 +47,7 @@ export class UsersController {
     return { success: true, data: safe };
   }
 
+  // GET /users/:id/notifications
   @Get(':id/notifications')
   async getNotifications(@Param('id') id: string) {
     try {
@@ -66,6 +57,7 @@ export class UsersController {
     }
   }
 
+  // PUT /users/:id/notifications/read
   @Put(':id/notifications/read')
   async markAllRead(@Param('id') id: string) {
     try {
@@ -107,6 +99,7 @@ export class UsersController {
     }
   }
 
+  // POST /users/:id/upload-avatar
   @Post(':id/upload-avatar')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
@@ -124,7 +117,7 @@ export class UsersController {
           cb(null, `${req.params.id}${ext}`);
         },
       }),
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+      limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
           cb(null, true);
@@ -139,13 +132,10 @@ export class UsersController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     try {
-      if (!file) return { success: false, message: 'No file uploaded' };
-
-      // Save URL path to database
-      const avatarUrl = `/uploads/avatars/${file.filename}`;
-      await this.service.updateProfile(id, { avatar_url: avatarUrl });
-
-      return { success: true, avatar_url: avatarUrl };
+      if (!file) return { success: false, message: 'No file uploaded' }
+      const avatarUrl = `/uploads/avatars/${file.filename}`
+      await this.service.updateProfile(id, { avatar_url: avatarUrl })
+      return { success: true, avatar_url: avatarUrl }
     } catch (e: any) {
       return { success: false, message: e.message };
     }
