@@ -31,68 +31,37 @@ export class StoriesService {
     return normalized;
   }
 
-  async findAll(q: { limit?: number; page?: number; status?: string }) {
+  async findAll(q: {
+    limit?: number;
+    page?: number;
+    status?: string;
+    userId?: string;
+  }) {
     const limit = Number(q.limit) || 10;
     const page = Number(q.page) || 1;
     const skip = (page - 1) * limit;
     const statusFilter = this.parseStatusFilter(q.status);
+    const userId = q.userId;
 
-    const params: Array<number | string[]> = [limit, skip];
-    const statusClause = statusFilter ? ' AND s.status = ANY($3)' : '';
-    if (statusFilter) {
-      params.push(statusFilter);
-    }
-
-    const data = await this.dataSource.query(
-      `
-      SELECT
-        s.id,
-        s.title,
-        s.content,
-        s.status,
-        s.category,
-        s.location,
-        s.image_url,
-        s.likes_count,
-        s.comments_count,
-        s.author_name,
-        s.author_handle,
-        s.published_at,
-        s.created_at,
-        u.id          AS user_id,
-        u.full_name   AS user_name,
-        u.avatar_url  AS user_avatar,
-        u.username    AS user_username,
-        COALESCE(
-          json_agg(
-            json_build_object('url', att.url, 'file_type', att.file_type)
-          ) FILTER (WHERE att.id IS NOT NULL),
-          '[]'
-        ) AS attachments
-      FROM stories s
-      JOIN users u ON u.id = s.user_id
-      LEFT JOIN attachments att
-        ON att.entity_id::uuid = s.id
-        AND att.entity_type = 'story'
-      WHERE s.deleted_at IS NULL${statusClause}
-      GROUP BY s.id, u.id
-      ORDER BY s.created_at DESC
-      LIMIT $1 OFFSET $2
-      `,
-      params,
-    );
-
-    const countQuery = this.storyRepo
+    const queryBuilder = this.storyRepo
       .createQueryBuilder('s')
       .where('s.deleted_at IS NULL');
 
     if (statusFilter) {
-      countQuery.andWhere('s.status IN (:...statuses)', {
+      queryBuilder.andWhere('s.status IN (:...statuses)', {
         statuses: statusFilter,
       });
     }
 
-    const total = await countQuery.getCount();
+    if (userId) {
+      queryBuilder.andWhere('s.user_id = :userId', { userId });
+    }
+
+    const [data, total] = await queryBuilder
+      .orderBy('s.created_at', 'DESC')
+      .take(limit)
+      .skip(skip)
+      .getManyAndCount();
 
     return { success: true, data, meta: { total, page, limit } };
   }

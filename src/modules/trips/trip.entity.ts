@@ -5,6 +5,9 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { TripMember } from './trip-member.entity';

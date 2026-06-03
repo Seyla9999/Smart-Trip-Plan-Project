@@ -31,13 +31,17 @@ import { StoryComment } from './community-stories/entities/story-comment.entity'
 import { Bookmark } from './modules/bookmarks/bookmark.entity';
 import { NearbyImage } from './modules/nearby-images/nearby-image.entity';
 import { UserPreferences } from './modules/users/user-preferences.entity';
+import { Review } from './modules/reviews/review.entity';
+import { Story as CommunityStory } from './community-stories/entities/story.entity';
+import { StoryComment } from './community-stories/entities/story-comment.entity';
+import { Trip } from './modules/trips/trip.entity';
+import { Sponsor } from './modules/sponsors/sponsor.entity';
 import { Conversation } from './modules/chat/entities/conversation.entity';
 import { ChatMessage } from './modules/chat/entities/chat-message.entity';
 import { ConversationRead } from './modules/chat/entities/conversation-read.entity';
 import { ConversationMember } from './modules/chat/entities/conversation-member.entity';
 
 import { ReviewsModule } from './modules/reviews/reviews.module';
-
 
 @Module({
   imports: [
@@ -54,6 +58,17 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
       database: process.env.DB_NAME,
       autoLoadEntities: true,
       synchronize: false,
+      entities: [
+        Attraction,
+        Province,
+        CommunityStory,
+        StoryComment,
+        Bookmark,
+        NearbyImage,
+        Review,
+        Trip,
+        Sponsor,
+      ],
 
       ssl: {
         rejectUnauthorized: false,

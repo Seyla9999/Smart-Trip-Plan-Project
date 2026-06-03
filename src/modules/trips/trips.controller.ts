@@ -10,6 +10,8 @@ import {
   UseGuards,
   Request,
   HttpCode,
+  Get,
+  Query,
 } from '@nestjs/common';
 import { TripsService } from './trips.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

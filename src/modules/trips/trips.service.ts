@@ -148,7 +148,7 @@ export class TripsService {
   async create(userId: string, dto: CreateTripDto): Promise<Trip | null> {
     const token = randomUUID();
 
-    const trip = this.tripRepo.create({
+    const tripData: Partial<Trip> = {
       title: dto.title,
       description: dto.description,
       destination: dto.destination,
@@ -159,8 +159,10 @@ export class TripsService {
       end_date: dto.end_date ? new Date(dto.end_date) : null,
       owner_id: userId,
       invite_token: token,
-    } as Partial<Trip>);
+      status: 'planning'
+    };
 
+    const trip = this.tripRepo.create(tripData);
     const saved = await this.tripRepo.save(trip);
 
     // Add owner as member

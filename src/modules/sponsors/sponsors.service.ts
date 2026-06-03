@@ -27,4 +27,10 @@ export class SponsorsService {
 
     return { success: true, data };
   }
+
+  async create(data: Partial<Sponsor>) {
+    const sponsor = this.repo.create(data);
+    const saved = await this.repo.save(sponsor);
+    return { success: true, data: saved };
+  }
 }

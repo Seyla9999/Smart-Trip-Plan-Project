@@ -33,14 +33,16 @@ export class UsersService {
   ) {}
 
   findByEmail(email: string) {
-    return this.repo.findOne({ where: { email } })
+    return this.repo.findOne({ where: { email } });
   }
 
   findById(id: string) {
-    return this.repo.findOne({ where: { id } })
+    return this.repo.findOne({ where: { id } });
   }
 
-  async createWithPassword(data: Partial<User> & { email: string; password?: string }) {
+  async createWithPassword(
+    data: Partial<User> & { email: string; password?: string },
+  ) {
     const { password, ...userData } = data;
 
     if (!userData.email) {
@@ -64,11 +66,11 @@ export class UsersService {
   }
 
   create(data: Partial<User>) {
-    return this.repo.save(this.repo.create(data))
+    return this.repo.save(this.repo.create(data));
   }
 
   save(user: User) {
-    return this.repo.save(user)
+    return this.repo.save(user);
   }
 
   async findAllForAdmin(): Promise<AdminUserRecord[]> {
@@ -148,25 +150,30 @@ export class UsersService {
     return safe
   }
 
-  async changePassword(id: string, currentPassword: string, newPassword: string) {
-    const user = await this.repo.findOne({ where: { id } })
-    if (!user) throw new NotFoundException('User not found')
+  async changePassword(
+    id: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
 
-    const isMatch = await bcrypt.compare(currentPassword, user.password_hash)
-    if (!isMatch) throw new BadRequestException('Current password is incorrect')
+    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isMatch)
+      throw new BadRequestException('Current password is incorrect');
 
-    user.password_hash = await bcrypt.hash(newPassword, 10)
-    user.updated_at    = new Date()
-    await this.repo.save(user)
-    return { success: true, message: 'Password updated successfully' }
+    user.password_hash = await bcrypt.hash(newPassword, 10);
+    user.updated_at = new Date();
+    await this.repo.save(user);
+    return { success: true, message: 'Password updated successfully' };
   }
 
   async deleteAccount(id: string) {
-    const user = await this.repo.findOne({ where: { id } })
-    if (!user) throw new NotFoundException('User not found')
-    user.deleted_at = new Date()
-    await this.repo.save(user)
-    return { success: true, message: 'Account deleted' }
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    user.deleted_at = new Date();
+    await this.repo.save(user);
+    return { success: true, message: 'Account deleted' };
   }
 
   async getUserStories(id: string) {
@@ -181,9 +188,9 @@ export class UsersService {
        WHERE s.user_id = $1 AND s.deleted_at IS NULL
        GROUP BY s.id
        ORDER BY s.created_at DESC`,
-      [id]
-    )
-    return { success: true, data: stories }
+      [id],
+    );
+    return { success: true, data: stories };
   }
 
   async getNotifications(userId: string) {
@@ -201,9 +208,9 @@ export class UsersService {
   async markNotificationsRead(userId: string) {
     await this.repo.manager.query(
       `UPDATE notifications SET is_read = true WHERE user_id = $1`,
-      [userId]
-    )
-    return { success: true }
+      [userId],
+    );
+    return { success: true };
   }
 
   async searchUsers(q: string) {

@@ -149,9 +149,9 @@ export class AttractionsService {
 
     if (isUuid) {
       attraction = await this.attractionRepo.findOne({
-        where: { id: identifier, deleted_at: IsNull() } as any,
+        where: { id: identifier, deleted_at: IsNull() },
         relations: ['province'],
-      })
+      });
     } else {
       const nameLike = `%${identifier.replace(/-/g, ' ')}%`;
       attraction = await this.attractionRepo
@@ -186,13 +186,19 @@ export class AttractionsService {
         .orderBy('a.average_rating', 'DESC')
         .take(5)
         .getMany(),
-    ])
+    ]);
 
-    const avgRating = reviews.length > 0
-      ? Math.round(
-          (reviews.reduce((sum: number, r: any) => sum + Number(r.rating), 0) / reviews.length) * 10,
-        ) / 10
-      : Number(attraction.average_rating)
+    const avgRating =
+      reviews.length > 0
+        ? Math.round(
+            (reviews.reduce(
+              (sum: number, r: any) => sum + Number(r.rating),
+              0,
+            ) /
+              reviews.length) *
+              10,
+          ) / 10
+        : Number(attraction.average_rating);
 
     return {
       ...attraction,
@@ -200,7 +206,7 @@ export class AttractionsService {
       nearbyPOIs,
       reviews,
       nearby,
-    }
+    };
   }
 
   async findNearbyPointsOfInterest(attraction: any) {
@@ -229,7 +235,7 @@ export class AttractionsService {
 
     let lng: number | null = null;
     let lat: number | null = null;
-    const loc = attraction.location as any;
+    const loc = attraction.location;
 
     if (loc?.coordinates) {
       lng = loc.coordinates[0];
@@ -342,7 +348,7 @@ export class AttractionsService {
 
   async findById(id: string) {
     return this.attractionRepo.findOne({
-      where: { id, deleted_at: IsNull() } as any,
+      where: { id, deleted_at: IsNull() },
     });
   }
 
@@ -456,7 +462,7 @@ export class AttractionsService {
 
   async seedTataiWaterfall() {
     const existing = await this.attractionRepo.findOne({
-      where: { name_en: 'Tatai Waterfall', deleted_at: IsNull() } as any,
+      where: { name_en: 'Tatai Waterfall', deleted_at: IsNull() },
     });
     if (existing) return existing;
 

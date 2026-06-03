@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Province } from './province.entity';
@@ -59,18 +63,20 @@ export class ProvincesService {
          VALUES ($1, $2, $3, $4) 
          RETURNING *`,
         [
-          data.name_en, 
-          data.name_kh, 
-          data.description || null, 
-          data.main_image_url || null
-        ]
+          data.name_en,
+          data.name_kh,
+          data.description || null,
+          data.main_image_url || null,
+        ],
       );
-      
+
       return result[0];
     } catch (error) {
       console.error('Province creation error:', error);
       if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException(error.message || 'Failed to create province');
+      throw new InternalServerErrorException(
+        error.message || 'Failed to create province',
+      );
     }
   }
 }
