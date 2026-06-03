@@ -193,7 +193,11 @@ export class AuthService {
     }
 
     // Generate JWT token
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, full_name: user.full_name })
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      full_name: user.full_name,
+    });
 
     return {
       message: 'Login success',
@@ -206,8 +210,8 @@ export class AuthService {
         avatar_url: user.avatar_url,
         bio: user.bio,
         role: user.role,
-        },
-    }
+      },
+    };
   }
 
   // async verify(email: string, code: string) {

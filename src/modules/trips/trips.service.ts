@@ -10,9 +10,6 @@ import { randomBytes } from 'crypto';
 
 @Injectable()
 export class TripsService {
-  findAll() {
-    throw new Error('Method not implemented.');
-  }
   constructor(
     @InjectRepository(Trip)
     private tripRepo: Repository<Trip>,
@@ -24,38 +21,62 @@ export class TripsService {
     private packingRepo: Repository<PackingListItem>,
   ) {}
 
+  async findAll(q: { ownerId?: string; limit?: number; page?: number }) {
+    const limit = Number(q.limit) || 10;
+    const page = Number(q.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const findOptions: any = {
+      where: { deleted_at: null },
+      order: { created_at: 'DESC' },
+      take: limit,
+      skip: skip,
+    };
+
+    if (q.ownerId) {
+      findOptions.where = { ...findOptions.where, owner_id: q.ownerId };
+    }
+
+    const [data, total] = await this.tripRepo.findAndCount(findOptions);
+
+    return {
+      success: true,
+      data,
+      meta: { total: Number(total), page, limit },
+    };
+  }
+
   async create(userId: string, dto: CreateTripDto) {
     const token = randomBytes(16).toString('hex');
 
-    const trip = this.tripRepo.create({
+    const tripData: Partial<Trip> = {
       title: dto.title,
       description: dto.description,
       destination: dto.destination,
-      start_date: dto.start_date ? new Date(dto.start_date) : null,
-      end_date: dto.end_date ? new Date(dto.end_date) : null,
+      start_date: dto.start_date ? new Date(dto.start_date) : undefined,
+      end_date: dto.end_date ? new Date(dto.end_date) : undefined,
       owner_id: userId,
       invite_token: token,
-    } as Partial<Trip>);
+      status: 'planning'
+    };
 
+    const trip = this.tripRepo.create(tripData);
     const saved = await this.tripRepo.save(trip);
 
     const member = this.memberRepo.create({
       trip_id: saved.id,
       user_id: userId,
       role: 'owner',
-    } as Partial<TripMember>);
+    } as any);
 
     await this.memberRepo.save(member);
 
     if (dto.locations && dto.locations.length > 0) {
       const itineraryItems = dto.locations.map((loc) => {
         return this.itineraryRepo.create({
-          trip: saved, // Link to the trip
+          trip_id: saved.id,
           title: loc.name,
-          // If your ItineraryItem entity has latitude/longitude columns, add them here:
-          // latitude: loc.lat,
-          // longitude: loc.lng
-        } as Partial<ItineraryItem>);
+        });
       });
 
       await this.itineraryRepo.save(itineraryItems);
@@ -63,7 +84,6 @@ export class TripsService {
 
     return this.tripRepo.findOne({
       where: { id: saved.id },
-      relations: ['members', 'itinerary_items'],
     });
   }
 }

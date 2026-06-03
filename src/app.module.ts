@@ -29,7 +29,10 @@ import { Bookmark } from './modules/bookmarks/bookmark.entity';
 import { NearbyImage } from './modules/nearby-images/nearby-image.entity';
 import { UserPreferences } from './modules/users/user-preferences.entity';
 import { Review } from './modules/reviews/review.entity';
-
+import { Story as CommunityStory } from './community-stories/entities/story.entity';
+import { StoryComment } from './community-stories/entities/story-comment.entity';
+import { Trip } from './modules/trips/trip.entity';
+import { Sponsor } from './modules/sponsors/sponsor.entity';
 
 @Module({
   imports: [
@@ -49,11 +52,13 @@ import { Review } from './modules/reviews/review.entity';
       entities: [
         Attraction,
         Province,
-        Story,
+        CommunityStory,
         StoryComment,
         Bookmark,
         NearbyImage,
         Review,
+        Trip,
+        Sponsor,
       ],
 
       ssl: {
@@ -96,7 +101,6 @@ import { Review } from './modules/reviews/review.entity';
     BookmarksModule,
     ReviewsModule,
     TripsModule,
-    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

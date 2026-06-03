@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { StoriesService } from './stories.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('stories')
 export class StoriesController {
@@ -11,8 +12,9 @@ export class StoriesController {
     @Query('limit') limit?: number,
     @Query('page') page?: number,
     @Query('status') status?: string,
+    @Query('userId') userId?: string,
   ) {
-    return this.service.findAll({ limit, page, status });
+    return this.service.findAll({ limit, page, status, userId });
   }
 
   @Patch(':id/status')

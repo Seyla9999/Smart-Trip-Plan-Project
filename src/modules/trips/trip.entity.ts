@@ -4,6 +4,9 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { TripMember } from './trip-member.entity';
@@ -12,44 +15,24 @@ import { PackingListItem } from './packing-list-item.entity';
 
 @Entity('trips')
 export class Trip {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
-
-  @Column()
-  title!: string;
-
-  @Column()
-  destination?: string;
-
-  @Column({ nullable: true })
-  description!: string;
-
-  @Column({ nullable: true })
-  start_date!: Date;
-
-  @Column({ nullable: true })
-  end_date!: Date;
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column() owner_id!: string;
+  @Column() title!: string;
+  @Column({ nullable: true }) description!: string;
+  @Column({ type: 'date' }) start_date!: Date;
+  @Column({ type: 'date' }) end_date!: Date;
+  @Column({ nullable: true }) destination?: string;
+  @Column({ nullable: true }) origin?: string;
+  @Column({ nullable: true }) travel_type?: string;
+  @Column({ default: 'planning' }) status!: string;
+  @Column({ nullable: true, type: 'text' }) ai_summary?: string;
+  @Column({ nullable: true }) invite_token?: string;
+  @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' }) created_at!: Date;
+  @UpdateDateColumn({ type: 'timestamptz', nullable: true }) updated_at?: Date;
+  @DeleteDateColumn({ type: 'timestamptz', nullable: true }) deleted_at?: Date;
 
   @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
   owner!: User;
-
-  @Column()
-  owner_id!: string;
-
-  @Column({ unique: true })
-  invite_token!: string;
-
-  @Column({ default: 'active' })
-  status!: string;
-
-  @Column({ default: () => 'CURRENT_TIMESTAMP' })
-  created_at!: Date;
-
-  @Column({ nullable: true })
-  updated_at!: Date;
-
-  @Column({ nullable: true })
-  deleted_at!: Date;
 
   @OneToMany(() => TripMember, (m) => m.trip)
   members!: TripMember[];
