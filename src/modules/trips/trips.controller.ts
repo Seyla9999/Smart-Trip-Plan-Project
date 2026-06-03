@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { TripsService } from './trips.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 
 import { CreateTripDto, ItineraryItemDto } from './dto/create-trip.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
@@ -66,6 +67,12 @@ export class TripsController {
   @HttpCode(200)
   join(@Request() req, @Param('token') token: string) {
     return this.tripsService.joinByToken(token, req.user.id);
+  }
+
+  @Get('invite/:token')
+  @Public()
+  getInvitePreview(@Param('token') token: string) {
+    return this.tripsService.findByInviteToken(token);
   }
 
   // POST /api/trips/:id/itinerary-items — append one item to existing trip

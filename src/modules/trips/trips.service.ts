@@ -47,6 +47,39 @@ export class TripsService {
         .find((province): province is Province => Boolean(province)) ?? null;
 
     trip.province = derivedProvince ?? undefined;
+    return this.sanitizeTripItinerary(trip);
+  }
+
+  private sanitizeItineraryItemNotes(value?: string | null): string | undefined {
+    if (value == null) return undefined;
+
+    const text = String(value).trim();
+    if (!text) return undefined;
+
+    const scheduleMetaMatch = text.match(/^\[schedule-meta\]\s*(\{.*\})$/);
+    if (!scheduleMetaMatch) return text;
+
+    try {
+      const parsed = JSON.parse(scheduleMetaMatch[1]);
+      return (
+        parsed.name ??
+        parsed.vicinity ??
+        parsed.placeId ??
+        parsed.icon ??
+        text
+      );
+    } catch {
+      return text;
+    }
+  }
+
+  private sanitizeTripItinerary(trip: Trip | null): Trip | null {
+    if (!trip || !trip.itinerary_items) return trip;
+
+    trip.itinerary_items.forEach((item) => {
+      item.notes = this.sanitizeItineraryItemNotes(item.notes) ?? item.notes;
+    });
+
     return trip;
   }
 
@@ -106,7 +139,9 @@ export class TripsService {
       sort_order: item.sort_order ?? fallbackSortOrder,
       start_time: normalizeTime(item.start_time),
       end_time: normalizeTime(item.end_time),
-      notes: item.notes ?? item.description ?? item.title ?? undefined,
+      notes: this.sanitizeItineraryItemNotes(
+        item.notes ?? item.description ?? item.title,
+      ),
     };
   }
 
@@ -288,7 +323,9 @@ export class TripsService {
       day_index:    (item.day_number ?? 1) - 1,
       attraction_id: item.attraction_id ?? undefined,
       sort_order:   item.sort_order ?? 0,
-      notes:        item.notes ?? item.description ?? item.title ?? undefined,
+      notes:        this.sanitizeItineraryItemNotes(
+        item.notes ?? item.description ?? item.title,
+      ),
       start_time:   item.start_time ?? undefined,
       end_time:     item.end_time   ?? undefined,
     } as Partial<ItineraryItem>);
@@ -333,5 +370,19 @@ export class TripsService {
       await manager.delete(Trip,            tripId);
     });
     return { message: 'Trip deleted successfully' };
+  }
+
+  async findByInviteToken(token: string): Promise<Trip> {
+    const trip = await this.tripRepo.findOne({
+      where: { invite_token: token },
+      relations: {
+        members: true,
+        itinerary_items: { attraction: { province: true } },
+        packing_list: true,
+      },
+      order: { itinerary_items: { day_index: 'ASC', sort_order: 'ASC' } },
+    });
+    if (!trip) throw new NotFoundException('Invite link is invalid or has expired');
+    return this.attachDerivedProvince(trip) as Trip;
   }
 }
