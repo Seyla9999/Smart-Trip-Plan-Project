@@ -157,17 +157,28 @@ const filteredAttractions = computed(() => {
 })
 
 function getCoords(a: any): { lat: number; lng: number } | null {
-  // Try flat latitude/longitude fields first (returned by ST_Y/ST_X in the backend query)
-  if (a.latitude != null && a.longitude != null) {
-    const lat = Number(a.latitude)
-    const lng = Number(a.longitude)
-    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng }
+  const lat = Number(a.latitude ?? a.lat)
+  const lng = Number(a.longitude ?? a.lng)
+  if (!Number.isNaN(lat) && !Number.isNaN(lng) && lat !== 0 && lng !== 0) {
+    return { lat, lng }
   }
-  // Fall back to GeoJSON location object
+
   const loc = a.location
   if (!loc) return null
-  if (loc.coordinates?.length >= 2) return { lng: loc.coordinates[0], lat: loc.coordinates[1] }
-  if (loc.x !== undefined && loc.y !== undefined) return { lng: loc.x, lat: loc.y }
+
+  if (typeof loc === 'string') {
+    const match = loc.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/i)
+    if (match) {
+      const parsedLng = Number(match[1])
+      const parsedLat = Number(match[2])
+      if (!Number.isNaN(parsedLat) && !Number.isNaN(parsedLng)) return { lat: parsedLat, lng: parsedLng }
+    }
+    return null
+  }
+
+  if (loc.coordinates?.length >= 2) return { lng: Number(loc.coordinates[0]), lat: Number(loc.coordinates[1]) }
+  if (loc.longitude !== undefined && loc.latitude !== undefined) return { lng: Number(loc.longitude), lat: Number(loc.latitude) }
+  if (loc.x !== undefined && loc.y !== undefined) return { lng: Number(loc.x), lat: Number(loc.y) }
   return null
 }
 
@@ -398,7 +409,8 @@ function refreshLocation() {
 onMounted(async () => {
   try {
     const { data } = await API.get('/attractions', { params: { limit: 200 } })
-    attractions.value = data.data ?? data
+    const payload = data?.data ?? data?.attractions ?? data
+    attractions.value = Array.isArray(payload) ? payload : []
   } catch (e) {
     console.error('Failed to load attractions:', e)
   } finally {
