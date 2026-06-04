@@ -11,6 +11,7 @@ import Admin_Destination from '../views/Admin_Destination.vue'
 import Admin_Moderation from '../views/Admin_Moderation.vue'
 import Admin_User from '../views/Admin_User.vue'
 import Admin_Setting from '../views/Admin_Setting.vue'
+import Admin_Sponsor from '../views/Admin_Sponsor.vue'
 import UserView from '../views/UserView.vue'
 import User_Discover from '../views/User_Discover.vue'
 import CommunityView from '../views/CommunityView.vue'
@@ -61,6 +62,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'admin-dashboard', component: Admin_Dashboard },
         { path: 'destination', name: 'admin-destination', component: Admin_Destination },
+        { path: 'sponsor', name: 'admin-sponsor', component: Admin_Sponsor },
         { path: 'moderation', name: 'admin-moderation', component: Admin_Moderation },
         { path: 'user', name: 'admin-user', component: Admin_User },
         { path: 'setting', name: 'admin-setting', component: Admin_Setting },

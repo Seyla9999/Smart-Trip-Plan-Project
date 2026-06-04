@@ -18,9 +18,6 @@ if (supabaseUrl && supabaseAnonKey) {
     console.warn('Failed to initialize Supabase client:', err)
     supabase = null
   }
-} else {
-  // eslint-disable-next-line no-console
-  console.warn('Supabase not initialized: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing')
 }
 
 // Upload an image file to Supabase Storage and return the public URL
@@ -32,7 +29,7 @@ export async function uploadImage(
     // Supabase is not available in this environment — skip upload and
     // return null so callers can fallback to a local/object URL.
     // eslint-disable-next-line no-console
-    console.warn('uploadImage called but Supabase client is not initialized')
+    console.warn('Supabase not initialized: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing')
     return null
   }
   const ext = file.name.split('.').pop()
