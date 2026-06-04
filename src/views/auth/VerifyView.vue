@@ -36,13 +36,16 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { verify, resendCode } from '@/services/auth.service'
 
 const router = useRouter()
+const route = useRoute()
+const REDIRECT_KEY = 'post_auth_redirect'
 
 const email = localStorage.getItem('verify_email')
+const redirectPath = ref(typeof route.query.redirect === 'string' ? route.query.redirect : localStorage.getItem(REDIRECT_KEY) || '')
 
 const otp = ref(['', '', '', '', '', ''])
 const inputs = ref([])
@@ -55,6 +58,11 @@ const countdown = ref(0)
 onMounted(() => {
   if (!email) {
     router.push('/register') // fallback
+  }
+
+  if (typeof route.query.redirect === 'string' && route.query.redirect) {
+    localStorage.setItem(REDIRECT_KEY, route.query.redirect)
+    redirectPath.value = route.query.redirect
   }
 })
 
@@ -98,7 +106,8 @@ const handleVerify = async () => {
     localStorage.removeItem('verify_email')
 
     setTimeout(() => {
-      router.push('/login')
+      const nextRedirect = redirectPath.value || localStorage.getItem(REDIRECT_KEY) || ''
+      router.push(nextRedirect ? { path: '/login', query: { redirect: nextRedirect } } : '/login')
     }, 1500)
 
   } catch (err) {

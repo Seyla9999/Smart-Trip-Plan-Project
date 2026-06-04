@@ -180,7 +180,7 @@ watch(
       </p>
 
       <div class="card-footer">
-        <span>{{ place.reviews }} REVIEWS</span>
+        <span class="review-text">{{ place.reviews }} REVIEWS</span>
 
         <button
           class="heart-btn"
@@ -257,7 +257,7 @@ watch(
 }
 
 .rating {
-  color: #8f6a0f;
+  color: #c69214;
   font-size: 15px;
   font-weight: 700;
 }
@@ -274,8 +274,12 @@ watch(
   justify-content: space-between;
   align-items: center;
   margin-top: 18px;
-  color: #a0a6b5;
+}
+
+.review-text {
+  color: #7d8492;
   font-size: 13px;
+  font-weight: 600;
 }
 
 .heart-btn {

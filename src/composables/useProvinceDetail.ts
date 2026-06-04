@@ -55,6 +55,8 @@ export type AttractionApi = {
   isHiddenGem: boolean;
   averageRating: number | string;
   reviewCount: number | string;
+  imageUrl?: string | null;
+  heroImage?: string | null;
 };
 
 export type WeatherApi = {
@@ -125,6 +127,8 @@ function normalizeAttraction(raw: any): AttractionApi | null {
     isHiddenGem: Boolean(raw.isHiddenGem ?? raw.is_hidden_gem ?? false),
     averageRating: raw.averageRating ?? raw.average_rating ?? raw.rating ?? 0,
     reviewCount: raw.reviewCount ?? raw.review_count ?? 0,
+    imageUrl: raw.imageUrl ?? raw.image_url ?? null,
+    heroImage: raw.heroImage ?? raw.hero_image ?? null,
   };
 }
 
@@ -147,7 +151,11 @@ function mapAttractionToPlace(
     rating,
     reviews,
     description: attraction.description || "No description available yet.",
-    image: province.mainImageUrl || FALLBACK_IMAGE,
+    image:
+      attraction.heroImage ||
+      attraction.imageUrl ||
+      province.mainImageUrl ||
+      FALLBACK_IMAGE,
     tags: [category, discovery],
     featured: index === 0,
     location: attraction.location,
@@ -175,32 +183,6 @@ export function useProvinceDetail() {
     weatherAlerts.value = [];
 
     try {
-      const localProvince = normalizeProvince(
-        mockProvinces.find((province) => toSlug(province.nameEn) === slug),
-      );
-
-      if (localProvince) {
-        backendProvinceId.value = localProvince.id;
-        backendProvince.value = localProvince;
-
-        const localAttractions =
-          mockProvinceAttractions[
-            localProvince.id as keyof typeof mockProvinceAttractions
-          ] || [];
-
-        allPlaces.value = localAttractions.map(
-          (attraction: any, index: number) =>
-            mapAttractionToPlace(
-              normalizeAttraction(attraction) as AttractionApi,
-              localProvince,
-              index,
-            ),
-        );
-
-        weather.value = mockWeather as WeatherApi;
-        weatherAlerts.value = [];
-      }
-
       let provinces: ProvinceApi[] = [];
       let usesMockData = false;
 
@@ -244,6 +226,7 @@ export function useProvinceDetail() {
       backendProvince.value = fallbackProvince;
 
       let attractions: AttractionApi[] = [];
+
       try {
         const attractionsResponse = await fetch(
           `${API_BASE}/attractions/province/${fallbackProvince.id}`,
@@ -264,10 +247,12 @@ export function useProvinceDetail() {
             : [];
         }
       } catch {
-        // ignore
+        // use fallback below
       }
 
       if (attractions.length === 0) {
+        console.log("Using mock attractions fallback");
+
         const mockData =
           mockProvinceAttractions[
             fallbackProvince.id as keyof typeof mockProvinceAttractions
@@ -284,8 +269,13 @@ export function useProvinceDetail() {
         allPlaces.value = attractions.map((attraction, index) =>
           mapAttractionToPlace(attraction, fallbackProvince, index),
         );
+
+        console.log("Backend attractions length:", attractions.length);
+        console.log("All places shown length:", allPlaces.value.length);
+        console.log("Backend attractions data:", attractions);
       } else {
         allPlaces.value = [];
+        console.log("No backend attractions found");
       }
 
       try {

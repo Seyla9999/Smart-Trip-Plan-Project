@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { logout } from '../services/auth.service'
 
 const route = useRoute()
 const linkBaseClass =
   'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium border'
+
+function handleLogout() {
+  logout()
+}
 
 function getLinkClass(routeName: string) {
   return [
@@ -78,6 +83,17 @@ function getLinkClass(routeName: string) {
           </svg>
           <span>Setting</span>
         </router-link>
+
+        <button
+          type="button"
+          :class="[linkBaseClass, 'mt-4 border-rose-500/20 text-rose-300 hover:bg-rose-500/10 hover:text-white']"
+          @click="handleLogout"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Log Out</span>
+        </button>
       </nav>
     </div>
   </aside>

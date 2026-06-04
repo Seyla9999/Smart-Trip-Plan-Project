@@ -17,23 +17,27 @@
       </ul>
 
       <div class="nav-actions">
+
         <template v-if="!user">
           <a href="/login"    class="btn-login">Login</a>
           <a href="/register" class="btn-signup">Sign Up Free</a>
         </template>
 
         <template v-else>
-
           <a href="/chat" class="icon-btn" title="Messages">
-            <span class="icon-btn-icon">💬</span>
-          </a>
+            <span>💬</span>
+            <span v-if="chatUnread > 0" class="notif-badge chat-badge">
+              {{ chatUnread > 9 ? '9+' : chatUnread }}
+            </span>
 
+          </a>
           <div class="notif-wrap" ref="notifRef">
             <button class="icon-btn" @click="toggleNotif" title="Notifications">
-              <span class="icon-btn-icon">🔔</span>
-              <span v-if="unreadCount > 0" class="notif-badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+              <span>🔔</span>
+              <span v-if="unreadCount > 0" class="notif-badge">
+                {{ unreadCount > 9 ? '9+' : unreadCount }}
+              </span>
             </button>
-
             <transition name="drop">
               <div v-if="notifOpen" class="notif-dropdown">
                 <div class="notif-header">
@@ -42,16 +46,12 @@
                     Mark all read
                   </button>
                 </div>
-
                 <div class="notif-list" v-if="notifications.length > 0">
-                  <a
-                    v-for="n in notifications"
-                    :key="n.id"
-                    :href="n.link || '#'"
-                    class="notif-item"
-                    :class="{ unread: !n.is_read }"
-                    @click="notifOpen = false"
-                  >
+                  <a v-for="n in notifications" :key="n.id"
+                     :href="n.link || '#'"
+                     class="notif-item"
+                     :class="{ unread: !n.is_read }"
+                     @click="notifOpen = false">
                     <div class="notif-icon">{{ getNotifIcon(n.type) }}</div>
                     <div class="notif-body">
                       <div class="notif-item-title">{{ n.title }}</div>
@@ -61,12 +61,10 @@
                     <div v-if="!n.is_read" class="unread-dot" />
                   </a>
                 </div>
-
                 <div v-else class="notif-empty">
                   <span>🔔</span>
                   <p>No notifications yet</p>
                 </div>
-
                 <a href="/notifications" class="notif-footer" @click="notifOpen = false">
                   See all notifications
                 </a>
@@ -75,21 +73,24 @@
           </div>
           <div class="user-menu" ref="menuRef">
             <button class="avatar-btn" @click="menuOpen = !menuOpen">
-              <img
-                v-if="user.avatar_url"
-                :src="getAvatarSrc(user.avatar_url)"
-                :alt="user.full_name"
-                class="avatar-img"
-              />
-              <div v-else class="avatar-circle">
-                {{ getInitials(user.full_name) }}
-              </div>
+              <img v-if="user.avatar_url"
+                   :src="getAvatarSrc(user.avatar_url)"
+                   :alt="user.full_name"
+                   class="avatar-img"
+                   @error="onAvatarError" />
+              <div v-else class="avatar-circle">{{ getInitials(user.full_name) }}</div>
             </button>
 
             <transition name="drop">
               <div v-if="menuOpen" class="user-dropdown">
                 <div class="dropdown-header">
-                  <div class="dh-circle">{{ getInitials(user.full_name) }}</div>
+                  <div class="dh-avatar-wrap">
+                    <img v-if="user.avatar_url"
+                         :src="getAvatarSrc(user.avatar_url)"
+                         class="dh-avatar-img"
+                         @error="onAvatarError" />
+                    <div v-else class="dh-circle">{{ getInitials(user.full_name) }}</div>
+                  </div>
                   <div class="dh-info">
                     <div class="dh-name">{{ user.full_name }}</div>
                     <div class="dh-email">{{ user.email }}</div>
@@ -123,6 +124,7 @@
       <a href="/plan-trip" class="mobile-link" @click="mobileOpen = false">Plan Trip</a>
       <a href="/map"       class="mobile-link" @click="mobileOpen = false">Map</a>
       <a href="/community" class="mobile-link" @click="mobileOpen = false">Community</a>
+
       <div class="mobile-auth">
         <template v-if="!user">
           <a href="/login"    class="btn-login-m">Login</a>
@@ -130,10 +132,37 @@
         </template>
         <div v-else class="mobile-user">
           <div class="mobile-user-info">
-            <div class="mobile-avatar">{{ getInitials(user.full_name) }}</div>
-            <span class="mobile-name">{{ user.full_name }}</span>
+            <div class="mobile-avatar-wrap">
+              <img v-if="user.avatar_url"
+                   :src="getAvatarSrc(user.avatar_url)"
+                   class="mobile-avatar-img"
+                   @error="onAvatarError" />
+              <div v-else class="mobile-avatar">{{ getInitials(user.full_name) }}</div>
+            </div>
+            <div>
+              <div class="mobile-name">{{ user.full_name }}</div>
+              <div class="mobile-email">{{ user.email }}</div>
+            </div>
           </div>
-          <a href="/chat"             class="mobile-dd-link" @click="mobileOpen = false">💬 Messages</a>
+
+          <a href="/chat" class="mobile-dd-link" @click="mobileOpen = false">
+            💬 Messages
+            <span v-if="chatUnread > 0" class="mobile-badge-inline">{{ chatUnread > 9 ? '9+' : chatUnread }}</span>
+          </a>
+          <div class="mobile-dd-link mobile-notif-toggle" @click="showMobileNotif = !showMobileNotif">
+            🔔 Notifications
+            <span v-if="unreadCount > 0" class="mobile-badge-inline">{{ unreadCount }}</span>
+          </div>
+          <div v-if="showMobileNotif" class="mobile-notif-list">
+            <div v-for="n in notifications.slice(0,3)" :key="n.id"
+                 class="mobile-notif-item" :class="{ unread: !n.is_read }">
+              {{ getNotifIcon(n.type) }} {{ n.title }}
+            </div>
+            <button v-if="unreadCount > 0" class="mobile-mark-read" @click="markAllRead">
+              Mark all read
+            </button>
+          </div>
+
           <a href="/profile"          class="mobile-dd-link" @click="mobileOpen = false">👤 My Profile</a>
           <a href="/profile/trips"    class="mobile-dd-link" @click="mobileOpen = false">🗺️ My Trips</a>
           <a href="/profile/stories"  class="mobile-dd-link" @click="mobileOpen = false">📖 My Stories</a>
@@ -149,25 +178,27 @@
 import { computed, defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-const API_URL    = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export default defineComponent({
   name: 'NavBar',
   setup() {
-    const mobileOpen  = ref(false)
-    const menuOpen    = ref(false)
-    const notifOpen   = ref(false)
-    const menuRef     = ref<HTMLElement | null>(null)
-    const notifRef    = ref<HTMLElement | null>(null)
-    const router      = useRouter()
-    const route       = useRoute()
-    const currentPath = computed(() => route.path)
-    const user        = ref<any>(null)
+    const mobileOpen      = ref(false)
+    const menuOpen        = ref(false)
+    const notifOpen       = ref(false)
+    const showMobileNotif = ref(false)
+    const menuRef         = ref<HTMLElement | null>(null)
+    const notifRef        = ref<HTMLElement | null>(null)
+    const router          = useRouter()
+    const route           = useRoute()
+    const currentPath     = computed(() => route.path)
+    const user            = ref<any>(null)
 
     const notifications = ref<any[]>([])
     const unreadCount   = ref(0)
+    const chatUnread    = ref(0)
     let   notifInterval: any = null
+    let chatInterval: any = null
 
     function loadUser() {
       const raw = localStorage.getItem('user_data')
@@ -177,12 +208,46 @@ export default defineComponent({
         try {
           user.value = JSON.parse(raw)
           loadNotifications()
+          loadChatUnread()
         } catch { user.value = null }
       } else {
-        user.value = null
+        user.value          = null
         notifications.value = []
         unreadCount.value   = 0
+        chatUnread.value = 0
       }
+      
+    }
+    async function loadChatUnread() {
+      if (!user.value?.id) return
+      try{
+        const res = await fetch(`${API_URL}/chat/unread?userId=${user.value.id}`)
+        if (res.ok) {
+          const data       = await res.json()
+          chatUnread.value = data.unread || 0
+        }
+      } catch {chatUnread.value = 0}
+    }
+
+    function getAvatarSrc(url: string | null): string {
+      if (!url) return ''
+      if (url.startsWith('data:'))    return url               
+      if (url.startsWith('http'))     return url              
+      if (url.startsWith('/uploads')) return `${API_URL}${url}`
+      return url
+    }
+
+    function onAvatarError(e: Event) {
+      const img = e.target as HTMLImageElement
+      img.style.display = 'none'
+      if (user.value) {
+        user.value = { ...user.value, avatar_url: null }
+      }
+    }
+
+    function getInitials(name: string): string {
+      if (!name) return '?'
+      return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
     }
 
     async function loadNotifications() {
@@ -196,9 +261,9 @@ export default defineComponent({
         }
       } catch {
         notifications.value = [
-          { id: '1', type: 'story_like',  title: 'Someone liked your story',   message: 'Your story got a new like!',           is_read: false, link: '/community', created_at: new Date(Date.now() - 5 * 60000).toISOString() },
-          { id: '2', type: 'new_message', title: 'New message',                message: 'Siem Reap Traveler sent you a message', is_read: false, link: '/chat',      created_at: new Date(Date.now() - 30 * 60000).toISOString() },
-          { id: '3', type: 'system',      title: 'Welcome to តោះទៅ! Cambodia', message: 'Start exploring Cambodia!',            is_read: true,  link: '/discover',  created_at: new Date(Date.now() - 60 * 60000).toISOString() },
+          { id: '1', type: 'story_like',  title: 'Someone liked your story',   message: 'Your story got a new like!',           is_read: false, link: '/community', created_at: new Date(Date.now() - 5   * 60000).toISOString() },
+          { id: '2', type: 'new_message', title: 'New message',                message: 'Siem Reap Traveler sent you a message', is_read: false, link: '/chat',      created_at: new Date(Date.now() - 30  * 60000).toISOString() },
+          { id: '3', type: 'system',      title: 'Welcome to តោះទៅ! Cambodia', message: 'Start exploring Cambodia!',            is_read: true,  link: '/discover',  created_at: new Date(Date.now() - 120 * 60000).toISOString() },
         ]
         unreadCount.value = notifications.value.filter((n: any) => !n.is_read).length
       }
@@ -220,38 +285,21 @@ export default defineComponent({
 
     function getNotifIcon(type: string): string {
       const icons: Record<string, string> = {
-        story_like:  '❤️',
-        new_message: '💬',
-        trip_invite: '✈️',
-        bookmark:    '🔖',
-        system:      '🔔',
+        story_like: '❤️', new_message: '💬', trip_invite: '✈️', bookmark: '🔖', system: '🔔',
       }
       return icons[type] || '🔔'
     }
 
     function formatTime(dateStr: string): string {
       if (!dateStr) return ''
-      const diff = Date.now() - new Date(dateStr).getTime()
+      const diff  = Date.now() - new Date(dateStr).getTime()
       const mins  = Math.floor(diff / 60000)
       const hours = Math.floor(mins / 60)
       const days  = Math.floor(hours / 24)
-      if (mins < 1)   return 'Just now'
-      if (mins < 60)  return `${mins}m ago`
+      if (mins  < 1)  return 'Just now'
+      if (mins  < 60) return `${mins}m ago`
       if (hours < 24) return `${hours}h ago`
       return `${days}d ago`
-    }
-
-    function getInitials(name: string): string {
-      if (!name) return '?'
-      return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
-    }
-
-    function getAvatarSrc(url: string | null): string {
-      if (!url) return ''
-      if (url.startsWith('data:'))    return url
-      if (url.startsWith('http'))     return url
-      if (url.startsWith('/uploads')) return `${BACKEND_URL}${url}`
-      return url
     }
 
     function handleLogout() {
@@ -260,10 +308,10 @@ export default defineComponent({
       localStorage.removeItem('currentUser')
       localStorage.removeItem('token')
       localStorage.removeItem('access_token')
-      user.value        = null
-      menuOpen.value    = false
-      notifOpen.value   = false
-      mobileOpen.value  = false
+      user.value          = null
+      menuOpen.value      = false
+      notifOpen.value     = false
+      mobileOpen.value    = false
       notifications.value = []
       unreadCount.value   = 0
       if (notifInterval) clearInterval(notifInterval)
@@ -271,12 +319,8 @@ export default defineComponent({
     }
 
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
-        menuOpen.value = false
-      }
-      if (notifRef.value && !notifRef.value.contains(e.target as Node)) {
-        notifOpen.value = false
-      }
+      if (menuRef.value  && !menuRef.value.contains(e.target as Node))  menuOpen.value  = false
+      if (notifRef.value && !notifRef.value.contains(e.target as Node)) notifOpen.value = false
     }
 
     onMounted(() => {
@@ -286,6 +330,8 @@ export default defineComponent({
       window.addEventListener('storage',        loadUser)
       window.addEventListener('user-updated',   loadUser)
       notifInterval = setInterval(loadNotifications, 60000)
+      chatInterval = setInterval(loadChatUnread, 10000)
+      
     })
 
     onUnmounted(() => {
@@ -294,12 +340,14 @@ export default defineComponent({
       window.removeEventListener('storage',        loadUser)
       window.removeEventListener('user-updated',   loadUser)
       if (notifInterval) clearInterval(notifInterval)
+      if (chatInterval) clearInterval(chatInterval)
     })
 
     return {
-      mobileOpen, menuOpen, notifOpen, menuRef, notifRef,
-      currentPath, user, notifications, unreadCount,
-      getInitials, getAvatarSrc, handleLogout,
+      mobileOpen, menuOpen, notifOpen, showMobileNotif,
+      menuRef, notifRef, currentPath, user,
+      notifications, unreadCount,chatUnread,
+      getInitials, getAvatarSrc, onAvatarError, handleLogout,
       toggleNotif, markAllRead, getNotifIcon, formatTime,
     }
   },
@@ -316,24 +364,24 @@ export default defineComponent({
 .nav-link { display: flex; align-items: center; height: 64px; padding: 0 14px; color: rgba(255,255,255,0.65); text-decoration: none; font-size: 14px; font-family: 'DM Sans', sans-serif; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
 .nav-link:hover { color: #fff; }
 .nav-link.active { color: #fff; border-bottom-color: #C8922A; }
+
 .nav-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .btn-login { padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 6px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
 .btn-login:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .btn-signup { padding: 8px 18px; background: #C8922A; border-radius: 6px; color: #fff; text-decoration: none; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: background 0.2s; white-space: nowrap; }
 .btn-signup:hover { background: #b07820; }
 
-.icon-btn { position: relative; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: background 0.2s; }
+.icon-btn { position: relative; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: background 0.2s; font-size: 16px; }
 .icon-btn:hover { background: rgba(255,255,255,0.15); }
-.icon-btn-icon { font-size: 16px; line-height: 1; }
 .notif-badge { position: absolute; top: -2px; right: -2px; background: #AE2012; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 10px; min-width: 16px; text-align: center; border: 1.5px solid #1a2340; }
 
 .notif-wrap { position: relative; }
 .notif-dropdown { position: absolute; top: calc(100% + 12px); right: 0; width: 320px; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); border: 1px solid #E0DDD6; overflow: hidden; z-index: 999; }
 .notif-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #E0DDD6; background: #F5F3EE; }
-.notif-title { font-size: 14px; font-weight: 600; color: #1a1a1a; font-family: 'DM Sans', sans-serif; }
+.notif-title { font-size: 14px; font-weight: 600; color: #1a1a1a; }
 .mark-read-btn { font-size: 12px; color: #C8922A; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .mark-read-btn:hover { text-decoration: underline; }
-.notif-list { max-height: 320px; overflow-y: auto; }
+.notif-list { max-height: 300px; overflow-y: auto; }
 .notif-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #E0DDD6; text-decoration: none; transition: background 0.15s; position: relative; }
 .notif-item:hover { background: #F5F3EE; }
 .notif-item.unread { background: #FDFAF5; }
@@ -345,17 +393,21 @@ export default defineComponent({
 .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: #C8922A; flex-shrink: 0; margin-top: 6px; }
 .notif-empty { text-align: center; padding: 32px 16px; color: #888; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .notif-empty span { font-size: 28px; }
-.notif-footer { display: block; text-align: center; padding: 12px; font-size: 13px; color: #C8922A; text-decoration: none; border-top: 1px solid #E0DDD6; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+.notif-footer { display: block; text-align: center; padding: 12px; font-size: 13px; color: #C8922A; text-decoration: none; border-top: 1px solid #E0DDD6; font-family: 'DM Sans', sans-serif; }
 .notif-footer:hover { background: #F5F3EE; }
 
 .user-menu { position: relative; }
 .avatar-btn { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; }
 .avatar-circle { width: 36px; height: 36px; background: #C8922A; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; font-family: 'DM Sans', sans-serif; border: 2px solid rgba(255,255,255,0.3); transition: border-color 0.2s, transform 0.2s; }
 .avatar-circle:hover { border-color: #fff; transform: scale(1.05); }
-.avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.3); }
+.avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.3); transition: border-color 0.2s; }
+.avatar-img:hover { border-color: #fff; }
+
 .user-dropdown { position: absolute; top: calc(100% + 12px); right: 0; width: 230px; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); border: 1px solid #E0DDD6; overflow: hidden; z-index: 999; }
 .dropdown-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #F5F3EE; }
-.dh-circle { width: 36px; height: 36px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.dh-avatar-wrap { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.dh-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.dh-circle { width: 36px; height: 36px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
 .dh-info { min-width: 0; }
 .dh-name  { font-size: 13px; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-email { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -364,24 +416,39 @@ export default defineComponent({
 .dd-item:hover { background: #F5F3EE; }
 .dd-logout { color: #AE2012; }
 .dd-logout:hover { background: #FFF0EF !important; }
+
 .drop-enter-active, .drop-leave-active { transition: opacity 0.15s, transform 0.15s; }
 .drop-enter-from, .drop-leave-to { opacity: 0; transform: translateY(-8px); }
 
 .hamburger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 8px; flex-shrink: 0; }
 .hamburger span { display: block; width: 22px; height: 2px; background: #fff; border-radius: 2px; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 998; }
-.mobile-menu { position: fixed; top: 0; right: -100%; width: 270px; height: 100vh; background: #1a2340; z-index: 999; display: flex; flex-direction: column; padding: 80px 0 24px; transition: right 0.3s ease; overflow-y: auto; }
+.mobile-menu { position: fixed; top: 0; right: -100%; width: 280px; height: 100vh; background: #1a2340; z-index: 999; display: flex; flex-direction: column; padding: 80px 0 24px; transition: right 0.3s ease; overflow-y: auto; }
 .mobile-menu.open { right: 0; }
 .mobile-link { padding: 14px 28px; color: rgba(255,255,255,0.75); text-decoration: none; font-size: 15px; font-family: 'DM Sans', sans-serif; border-left: 3px solid transparent; transition: all 0.15s; }
 .mobile-link:hover { color: #fff; background: rgba(255,255,255,0.06); border-left-color: #C8922A; }
-.mobile-auth { display: flex; flex-direction: column; gap: 10px; padding: 16px 28px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+.mobile-auth { display: flex; flex-direction: column; gap: 8px; padding: 16px 28px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
 .btn-login-m  { padding: 10px; border: 1.5px solid rgba(255,255,255,0.35); border-radius: 7px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14px; text-align: center; }
 .btn-signup-m { padding: 10px; background: #C8922A; border-radius: 7px; color: #fff; text-decoration: none; font-size: 14px; font-weight: 500; text-align: center; }
 .mobile-user { display: flex; flex-direction: column; gap: 8px; }
-.mobile-user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.mobile-avatar { width: 34px; height: 34px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
-.mobile-name { color: #fff; font-size: 14px; font-family: 'DM Sans', sans-serif; }
-.mobile-dd-link { padding: 9px 0; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-family: 'DM Sans', sans-serif; border-bottom: 1px solid rgba(255,255,255,0.07); }
+
+.mobile-user-info { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 4px; }
+.mobile-avatar-wrap { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.3); }
+.mobile-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.mobile-avatar { width: 42px; height: 42px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.mobile-name  { color: #fff; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; }
+.mobile-email { color: rgba(255,255,255,0.5); font-size: 11px; font-family: 'DM Sans', sans-serif; margin-top: 1px; }
+
+.mobile-notif-row { display: flex; gap: 8px; }
+.mobile-notif-btn { flex: 1; padding: 9px 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.8); font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; position: relative; }
+.mobile-notif-btn:hover { background: rgba(255,255,255,0.15); }
+.mobile-badge { background: #AE2012; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 10px; }
+.mobile-notif-list { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.mobile-notif-item { font-size: 12px; color: rgba(255,255,255,0.7); padding: 6px 8px; border-radius: 6px; }
+.mobile-notif-item.unread { color: #fff; background: rgba(200,146,42,0.15); }
+.mobile-mark-read { background: none; border: none; color: #C8922A; font-size: 12px; cursor: pointer; text-align: left; padding: 4px 8px; font-family: 'DM Sans', sans-serif; }
+
+.mobile-dd-link { padding: 10px 0; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-family: 'DM Sans', sans-serif; border-bottom: 1px solid rgba(255,255,255,0.07); }
 .mobile-dd-link:hover { color: #fff; }
 .btn-logout-m { padding: 10px; background: transparent; border: 1px solid rgba(255,60,60,0.5); border-radius: 7px; color: #ff6b6b; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 4px; }
 
