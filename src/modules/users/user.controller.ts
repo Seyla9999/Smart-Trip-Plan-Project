@@ -129,7 +129,7 @@ export class UsersController {
   )
   async uploadAvatar(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: MulterFile,
   ) {
     try {
       if (!file) return { success: false, message: 'No file uploaded' }

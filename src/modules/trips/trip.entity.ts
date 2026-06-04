@@ -40,11 +40,11 @@ export class Trip {
   @Column({ type: 'text', nullable: true })
   ai_summary?: string;
 
-  @Column({ nullable: true })
-  start_date!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  start_date?: Date | null;
 
-  @Column({ nullable: true })
-  end_date!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  end_date?: Date | null;
 
   @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'owner_id' })
