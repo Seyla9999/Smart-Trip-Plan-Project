@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { login } from '@/services/auth.service'
@@ -74,6 +74,17 @@ const dialogType = ref('success')
 const router = useRouter()
 const route = useRoute()
 const REDIRECT_KEY = 'post_auth_redirect'
+
+const timeoutMessage = computed(() => {
+  const timeoutValue = route.query.timeout
+  return timeoutValue === '1' || timeoutValue === 'true'
+})
+
+onMounted(() => {
+  if (timeoutMessage.value) {
+    showDialog('Your session has timed out. Please log in again.', 'error')
+  }
+})
 
 const getNormalizedRole = (user) => {
   const role = user?.role || user?.user_role || ''

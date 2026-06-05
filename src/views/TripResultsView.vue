@@ -27,7 +27,7 @@
             <span class="text-sm text-gray-400">{{ displayDateRange }}</span>
           </p>
         </div>
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3 items-center">
           <button @click="savePlan" :disabled="isSaving"
             class="px-4 py-2.5 bg-green-700 text-white rounded-lg text-sm font-semibold
                    hover:bg-green-800 disabled:opacity-70 disabled:cursor-not-allowed transition shadow-sm flex items-center gap-2">
@@ -37,6 +37,11 @@
           <button @click="openShareModal"
             class="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition shadow-sm">
             🔗 Invite Friends
+          </button>
+          <button v-if="tripData?.members && tripData.members.length > 0"
+            @click="showMembersPanel = true"
+            class="px-4 py-2.5 bg-white text-green-800 rounded-lg border border-gray-300 text-sm font-semibold hover:bg-gray-50 hover:border-green-700 transition shadow-sm">
+            👥 Members
           </button>
           <router-link to="/trip"
             class="px-4 py-2.5 border border-gray-300 bg-white text-green-800 rounded-lg text-sm font-semibold
@@ -87,6 +92,27 @@
                 <button @click="shareToEmail"    class="flex-1 py-2.5 bg-red-500    text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">📧 Email</button>
                 <button @click="shareToFacebook" class="flex-1 py-2.5 bg-[#1877f2] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">👍 Facebook</button>
               </div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showMembersPanel" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4 pt-20"
+          @click.self="showMembersPanel = false">
+          <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center px-6 py-5 border-b border-gray-100">
+              <h3 class="text-lg font-bold text-green-800">Trip Members</h3>
+              <button @click="showMembersPanel = false" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+              <PlanMembers
+                :members="formattedMembers"
+                :tripId="tripId"
+                :creatorId="tripData?.owner_id || ''"
+                @joined-chat="handleJoinedGroupChat"
+                @open-chat="handleOpenGroupChat"
+              />
             </div>
           </div>
         </div>
@@ -515,6 +541,8 @@ import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import API from '@/api/axios'
+import PlanMembers from '@/components/PlanMembers.vue'
+import { useGroupChat } from '@/composables/useGroupChat'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -539,7 +567,20 @@ interface ItineraryItem  {
   day_index: number
 }
 interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
-interface TripMember     { id: string; user_id: string; role: string }
+interface TripMember     {
+  id: string
+  user_id: string
+  role: string
+  name?: string
+  email?: string
+  avatar_url?: string
+  user?: {
+    id?: string
+    name?: string
+    email?: string
+    avatar_url?: string
+  }
+}
 interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
 interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
@@ -631,6 +672,7 @@ const isPageLoading     = ref(false)
 const apiError          = ref<string | null>(null)
 const isLoadingRoute    = ref(false)
 const showShareModal    = ref(false)
+const showMembersPanel  = ref(false)
 const isSaving          = ref(false)
 const saveLabel         = ref('💾 Save Plan')
 const copiedText        = ref('📋 Copy')
@@ -644,6 +686,9 @@ const savedTripViewMeta = ref<PersistedTripViewMeta | null>(null)
 const weatherForecast   = ref<DayWeather[]>([])
 const weatherLoading    = ref(false)
 const selectedWeatherDay = ref(0)
+
+// Group chat
+const { getOrCreateChatForTrip, joinChat, currentUserId } = useGroupChat()
 
 // Attractions — fetched from your backend /api/attractions
 const allAttractions             = ref<Attraction[]>([])
@@ -1973,6 +2018,65 @@ const shareToEmail    = () => window.open(`mailto:?subject=${encodeURIComponent(
 const shareToFacebook = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink.value)}`, '_blank')
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
+// ─── Group Chat Handlers ────────────────────────────────────────────────────
+const formattedMembers = computed(() => {
+  if (!tripData.value?.members) return []
+  return tripData.value.members.map(member => ({
+    id: member.user?.id || member.user_id || member.id,
+    name: member.name || member.user?.name || 'Member',
+    email: member.email || member.user?.email || 'No email',
+    avatar_url: member.avatar_url || member.user?.avatar_url,
+  }))
+})
+
+const handleJoinedGroupChat = async () => {
+  try {
+    if (!tripId.value) {
+      toastMsg.value = 'Please save the trip first before joining chat'
+      toastType.value = 'error'
+      return
+    }
+
+    const chat = await getOrCreateChatForTrip(tripId.value)
+    if (chat) {
+      if (currentUserId.value && !chat.members.some(m => String(m.id) === String(currentUserId.value))) {
+        await joinChat(chat.id)
+      }
+      toastMsg.value = 'Successfully joined group chat!'
+      toastType.value = 'success'
+      setTimeout(() => {
+        router.push({ path: '/chat', query: { convId: String(chat.id) } })
+      }, 1000)
+    }
+  } catch (error) {
+    console.error('Error joining group chat:', error)
+    toastMsg.value = 'Failed to join group chat'
+    toastType.value = 'error'
+  }
+}
+
+const handleOpenGroupChat = async () => {
+  try {
+    if (!tripId.value) {
+      toastMsg.value = 'Please save the trip first before opening chat'
+      toastType.value = 'error'
+      return
+    }
+
+    const chat = await getOrCreateChatForTrip(tripId.value)
+    if (chat) {
+      if (currentUserId.value && !chat.members.some(m => String(m.id) === String(currentUserId.value))) {
+        await joinChat(chat.id)
+      }
+      router.push({ path: '/chat', query: { convId: String(chat.id) } })
+    }
+  } catch (error) {
+    console.error('Error opening group chat:', error)
+    toastMsg.value = 'Failed to open group chat'
+    toastType.value = 'error'
+  }
+}
+
 onMounted(async () => {
   try {
     await fetchTrip()
