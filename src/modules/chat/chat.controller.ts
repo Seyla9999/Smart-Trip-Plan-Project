@@ -48,10 +48,50 @@ export class ChatController {
 
   @Get('conversations/:id/messages')
   getMessages(
-    @Param('id')          id:     string,
-    @Query('userId') userId: string,
+    @Param('id')            id:     string,
+    @Query('userId')        userId: string,
+    @Query('limit')         limit?: string,
+    @Query('offset')        offset?: string,
   ) {
-    return this.service.getMessages(id, userId)
+    const parsedLimit  = limit  ? parseInt(limit, 10)  : undefined
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined
+    return this.service.getMessages(
+      id,
+      userId,
+      parsedLimit  ?? 100,
+      parsedOffset ?? 0,
+    )
+  }
+
+  @Get('conversations/:id')
+  getConversation(@Param('id') id: string) {
+    return this.service.getConversationById(id)
+  }
+
+  @Post('conversations/:id/join')
+  joinConversation(@Param('id') id: string, @Body() body: { userId: string }) {
+    return this.service.joinConversation(id, body.userId)
+  }
+
+  @Post('conversations/:id/leave')
+  leaveConversation(@Param('id') id: string, @Body() body: { userId: string }) {
+    return this.service.leaveConversation(id, body.userId)
+  }
+
+  @Delete('conversations/:id/members/:userId')
+  removeConversationMember(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.service.removeMember(id, userId)
+  }
+
+  @Put('conversations/:id')
+  updateConversation(
+    @Param('id') id: string,
+    @Body() body: { name?: string; avatar?: string },
+  ) {
+    return this.service.updateConversation(id, body)
   }
 
   @Post('conversations')

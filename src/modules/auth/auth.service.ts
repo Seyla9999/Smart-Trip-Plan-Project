@@ -36,20 +36,29 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    const hashed = await bcrypt.hash(dto.password, 10);
+    const email = typeof dto.email === 'string' ? dto.email.trim().toLowerCase() : undefined;
+    const password = typeof dto.password === 'string' ? dto.password : undefined;
+    const fullNameRaw = dto.full_name ?? dto.username ?? '';
+    const fullName = typeof fullNameRaw === 'string' ? fullNameRaw.trim() : '';
+
+    if (!email || !password || !fullName) {
+      throw new BadRequestException('Email, password, and full name are required');
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     const existingUser = await this.userRepo.findOne({
-      where: { email: dto.email },
+      where: { email },
     });
     if (existingUser) {
       throw new BadRequestException('Email already exists');
     }
 
-    this.pendingUsers.set(dto.email, {
-      email: dto.email,
-      full_name: dto.full_name,
+    this.pendingUsers.set(email, {
+      email,
+      full_name: fullName,
       password_hash: hashed,
       verification_code: code,
       is_verified: false,
@@ -246,7 +255,8 @@ export class AuthService {
   // }
 
   async verify(email: string, code: string) {
-    const pendingUser = this.pendingUsers.get(email);
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const pendingUser = this.pendingUsers.get(normalizedEmail);
 
     if (!pendingUser) {
       throw new NotFoundException(

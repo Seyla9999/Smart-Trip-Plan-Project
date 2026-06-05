@@ -154,7 +154,7 @@ export class ChatService {
   }
 
 
-  async getMessages(conversationId: string, userId: string) {
+  async getMessages(conversationId: string, userId: string, limit = 100, offset = 0) {
     const isMember = await this.memberRepo.findOne({
       where: { conversationId, userId },
     })
@@ -176,7 +176,8 @@ export class ChatService {
       JOIN users u ON u.id = m.sender_id
       WHERE m.conversation_id = $1
       ORDER BY m.created_at ASC
-    `, [conversationId])
+      LIMIT $2 OFFSET $3
+    `, [conversationId, limit, offset])
 
     await this.convRepo.manager.query(`
       UPDATE chat_messages
@@ -299,6 +300,92 @@ export class ChatService {
     return { success: true, data: saved }
   }
 
+  async getConversationById(conversationId: string) {
+    const rows = await this.convRepo.manager.query(`
+      SELECT
+        c.id,
+        c.type,
+        c.name,
+        c.avatar,
+        c.trip_id,
+        c.created_by,
+        c.created_at,
+        c.updated_at,
+        json_agg(json_build_object(
+          'id', u.id,
+          'full_name', u.full_name,
+          'username', u.username,
+          'avatar_url', u.avatar_url
+        )) AS members
+      FROM conversations c
+      JOIN conversation_members cm ON cm.conversation_id = c.id
+      JOIN users u ON u.id = cm.user_id
+      WHERE c.id = $1
+      GROUP BY c.id
+    `, [conversationId])
+    if (!rows?.length) return { success: false, message: 'Conversation not found' }
+    return { success: true, data: rows[0] }
+  }
+
+  async joinConversation(conversationId: string, userId: string) {
+    await this.convRepo.manager.query(
+      `INSERT INTO conversation_members (conversation_id, user_id)
+       VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [conversationId, userId],
+    )
+    return { success: true, message: 'Joined conversation' }
+  }
+
+  async leaveConversation(conversationId: string, userId: string) {
+    await this.convRepo.manager.query(
+      `DELETE FROM conversation_members
+       WHERE conversation_id = $1
+         AND user_id = $2`,
+      [conversationId, userId],
+    )
+    return { success: true, message: 'Left conversation' }
+  }
+
+  async removeMember(conversationId: string, userId: string) {
+    await this.convRepo.manager.query(
+      `DELETE FROM conversation_members
+       WHERE conversation_id = $1
+         AND user_id = $2`,
+      [conversationId, userId],
+    )
+    return { success: true, message: 'Member removed' }
+  }
+
+  async updateConversation(
+    conversationId: string,
+    dto: { name?: string; avatar?: string },
+  ) {
+    const updates: string[] = []
+    const params: string[] = []
+
+    if (dto.name !== undefined) {
+      params.push(dto.name)
+      updates.push(`name = $${params.length}`)
+    }
+    if (dto.avatar !== undefined) {
+      params.push(dto.avatar)
+      updates.push(`avatar = $${params.length}`)
+    }
+
+    if (!updates.length) {
+      return { success: false, message: 'No fields to update' }
+    }
+
+    params.push(conversationId)
+    const result = await this.convRepo.manager.query(
+      `UPDATE conversations SET ${updates.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params,
+    )
+
+    if (!result?.length) return { success: false, message: 'Conversation not found' }
+    return { success: true, data: result[0] }
+  }
+
   async addMember(conversationId: string, userId: string) {
     await this.convRepo.manager.query(
       `INSERT INTO conversation_members (conversation_id, user_id)
@@ -376,11 +463,24 @@ export class ChatService {
     `, [tripName ?? 'Trip Group Chat', tripId, createdBy])
 
     const saved = result[0]
-    await this.convRepo.manager.query(
-      `INSERT INTO conversation_members (conversation_id, user_id)
-       VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [saved.id, createdBy],
+    const members = await this.convRepo.manager.query(
+      `SELECT user_id FROM trip_members WHERE trip_id = $1`,
+      [tripId],
     )
+
+    const memberIds = new Set<string>([createdBy])
+    for (const row of members) {
+      if (row?.user_id) memberIds.add(row.user_id)
+    }
+
+    for (const uid of memberIds) {
+      await this.convRepo.manager.query(
+        `INSERT INTO conversation_members (conversation_id, user_id)
+         VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [saved.id, uid],
+      )
+    }
+
     return { success: true, data: saved }
   }
 }
