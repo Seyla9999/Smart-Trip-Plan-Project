@@ -72,7 +72,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch, PropType, onMounted } from 'vue'
+import { defineComponent, ref, computed, watch, type PropType, onMounted } from 'vue'
 import type { Attraction } from '@/services/home.service'
 
 interface DisplayItem {
@@ -85,14 +85,14 @@ interface DisplayItem {
   reviews: number
 }
 
-const STAR_MAP = [0,'★☆☆☆☆','★★☆☆☆','★★★☆☆','★★★★☆','★★★★★']
+const STAR_MAP = ['', '★☆☆☆☆', '★★☆☆☆', '★★★☆☆', '★★★★☆', '★★★★★']
 
 const FALLBACK_DATA: Record<string, DisplayItem[]> = {
   Sea: [
     { name: 'Long Beach',        province: 'Koh Kong',      image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&q=80', color: '#2196A6', rating: '★★★★★', reviews: 312 },
     { name: 'Koh Ta Kiev',       province: 'Sihanoukville', image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=500&q=80', color: '#1A7A8A', rating: '★★★★☆', reviews: 198 },
     { name: 'Koh Rong Island',   province: 'Sihanoukville', image: 'https://images.unsplash.com/photo-1511497584788-876760111969?w=500&q=80', color: '#2D6A4F', rating: '★★★★☆', reviews: 145 },
-    { name: 'Koh Kong Island',   province: 'Koh Kong',      image: 'https://images.unsplash.com/photo-1564760055775-d63b17a55c44?w=500&q=80', color: '#3E6B47', rating: '★★★★☆', reviews: 87  },
+    { name: 'Koh Kong Island',   province: 'Koh Kong',      image: 'https://images.unsplash.com/photo-1564760055775-d63b17a55c44?w=500&q=80', color: '#3E6B47', rating: '★★★☆☆', reviews: 87  },
   ],
   Waterfall: [
     { name: 'Tatai Waterfall',   province: 'Koh Kong',      image: 'https://images.unsplash.com/photo-1564760055775-d63b17a55c44?w=500&q=80', color: '#2D6A8F', rating: '★★★★★', reviews: 743 },
@@ -103,32 +103,32 @@ const FALLBACK_DATA: Record<string, DisplayItem[]> = {
   Temple: [
     { name: 'Angkor Wat',        province: 'Siem Reap',     image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=500&q=80', color: '#4A7C59', rating: '★★★★★', reviews: 2341 },
     { name: 'Bayon Temple',      province: 'Siem Reap',     image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500&q=80', color: '#5B5EA6', rating: '★★★★★', reviews: 1654 },
-    { name: 'Ta Prohm',          province: 'Siem Reap',     image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=500&q=80', color: '#6B4C3B', rating: '★★★★★', reviews: 543  },
+    { name: 'Ta Prohm',          province: 'Siem Reap',     image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=500&q=80', color: '#6B4C3B', rating: '★★★★☆', reviews: 543  },
     { name: 'Preah Vihear',      province: 'Preah Vihear',  image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500&q=80', color: '#7A6030', rating: '★★★★☆', reviews: 876  },
   ],
   Nature: [
     { name: 'Yeak Laom Lake',     province: 'Ratanakiri',   image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=500&q=80', color: '#6B4C3B', rating: '★★★★★', reviews: 512 },
     { name: 'Cardamom Mountains', province: 'Koh Kong',     image: 'https://images.unsplash.com/photo-1511497584788-876760111969?w=500&q=80', color: '#2D6A4F', rating: '★★★★☆', reviews: 398 },
-    { name: 'Elephant Valley',    province: 'Mondulkiri',   image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=500&q=80', color: '#5C7A3E', rating: '★★★★★', reviews: 445 },
-    { name: 'Virachey Park',      province: 'Ratanakiri',   image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=500&q=80', color: '#3E6B47', rating: '★★★★☆', reviews: 198 },
+    { name: 'Elephant Valley',    province: 'Mondulkiri',   image: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=500&q=80', color: '#5C7A3E', rating: '★★★★☆', reviews: 445 },
+    { name: 'Virachey Park',      province: 'Ratanakiri',   image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=500&q=80', color: '#3E6B47', rating: '★★★☆☆', reviews: 198 },
   ],
   Food: [
     { name: 'Kep Crab Market',    province: 'Kep',          image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80', color: '#3D8B8B', rating: '★★★★★', reviews: 654 },
     { name: 'Phsar Thmei',        province: 'Phnom Penh',   image: 'https://images.unsplash.com/photo-1598946329549-8ac25a6c2890?w=500&q=80', color: '#3D5A80', rating: '★★★★☆', reviews: 421 },
     { name: 'Old Market SR',      province: 'Siem Reap',    image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=500&q=80', color: '#4A7C59', rating: '★★★★☆', reviews: 387 },
-    { name: 'Night Market Kampot',province: 'Kampot',       image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=500&q=80', color: '#5C7A3E', rating: '★★★★☆', reviews: 276 },
+    { name: 'Night Market Kampot',province: 'Kampot',       image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=500&q=80', color: '#5C7A3E', rating: '★★★☆☆', reviews: 276 },
   ],
   Pagoda: [
     { name: 'Silver Pagoda',      province: 'Phnom Penh',   image: 'https://images.unsplash.com/photo-1598946329549-8ac25a6c2890?w=500&q=80', color: '#3D5A80', rating: '★★★★★', reviews: 987 },
     { name: 'Wat Phnom',          province: 'Phnom Penh',   image: 'https://images.unsplash.com/photo-1598946329549-8ac25a6c2890?w=500&q=80', color: '#5B5EA6', rating: '★★★★☆', reviews: 765 },
-    { name: 'Phnom Sampov',       province: 'Battambang',   image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80', color: '#7A6030', rating: '★★★★☆', reviews: 312 },
+    { name: 'Phnom Sampov',       province: 'Battambang',   image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80', color: '#7A6030', rating: '★★★☆☆', reviews: 312 },
     { name: 'Wat Banan',          province: 'Battambang',   image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80', color: '#6B7C3E', rating: '★★★☆☆', reviews: 156 },
   ],
   Culture: [
     { name: 'Royal Palace',       province: 'Phnom Penh',   image: 'https://images.unsplash.com/photo-1598946329549-8ac25a6c2890?w=500&q=80', color: '#3D5A80', rating: '★★★★★', reviews: 1876 },
     { name: 'Killing Fields',     province: 'Phnom Penh',   image: 'https://images.unsplash.com/photo-1598946329549-8ac25a6c2890?w=500&q=80', color: '#6B4C3B', rating: '★★★★☆', reviews: 1234 },
-    { name: 'Apsara Dance Show',  province: 'Siem Reap',    image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=500&q=80', color: '#4A7C59', rating: '★★★★★', reviews: 987  },
-    { name: 'Phare Circus',       province: 'Battambang',   image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80', color: '#2196A6', rating: '★★★★★', reviews: 432  },
+    { name: 'Apsara Dance Show',  province: 'Siem Reap',    image: 'https://images.unsplash.com/photo-1538964173425-93884e739ccd?w=500&q=80', color: '#4A7C59', rating: '★★★★☆', reviews: 987  },
+    { name: 'Phare Circus',       province: 'Battambang',   image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80', color: '#2196A6', rating: '★★★★☆', reviews: 432  },
   ],
 }
 
@@ -152,12 +152,12 @@ export default defineComponent({
     const liveItems  = ref<DisplayItem[]>([])
 
     const categories = [
-      { name: 'Sea',       icon: '🌊' },
-      { name: 'Waterfall', icon: '💧' },
-      { name: 'Temple',    icon: '🏛️' },
+      { name: 'Sea',       icon: '🏖️' },
+      { name: 'Waterfall', icon: '🏞️' },
+      { name: 'Temple',    icon: '🛕' },
       { name: 'Nature',    icon: '🌿' },
       { name: 'Food',      icon: '🍜' },
-      { name: 'Pagoda',    icon: '🕌' },
+      { name: 'Pagoda',    icon: '🛕' },
       { name: 'Culture',   icon: '🎎' },
     ]
 
@@ -175,7 +175,7 @@ export default defineComponent({
         province: a.province?.name_en ?? '',
         image:    getAttractionImage(a),
         color:    '#4A7C59',
-        rating:   STAR_MAP[rating] as string || '★★★☆☆',
+        rating:   STAR_MAP[rating] as string || '',
         reviews:  (a as any).review_count || 0,
       }
     }

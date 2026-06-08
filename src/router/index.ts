@@ -1,22 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { clearAuthSession, isAuthSessionExpired } from '@/services/auth-session.service'
 
-import HomeView          from '../views/HomeView.vue'
-import LoginView         from '../views/auth/LoginView.vue'
-import RegisterView      from '../views/auth/RegisterView.vue'
-import VerifyView        from '../views/auth/VerifyView.vue'
-import AdminView         from '../views/AdminView.vue'
-import Admin_Dashboard   from '../views/Admin_Dashboard.vue'
-import UserView          from '../views/UserView.vue'
-import User_Discover     from '../views/User_Discover.vue'
-import CommunityView     from '../views/CommunityView.vue'
+import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/auth/LoginView.vue'
+import RegisterView from '../views/auth/RegisterView.vue'
+import VerifyView from '../views/auth/VerifyView.vue'
+import AdminView from '../views/AdminView.vue'
+import Admin_Dashboard from '../views/Admin_Dashboard.vue'
+import Admin_Destination from '../views/Admin_Destination.vue'
+import Admin_Moderation from '../views/Admin_Moderation.vue'
+import Admin_User from '../views/Admin_User.vue'
+import Admin_Setting from '../views/Admin_Setting.vue'
+import UserView from '../views/UserView.vue'
+import User_Discover from '../views/User_Discover.vue'
+import CommunityView from '../views/CommunityView.vue'
 import ProvinceDetailView from '../views/ProvinceDetailView.vue'
-import AboutView         from '../views/AboutView.vue'
-import AttractionDetail  from '../components/AttractionDetail.vue'
-import TripPlannerView   from '../views/TripPlannerView.vue'
-import TripFormView      from '../views/TripFormView.vue'
-import TripResultsView   from '../views/TripResultsView.vue'
-import ProfileView       from '../views/ProfileView.vue'
-import ChatView          from '../views/ChatView.vue'
+import AboutView from '../views/AboutView.vue'
+import AttractionDetail from '../components/AttractionDetail.vue'
+import TripPlannerView from '../views/TripPlannerView.vue'
+import TripFormView from '../views/TripFormView.vue'
+import TripResultsView from '../views/TripResultsView.vue'
+import MapView from '../views/MapView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import MyTripsView from '../views/MyTripsView.vue'
+import ChatView from '../views/ChatView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -48,26 +55,41 @@ const router = createRouter({
     },
 
     {
-      path: '/admin',
+      path: "/admin",
       component: AdminView,
       children: [
         { path: '', name: 'admin-dashboard', component: Admin_Dashboard },
+        { path: 'destination', name: 'admin-destination', component: Admin_Destination },
+        { path: 'moderation', name: 'admin-moderation', component: Admin_Moderation },
+        { path: 'user', name: 'admin-user', component: Admin_User },
+        { path: 'setting', name: 'admin-setting', component: Admin_Setting },
       ],
     },
     {
-      path: '/discover',
+      path: "/discover",
       component: UserView,
-      children: [
-        { path: '', name: 'discover', component: User_Discover },
-      ],
+      children: [{ path: "", name: "discover", component: User_Discover }],
     },
-    { path: '/user',          redirect: '/discover' },
-    { path: '/user/discover', redirect: '/discover' },
-
-    { path: '/community', name: 'community', component: CommunityView },
-
     {
-      path: '/trip',
+      path: "/map",
+      name: "map",
+      component: MapView,
+    },
+    {
+      path: "/user",
+      redirect: "/discover",
+    },
+    {
+      path: "/user/discover",
+      redirect: "/discover",
+    },
+    {
+      path: "/community",
+      name: "community",
+      component: CommunityView,
+    },
+    {
+      path: "/trip",
       component: TripPlannerView,
       children: [
         { path: '',        name: 'trip',         component: TripFormView },
@@ -127,7 +149,7 @@ const router = createRouter({
   scrollBehavior(_to, _from, savedPosition) {
     return savedPosition || { top: 0 }
   },
-})
+});
 
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('auth_token')
@@ -148,9 +170,43 @@ router.beforeEach((to, _from, next) => {
 
   if (!token && !publicRoutes.includes(routeName)) {
     next('/login')
-  } else {
-    next()
+    return
   }
-})
+
+  const rawUser = localStorage.getItem('user_data') || localStorage.getItem('user') || localStorage.getItem('currentUser')
+  let isAdminUser = false
+
+  if (rawUser) {
+    try {
+      const user = JSON.parse(rawUser)
+      const role = String(user?.role || user?.user_role || '').trim().toLowerCase()
+      isAdminUser = role === 'admin'
+    } catch {
+      isAdminUser = false
+    }
+  }
+
+  const isAdminRoute = to.path.startsWith('/admin')
+  const authRoutes = ['/login', '/register', '/verify']
+
+  if (isAdminUser && !isAdminRoute) {
+    next('/admin')
+    return
+  }
+
+  if (isAdminRoute) {
+    if (!token) {
+      next('/login')
+      return
+    }
+
+    if (!isAdminUser) {
+      next('/')
+      return
+    }
+  }
+
+  next();
+});
 
 export default router

@@ -80,10 +80,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import type { Attraction } from '@/services/home.service'
 
-const STAR_MAP = ['','★☆☆☆☆','★★☆☆☆','★★★☆☆','★★★★☆','★★★★★']
+const STAR_MAP = ['', '★☆☆☆☆', '★★☆☆☆', '★★★☆☆', '★★★★☆', '★★★★★']
 
 export default defineComponent({
   name: 'HiddenGems',
@@ -100,7 +100,7 @@ export default defineComponent({
 
     function getStars(rating: number): string {
       const r = Math.min(Math.round(Number(rating) || 0), 5)
-      return STAR_MAP[r] || '★★★☆☆'
+      return STAR_MAP[r] || ''
     }
 
     const staticGems = [
