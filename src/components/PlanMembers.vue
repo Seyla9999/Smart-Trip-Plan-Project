@@ -16,9 +16,10 @@
         <div class="member-info">
           <div class="member-name">
             {{ member.name }}
-            <span v-if="isCreator(member.id)" class="creator-badge">Creator</span>
+            <span v-if="isCreator(member.id)" class="role-badge owner-badge">Owner</span>
+            <span v-else class="role-badge member-badge">Member</span>
           </div>
-          <div class="member-role">{{ member.email }}</div>
+          <div class="member-email">{{ member.email }}</div>
         </div>
         <div v-if="isCreator(member.id)" class="member-icon">👑</div>
       </div>
@@ -63,6 +64,7 @@ interface Member {
   name: string
   email: string
   avatar_url?: string
+  role?: 'owner' | 'member'
 }
 
 export default defineComponent({
@@ -279,12 +281,33 @@ export default defineComponent({
   font-weight: 600;
 }
 
-.member-role {
+.member-email {
   font-size: 12px;
-  color: #9ca3af;
+  color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.owner-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.member-badge {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .member-icon {
@@ -317,13 +340,14 @@ export default defineComponent({
 }
 
 .btn-join-chat {
-  background: #dcfce7;
-  color: #166534;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .btn-join-chat:hover:not(:disabled) {
-  background: #bbf7d0;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .btn-join-chat:disabled {
@@ -332,13 +356,14 @@ export default defineComponent({
 }
 
 .btn-open-chat {
-  background: #bfdbfe;
-  color: #1e40af;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .btn-open-chat:hover {
-  background: #93c5fd;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .spinner-small {

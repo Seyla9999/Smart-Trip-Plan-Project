@@ -38,6 +38,11 @@
             class="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition shadow-sm">
             🔗 Invite Friends
           </button>
+          <button v-if="tripData?.owner_id && currentUserId.value && String(tripData.owner_id) === String(currentUserId.value)"
+            @click="confirmDeleteOnPage"
+            class="px-4 py-2.5 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition shadow-sm">
+            🗑️ Delete Trip
+          </button>
           <button v-if="tripData?.members && tripData.members.length > 0"
             @click="showMembersPanel = true"
             class="px-4 py-2.5 bg-white text-green-800 rounded-lg border border-gray-300 text-sm font-semibold hover:bg-gray-50 hover:border-green-700 transition shadow-sm">
@@ -1586,6 +1591,20 @@ const savePlan = async () => {
        window.history.replaceState({}, '', `/trip/results/${data.id}`)
     }
 
+    // Auto-create/get group chat for the trip
+    try {
+      if (!tripId.value && persistedTripId) {
+        // New trip created, automatically create group chat
+        await getOrCreateChatForTrip(persistedTripId)
+      } else if (tripId.value && persistedTripId) {
+        // Existing trip updated, ensure group chat exists
+        await getOrCreateChatForTrip(persistedTripId)
+      }
+    } catch (err) {
+      console.error('Error creating group chat:', err)
+      // Don't block trip save if group chat fails
+    }
+
     saveLabel.value = '✓ Saved!'
     showToast('Trip plan saved successfully!', 'success')
     setTimeout(() => router.push({ name: 'my-trips' }), 1500)
@@ -1994,17 +2013,11 @@ const openShareModal = async () => {
     ]
     for (const ep of endpoints) {
       try {
-        const res = await fetch(`${API_BASE}${ep}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json',
-                     Authorization: `Bearer ${authToken}` },
-        })
-        if (res.ok) {
-          const data = await res.json()
-          const generated = data?.invite_token ?? data?.token
-                          ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
-          if (generated) { inviteToken.value = String(generated); break }
-        }
+        const res = await API.post(ep)
+        const data = res.data
+        const generated = data?.invite_token ?? data?.token
+                        ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
+        if (generated) { inviteToken.value = String(generated); break }
       } catch { /* try next */ }
     }
   } catch { /* ignore */ } finally {
@@ -2013,6 +2026,20 @@ const openShareModal = async () => {
 }
 
 const copyToClipboard = async () => { await navigator.clipboard.writeText(shareLink.value).catch(()=>{}); copiedText.value = '✓ Copied!'; setTimeout(() => { copiedText.value = '📋 Copy' }, 2000) }
+
+const confirmDeleteOnPage = async () => {
+  if (!tripData.value) return
+  const ok = window.confirm(`Delete trip "${tripData.value.title}"? This cannot be undone.`)
+  if (!ok) return
+  try {
+    await API.delete(`/api/trips/${tripId.value}`)
+    showToast('Trip deleted', 'success')
+    router.push({ name: 'my-trips' })
+  } catch (err: any) {
+    console.error('Failed to delete trip', err)
+    showToast(err?.response?.data?.message || 'Failed to delete trip', 'error')
+  }
+}
 const shareToWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(`My trip: ${originName.value} → ${destinationName.value} — ${shareLink.value}`)}`, '_blank')
 const shareToEmail    = () => window.open(`mailto:?subject=${encodeURIComponent(`Trip: ${originName.value} → ${destinationName.value}`)}&body=${encodeURIComponent(shareLink.value)}`)
 const shareToFacebook = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink.value)}`, '_blank')
@@ -2021,19 +2048,22 @@ const shareToFacebook = () => window.open(`https://www.facebook.com/sharer/share
 // ─── Group Chat Handlers ────────────────────────────────────────────────────
 const formattedMembers = computed(() => {
   if (!tripData.value?.members) return []
-  return tripData.value.members.map(member => ({
-    id: member.user?.id || member.user_id || member.id,
-    name: member.name || member.user?.name || 'Member',
-    email: member.email || member.user?.email || 'No email',
-    avatar_url: member.avatar_url || member.user?.avatar_url,
-  }))
+  return tripData.value.members.map(member => {
+    const memberId = member.user?.id || member.user_id || member.id
+    return {
+      id: memberId,
+      name: member.name || member.user?.name || 'Member',
+      email: member.email || member.user?.email || '',
+      avatar_url: member.avatar_url || member.user?.avatar_url,
+      role: (memberId === tripData.value?.owner_id ? 'owner' : 'member') as 'owner' | 'member',
+    }
+  })
 })
 
 const handleJoinedGroupChat = async () => {
   try {
     if (!tripId.value) {
-      toastMsg.value = 'Please save the trip first before joining chat'
-      toastType.value = 'error'
+      showToast('Please save the trip first before joining chat', 'error')
       return
     }
 
@@ -2042,24 +2072,22 @@ const handleJoinedGroupChat = async () => {
       if (currentUserId.value && !chat.members.some(m => String(m.id) === String(currentUserId.value))) {
         await joinChat(chat.id)
       }
-      toastMsg.value = 'Successfully joined group chat!'
-      toastType.value = 'success'
+      showToast('Successfully joined group chat!', 'success')
       setTimeout(() => {
-        router.push({ path: '/chat', query: { convId: String(chat.id) } })
+        showMembersPanel.value = false
+        router.push({ name: 'chat', query: { convId: String(chat.id) } })
       }, 1000)
     }
   } catch (error) {
     console.error('Error joining group chat:', error)
-    toastMsg.value = 'Failed to join group chat'
-    toastType.value = 'error'
+    showToast('Failed to join group chat. Please try again.', 'error')
   }
 }
 
 const handleOpenGroupChat = async () => {
   try {
     if (!tripId.value) {
-      toastMsg.value = 'Please save the trip first before opening chat'
-      toastType.value = 'error'
+      showToast('Please save the trip first before opening chat', 'error')
       return
     }
 
@@ -2068,12 +2096,15 @@ const handleOpenGroupChat = async () => {
       if (currentUserId.value && !chat.members.some(m => String(m.id) === String(currentUserId.value))) {
         await joinChat(chat.id)
       }
-      router.push({ path: '/chat', query: { convId: String(chat.id) } })
+      showMembersPanel.value = false
+      showToast('Opening group chat...', 'success')
+      setTimeout(() => {
+        router.push({ name: 'chat', query: { convId: String(chat.id) } })
+      }, 300)
     }
   } catch (error) {
     console.error('Error opening group chat:', error)
-    toastMsg.value = 'Failed to open group chat'
-    toastType.value = 'error'
+    showToast('Failed to open group chat. Please try again.', 'error')
   }
 }
 
