@@ -7,30 +7,18 @@ import { Sponsor } from './sponsor.entity';
 export class SponsorsService {
   constructor(
     @InjectRepository(Sponsor)
-    private repo: Repository<Sponsor>,
+    private sponsorRepo: Repository<Sponsor>,
   ) {}
 
   async findAllActive() {
-    const data = await this.repo
-      .createQueryBuilder('s')
-      .where('s.is_active = true')
-      .orderBy(
-        `CASE s.tier
-          WHEN 'gold'   THEN 1
-          WHEN 'silver' THEN 2
-          WHEN 'bronze' THEN 3
-          ELSE 4
-        END`,
-      )
-      .addOrderBy('s.created_at', 'ASC')
-      .getMany();
-
-    return { success: true, data };
+    return this.sponsorRepo.find({
+      where: { is_active: true },
+      order: { tier: 'ASC', name: 'ASC' },
+    });
   }
 
-  async create(data: Partial<Sponsor>) {
-    const sponsor = this.repo.create(data);
-    const saved = await this.repo.save(sponsor);
-    return { success: true, data: saved };
+  async create(data: any) {
+    const sponsor = this.sponsorRepo.create(data);
+    return this.sponsorRepo.save(sponsor);
   }
 }
