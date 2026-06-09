@@ -103,8 +103,8 @@
                     <div v-else class="dh-circle">{{ getInitials(user.full_name) }}</div>
                   </div>
                   <div class="dh-info">
-                    <div class="dh-name">{{ user.full_name }}</div>
-                    <div class="dh-email">{{ user.email }}</div>
+                    <div class="dh-name">{{ user.full_name || user.username || 'Traveler' }}</div>
+                    <div class="dh-email">{{ user.email || (user.username ? `@${user.username}` : '') }}</div>
                   </div>
                 </div>
                 <div class="dd-divider" />
@@ -151,8 +151,8 @@
               <div v-else class="mobile-avatar">{{ getInitials(user.full_name) }}</div>
             </div>
             <div>
-              <div class="mobile-name">{{ user.full_name }}</div>
-              <div class="mobile-email">{{ user.email }}</div>
+              <div class="mobile-name">{{ user.full_name || user.username || 'Traveler' }}</div>
+              <div class="mobile-email">{{ user.email || (user.username ? `@${user.username}` : '') }}</div>
             </div>
           </div>
 
@@ -250,13 +250,30 @@ export default defineComponent({
     let notifInterval: any = null
     let chatInterval:  any = null
 
+    function normalizeUser(rawUser: any) {
+      const fullName = rawUser.full_name || rawUser.name || rawUser.user_name || rawUser.username || rawUser.email || ''
+      const userName = rawUser.username || rawUser.user_name || rawUser.handle || (fullName ? String(fullName).split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '') : '')
+      const email = rawUser.email || rawUser.user_email || rawUser.email_address || ''
+      const avatarUrl = rawUser.avatar_url || rawUser.avatar || rawUser.profile_image || rawUser.imageUrl || rawUser.user_avatar || null
+      const id = rawUser.id || rawUser.user_id || rawUser.uuid || null
+      return {
+        ...rawUser,
+        id,
+        full_name: fullName,
+        username: userName,
+        email,
+        avatar_url: avatarUrl,
+      }
+    }
+
     function loadUser() {
       const raw = localStorage.getItem('user_data')
                 || localStorage.getItem('user')
                 || localStorage.getItem('currentUser')
       if (raw) {
         try {
-          user.value = JSON.parse(raw)
+          const parsed = JSON.parse(raw)
+          user.value = normalizeUser(parsed)
           loadNotifications()
           loadChatUnread()
         } catch { user.value = null }

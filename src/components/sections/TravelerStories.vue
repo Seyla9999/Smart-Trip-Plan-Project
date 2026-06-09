@@ -38,10 +38,10 @@
             >
               <div class="scard-overlay" />
               <div class="scard-author">
-                <div class="scard-av" :style="{ background: getAvatarColor(s.user_name) }">
-                  {{ getInitials(s.user_name) }}
+                <div class="scard-av" :style="{ background: getAvatarColor(s.user_name || s.user_username) }">
+                  {{ getInitials(s.user_name || s.user_username) }}
                 </div>
-                <span class="scard-aname">{{ s.user_name || 'Traveler' }}</span>
+                <span class="scard-aname">{{ s.user_name || s.user_username || 'Traveler' }}</span>
               </div>
             </div>
             <div class="scard-body">

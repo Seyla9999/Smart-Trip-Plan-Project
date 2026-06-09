@@ -8,6 +8,10 @@
           <img :src="currentUser.avatar" :alt="currentUser.name" class="avatar-img" />
         </div>
         <div v-else class="avatar av-you">{{ currentUser.initials }}</div>
+        <div class="composer-user-info">
+          <div class="composer-user-name">{{ currentUser.name }}</div>
+          <div v-if="currentUser.id" class="composer-user-handle">@{{ currentUser.name.split(' ')[0].toLowerCase() }}</div>
+        </div>
         
         <div class="composer-search-bar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -288,8 +292,8 @@ function updateCurrentUser() {
     if (raw) {
       const parsed = JSON.parse(raw)
       currentUser.value.id = parsed.id || parsed.uuid || parsed.user_id || null
-      currentUser.value.name = parsed.name || parsed.username || parsed.full_name || parsed.email || 'You'
-      currentUser.value.avatar = parsed.avatar || parsed.profile_image || parsed.imageUrl || null
+      currentUser.value.name = parsed.name || parsed.username || parsed.full_name || parsed.user_name || parsed.user?.name || parsed.email || 'You'
+      currentUser.value.avatar = parsed.avatar || parsed.avatar_url || parsed.profile_image || parsed.imageUrl || parsed.user_avatar || null
       currentUser.value.initials = currentUser.value.name
         .split(' ')
         .map((n: string) => n[0])
@@ -704,6 +708,23 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.composer-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.composer-user-name {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.composer-user-handle {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 /* Image Upload Styles */

@@ -115,15 +115,19 @@ export async function getStories(limit = 5): Promise<Story[]> {
         }
       }
       
+      const authorName = s.user_name || s.user?.name || s.user?.full_name || s.user?.username || s.author_name || 'Traveler'
+      const authorHandle = s.user_username || s.user?.username || (authorName ? `@${String(authorName).split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@traveler')
+      const authorAvatar = s.user_avatar || s.user?.avatar_url || s.user?.avatar || s.avatar_url || '#4A7C59'
+
       return {
         id: s.id,
         title: s.title || 'Untitled Story',
         content: s.content || '',
         created_at: s.created_at,
         user_id: s.user_id || 'unknown',
-        user_name: 'Traveler', // Backend doesn't return author name yet
-        user_avatar: '#4A7C59',
-        user_username: '@traveler',
+        user_name: authorName,
+        user_avatar: authorAvatar,
+        user_username: authorHandle,
         attachments: imageUrl ? [{ url: imageUrl, file_type: 'image' }] : [],
       }
     })
