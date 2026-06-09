@@ -13,7 +13,6 @@ import { CommunityStoriesService } from './community-stories.service';
 export class CommunityStoriesController {
   constructor(private readonly service: CommunityStoriesService) {}
 
-  // GET /community?category=Natural&sort=latest&search=angkor&page=1
   @Get()
   findAll(
     @Query('category') category?: string,
@@ -31,7 +30,6 @@ export class CommunityStoriesController {
     });
   }
 
-  // GET /community/stats
   @Get('stats')
   getStats() {
     return this.service.getStats();
@@ -53,7 +51,9 @@ export class CommunityStoriesController {
       authorHandle: string;
       authorInitials: string;
       authorAvatarColor?: string;
+      authorAvatarUrl?: string;
       authorHomeBase?: string;
+      userId?: string;
     },
   ) {
     return this.service.create(body);

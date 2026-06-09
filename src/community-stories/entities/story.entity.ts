@@ -24,7 +24,7 @@ export class Story {
   @Column({ type: 'text', nullable: true })
   content: string;
 
-  @Column({ type: 'varchar', default: 'published' })
+  @Column({ type: 'varchar', default: 'pending' })
   status: string;
 
   @Column({ type: 'varchar', length: 50, default: 'Natural' })
@@ -74,6 +74,14 @@ export class Story {
     default: '#1a2340',
   })
   authorAvatarColor: string;
+
+  @Column({
+    name: 'author_avatar_url',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  authorAvatarUrl: string;
 
   @Column({
     name: 'author_home_base',

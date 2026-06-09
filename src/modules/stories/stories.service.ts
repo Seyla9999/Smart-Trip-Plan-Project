@@ -36,16 +36,22 @@ export class StoriesService {
     page?: number;
     status?: string;
     userId?: string;
+    category?: string;
+    sort?: string;
+    search?: string;
   }) {
     const limit = Number(q.limit) || 10;
     const page = Number(q.page) || 1;
     const skip = (page - 1) * limit;
     const statusFilter = this.parseStatusFilter(q.status);
     const userId = q.userId;
+    const category = q.category;
+    const sort = q.sort || 'latest';
+    const search = q.search;
 
     const queryBuilder = this.storyRepo
       .createQueryBuilder('s')
-      .where('s.deleted_at IS NULL');
+      .where('s.deletedAt IS NULL');
 
     if (statusFilter) {
       queryBuilder.andWhere('s.status IN (:...statuses)', {
@@ -54,16 +60,36 @@ export class StoriesService {
     }
 
     if (userId) {
-      queryBuilder.andWhere('s.user_id = :userId', { userId });
+      queryBuilder.andWhere('s.userId = :userId', { userId });
+    }
+
+    if (category && category !== 'All') {
+      queryBuilder.andWhere('s.category = :category', { category });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(s.title ILIKE :q OR s.content ILIKE :q OR s.location ILIKE :q OR s.authorName ILIKE :q)',
+        { q: `%${search}%` },
+      );
+    }
+
+    if (sort === 'popular') {
+      queryBuilder.orderBy('s.likesCount', 'DESC');
+    } else if (sort === 'discussed') {
+      queryBuilder.orderBy('s.commentsCount', 'DESC');
+    } else if (sort === 'top-rated') {
+      queryBuilder.orderBy('s.rating', 'DESC');
+    } else {
+      queryBuilder.orderBy('s.createdAt', 'DESC');
     }
 
     const [data, total] = await queryBuilder
-      .orderBy('s.created_at', 'DESC')
       .take(limit)
       .skip(skip)
       .getManyAndCount();
 
-    return { success: true, data, meta: { total, page, limit } };
+    return { success: true, data, total, meta: { total, page, limit } };
   }
 
   private normalizeStatus(status?: string): string {
@@ -86,18 +112,18 @@ export class StoriesService {
     }
 
     const story = await this.storyRepo.findOne({ where: { id } });
-    if (!story || story.deleted_at) {
+    if (!story || story.deletedAt) {
       throw new NotFoundException('Story not found');
     }
 
     story.status = normalizedStatus;
-    story.updated_at = new Date();
+    story.updatedAt = new Date();
     await this.storyRepo.save(story);
 
     return {
       id: story.id,
       status: story.status,
-      updated_at: story.updated_at,
+      updatedAt: story.updatedAt,
     };
   }
 }

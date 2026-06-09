@@ -25,7 +25,7 @@ export class CommunityStoriesService {
     const qb = this.storyRepo
       .createQueryBuilder('story')
       .where('story.deletedAt IS NULL')
-      .andWhere("story.status = 'published'");
+      .andWhere("story.status IN ('published', 'approved')");
 
     if (category && category !== 'All') {
       qb.andWhere('story.category = :category', { category });
@@ -67,6 +67,7 @@ export class CommunityStoriesService {
     authorHandle: string;
     authorInitials: string;
     authorAvatarColor?: string;
+    authorAvatarUrl?: string;
     authorHomeBase?: string;
     userId?: string;
   }): Promise<Story> {
@@ -84,9 +85,10 @@ export class CommunityStoriesService {
       authorHandle: dto.authorHandle,
       authorInitials: dto.authorInitials,
       authorAvatarColor: dto.authorAvatarColor ?? '#1a2340',
+      authorAvatarUrl: dto.authorAvatarUrl,
       authorHomeBase: dto.authorHomeBase,
       userId: dto.userId,
-      status: 'published',
+      status: 'pending',
       publishedAt: new Date(),
     };
 
@@ -139,7 +141,7 @@ export class CommunityStoriesService {
   async getStats(): Promise<{ totalStories: number; totalLikes: number }> {
     const rows = await this.storyRepo.manager.query(
       `SELECT COUNT(*) as total, SUM(likes_count) as likes
-       FROM stories WHERE status = 'published' AND deleted_at IS NULL`,
+       FROM stories WHERE status IN ('published', 'approved') AND deleted_at IS NULL`,
     );
     return {
       totalStories: parseInt(rows[0]?.total ?? '0', 10),
