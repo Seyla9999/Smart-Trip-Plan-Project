@@ -223,13 +223,17 @@ export default defineComponent({
     const travelerCount = ref<number | null>(null);
 
     const isLoggedIn = computed(() => {
-      const token = localStorage.getItem("auth_token");
-      return (
-        !!token &&
-        token !== "null" &&
-        token !== "undefined" &&
-        token.trim() !== ""
+      const authToken = localStorage.getItem("auth_token");
+      const hasValidAuthToken = !!authToken && authToken !== "null" && authToken !== "undefined" && authToken.trim() !== "";
+      
+      const hasOtherTokens = !!(
+        localStorage.getItem('user_data') || 
+        localStorage.getItem('user') || 
+        localStorage.getItem('token') || 
+        localStorage.getItem('access_token')
       );
+
+      return hasValidAuthToken || hasOtherTokens;
     });
 
     async function fetchTravelerCount() {
@@ -449,10 +453,6 @@ export default defineComponent({
         window.location.href = `/discover?search=${encodeURIComponent(tag)}`;
       }
     }
-
-    const isLoggedIn = computed(() => {
-      return !!(localStorage.getItem('user_data') || localStorage.getItem('user') || localStorage.getItem('token') || localStorage.getItem('access_token'))
-    })
 
     return {
       current,
