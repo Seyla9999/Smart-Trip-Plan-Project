@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 const props = defineProps<{
   place: {
     id: string | number;
@@ -27,6 +29,23 @@ function shortDescription(text: string, max = 180) {
   if (!text) return "";
   return text.length > max ? text.slice(0, max) + "..." : text;
 }
+
+function roundToHalf(value: number) {
+  return Math.round(value * 2) / 2;
+}
+
+const starDisplay = computed(() => {
+  const rounded = roundToHalf(props.place.rating);
+  const full = Math.floor(rounded);
+  const half = rounded % 1 !== 0 ? 1 : 0;
+  const empty = 5 - full - half;
+
+  return {
+    full: "★".repeat(full),
+    half: half ? "⯨" : "",
+    empty: "☆".repeat(empty),
+  };
+});
 </script>
 
 <template>
@@ -47,7 +66,10 @@ function shortDescription(text: string, max = 180) {
 
     <div class="featured-content">
       <div class="featured-meta">
-        <span class="rating-stars">★ {{ place.rating }}</span>
+        <span class="rating-stars">
+          {{ starDisplay.full }}{{ starDisplay.half }}{{ starDisplay.empty }}
+        </span>
+        <span class="rating-number">{{ place.rating.toFixed(1) }}</span>
         <span class="review-text">· {{ place.reviews }} REVIEWS</span>
       </div>
 
@@ -128,15 +150,22 @@ function shortDescription(text: string, max = 180) {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .rating-stars {
   color: #c69214;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.rating-number {
+  color: #c69214;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .review-text {
