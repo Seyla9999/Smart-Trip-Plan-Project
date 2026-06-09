@@ -570,31 +570,39 @@ export default defineComponent({
       if (file.size > 10 * 1024 * 1024) { alert('Max 10MB'); return }
 
       sending.value = true
-      const reader  = new FileReader()
-      reader.onload = ev => {
-        const optimistic = {
-          id: 'temp-' + Date.now(), sender_id: loggedInUser.value.id,
-          sender_name: loggedInUser.value.full_name,
-          sender_avatar: loggedInUser.value.avatar_url,
-          text: '', image_url: ev.target?.result as string,
-          status: 'sent', created_at: new Date().toISOString(),
+      const tempId = 'temp-' + Date.now()
+
+      // Wait for FileReader before uploading so optimistic message is always added first
+      await new Promise<void>(resolve => {
+        const reader = new FileReader()
+        reader.onload = ev => {
+          const optimistic = {
+            id: tempId,
+            sender_id: loggedInUser.value.id,
+            sender_name: loggedInUser.value.full_name,
+            sender_avatar: loggedInUser.value.avatar_url,
+            text: '', image_url: ev.target?.result as string,
+            status: 'sent', created_at: new Date().toISOString(),
+          }
+          messages.value.push(optimistic)
+          lastMsgCount = messages.value.length
+          scrollToBottom()
+          resolve()
         }
-        messages.value.push(optimistic)
-        lastMsgCount = messages.value.length
-        scrollToBottom()
-      }
-      reader.readAsDataURL(file)
+        reader.readAsDataURL(file)
+      })
 
       try {
         const fd = new FormData()
         fd.append('file', file)
         fd.append('senderId', loggedInUser.value.id)
-        const res  = await fetch(`${API_URL}/chat/conversations/${activeConv.value.id}/upload`, {
+        const res = await fetch(`${API_URL}/chat/conversations/${activeConv.value.id}/upload`, {
           method: 'POST', body: fd,
         })
         if (res.ok) {
           const data = await res.json()
-          const idx  = messages.value.findIndex((m: any) => m.id.startsWith('temp-'))
+          // Use exact tempId match — safe when multiple images are sent in parallel
+          const idx = messages.value.findIndex((m: any) => m.id === tempId)
           if (idx !== -1) messages.value[idx] = { ...data.data, status: data.data.status || 'sent' }
         }
       } catch {} finally {
