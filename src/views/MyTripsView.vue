@@ -418,6 +418,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import API from '@/api/axios'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
@@ -593,16 +594,14 @@ const deleteTrip = async () => {
   if (!tripToDelete.value) return
   isDeleting.value = true
   try {
-    const res = await fetch(
-      `${API_BASE}/api/trips/${tripToDelete.value.id}`,
-      { method: 'DELETE', headers: authHeaders() }
-    )
-    if (!res.ok) throw new Error(`${res.status}`)
+    await API.delete(`/api/trips/${tripToDelete.value.id}`)
     trips.value = trips.value.filter(t => t.id !== tripToDelete.value!.id)
     showToast('Trip deleted', 'success')
     tripToDelete.value = null
-  } catch {
-    showToast('Failed to delete trip', 'error')
+  } catch (err: any) {
+    console.error('Failed to delete trip', err)
+    const msg = err?.response?.data?.message || 'Failed to delete trip'
+    showToast(msg, 'error')
   } finally {
     isDeleting.value = false
   }
@@ -715,19 +714,14 @@ const shareTrip = async (trip: Trip) => {
       ]
       for (const ep of endpoints) {
         try {
-          const res = await fetch(`${API_BASE}${ep}`, {
-            method: 'POST',
-            headers: { ...authHeaders() },
-          })
-          if (res.ok) {
-            const data = await res.json()
-            const generated = data?.invite_token ?? data?.token
-                            ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
-            if (generated) {
-              trip.invite_token = String(generated)  // patch local object
-              tripToShare.value = { ...trip }         // trigger reactivity
-              break
-            }
+          const res = await API.post(ep)
+          const data = res.data
+          const generated = data?.invite_token ?? data?.token
+                          ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
+          if (generated) {
+            trip.invite_token = String(generated)  // patch local object
+            tripToShare.value = { ...trip }         // trigger reactivity
+            break
           }
         } catch { /* try next */ }
       }
@@ -897,9 +891,9 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
 /* Make the whole card clickable via an invisible overlay while keeping buttons clickable */
 .trip-card { position: relative; }
 .card-overlay {
-  position: absolute; inset: 0; display: block; z-index: 2;
+  position: absolute; inset: 0; display: block; z-index: 1;
 }
-.card-body { position: relative; z-index: 1; }
+.card-body { position: relative; z-index: 2; }
 .card-actions button, .btn-delete, .btn-share, .btn-view { position: relative; z-index: 3; }
 
 .card-route {
