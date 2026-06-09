@@ -118,7 +118,7 @@
       <span v-for="tag in quickTags" :key="tag" class="q-tag" @click="quickSearch(tag)">{{ tag }}</span>
     </div>
 
-    <p class="guest-note">
+    <p v-if="!isLoggedIn" class="guest-note">
       Not logged in? Browse freely.
       <a href="/register">Sign up</a> to save trips &amp; invite friends.
     </p>
@@ -229,7 +229,6 @@ export default defineComponent({
     onMounted(() => document.addEventListener('click', handleOutsideClick))
     onUnmounted(() => document.removeEventListener('click', handleOutsideClick))
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Quick search Ã¢â€â‚¬Ã¢â€â‚¬
     const quickTags = ['Angkor Wat', 'Kampot', 'Koh Kong', 'Phnom Penh', 'Mondulkiri']
     function toSlug(v: string) { return v.toLowerCase().trim().replace(/\s+/g, '-') }
     function doSearch() {
@@ -247,6 +246,10 @@ export default defineComponent({
       else        window.location.href = `/discover?search=${encodeURIComponent(tag)}`
     }
 
+    const isLoggedIn = computed(() => {
+      return !!(localStorage.getItem('user_data') || localStorage.getItem('user') || localStorage.getItem('token') || localStorage.getItem('access_token'))
+    })
+
     return {
       current, slides, stats, provinceList,
       destination, travelType, quickTags,
@@ -254,7 +257,7 @@ export default defineComponent({
       startDate, endDate, dateDisplay,
       isSelected, isInRange, isRangeStart, isRangeEnd, isToday, isPast,
       selectDay, prevMonth, nextMonth, formatDate, clearDates, openDatePicker,
-      doSearch, quickSearch,
+      doSearch, quickSearch, isLoggedIn,
     }
   },
 })
