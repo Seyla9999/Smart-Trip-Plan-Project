@@ -47,13 +47,11 @@
                   </button>
                 </div>
 
-                <!-- Loading state -->
                 <div v-if="notifLoading" class="notif-empty">
                   <div class="notif-spinner"></div>
                   <p>Loading...</p>
                 </div>
 
-                <!-- Has notifications -->
                 <div v-else-if="notifications.length > 0" class="notif-list">
                   <a v-for="n in notifications" :key="n.id"
                      :href="getNotifLink(n)"
@@ -70,13 +68,11 @@
                   </a>
                 </div>
 
-                <!-- Empty state -->
                 <div v-else class="notif-empty">
                   <span>🔔</span>
                   <p>No notifications yet</p>
                 </div>
 
-                <!-- Footer: only show if there are notifications -->
                 <div v-if="notifications.length > 0" class="notif-footer-wrap">
                   <button class="notif-footer-btn" @click="showAllNotif">
                     See all notifications
@@ -190,7 +186,7 @@
       </div>
     </div>
 
-    <!-- All Notifications Modal -->
+
     <transition name="fade">
       <div v-if="showAllNotifModal" class="modal-overlay" @click.self="showAllNotifModal = false">
         <div class="all-notif-modal">
@@ -296,7 +292,7 @@ export default defineComponent({
           }
         }
       } catch {
-        // API failed — show empty, not fake data
+
         notifications.value = []
         unreadCount.value   = 0
       } finally {
@@ -313,18 +309,14 @@ export default defineComponent({
       unreadCount.value   = 0
     }
 
-    // Mark single notification as read and navigate to its link
     async function handleNotifClick(n: any) {
       notifOpen.value = false
       if (!n.is_read) {
         n.is_read = true
         unreadCount.value = Math.max(0, unreadCount.value - 1)
-        // Mark single notification read on backend if you have that endpoint
-        // For now markAllRead handles bulk
       }
     }
 
-    // Get the correct link for each notification type
     function getNotifLink(n: any): string {
       if (n.link) return n.link
       const map: Record<string, string> = {
@@ -484,12 +476,10 @@ export default defineComponent({
 .notif-spinner { width: 20px; height: 20px; border: 2px solid #E0DDD6; border-top-color: #C8922A; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* See all button — replaces the broken <a href="/notifications"> */
 .notif-footer-wrap { border-top: 1px solid #E0DDD6; }
 .notif-footer-btn { display: block; width: 100%; padding: 12px; font-size: 13px; color: #C8922A; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; text-align: center; }
 .notif-footer-btn:hover { background: #F5F3EE; }
 
-/* All notifications modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .all-notif-modal { background: #fff; border-radius: 16px; width: 420px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 48px rgba(0,0,0,0.2); }
 .all-notif-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E0DDD6; background: #F5F3EE; flex-shrink: 0; }

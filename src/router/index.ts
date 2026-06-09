@@ -171,17 +171,17 @@ router.beforeEach((to, _from, next) => {
 
   const publicRoutes = [
     'home', 'login', 'register', 'verify',
-    'about',           
-    'discover',
+    'about',
+    'discover', 'map',
     'trip', 'trip-results', 'trip-join',
     'province-detail', 'place-detail', 'AttractionDetail',
-    'profile',         
-    'user-profile',    
+    'profile', 'user-profile',
   ]
 
   const routeName = typeof to.name === 'string' ? to.name : ''
+  const authRoutes = ['/login', '/register', '/verify']
 
-  if (!token && !publicRoutes.includes(routeName)) {
+  if (!token && !publicRoutes.includes(routeName) && !authRoutes.includes(to.path)) {
     next('/login')
     return
   }
@@ -200,7 +200,6 @@ router.beforeEach((to, _from, next) => {
   }
 
   const isAdminRoute = to.path.startsWith('/admin')
-  const authRoutes = ['/login', '/register', '/verify']
 
   if (isAdminUser && !isAdminRoute) {
     next('/admin')
@@ -219,27 +218,7 @@ router.beforeEach((to, _from, next) => {
     }
   }
 
-  const publicRoutes = [
-    "home",
-    "login",
-    "register",
-    "verify",
-    "discover",
-    "map",
-    "trip",
-    "trip-results",
-    "province-detail",
-    "place-detail",
-    "AttractionDetail",
-
-  ];
-  const routeName = typeof to.name === "string" ? to.name : "";
-
-  if (!token && !publicRoutes.includes(routeName) && !authRoutes.includes(to.path)) {
-    next("/login");
-  } else {
-    next();
-  }
-});
+  next()
+})
 
 export default router
