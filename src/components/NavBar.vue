@@ -29,8 +29,8 @@
             <span v-if="chatUnread > 0" class="notif-badge chat-badge">
               {{ chatUnread > 9 ? '9+' : chatUnread }}
             </span>
-
           </a>
+
           <div class="notif-wrap" ref="notifRef">
             <button class="icon-btn" @click="toggleNotif" title="Notifications">
               <span>🔔</span>
@@ -46,12 +46,20 @@
                     Mark all read
                   </button>
                 </div>
-                <div class="notif-list" v-if="notifications.length > 0">
+
+                <!-- Loading state -->
+                <div v-if="notifLoading" class="notif-empty">
+                  <div class="notif-spinner"></div>
+                  <p>Loading...</p>
+                </div>
+
+                <!-- Has notifications -->
+                <div v-else-if="notifications.length > 0" class="notif-list">
                   <a v-for="n in notifications" :key="n.id"
-                     :href="n.link || '#'"
+                     :href="getNotifLink(n)"
                      class="notif-item"
                      :class="{ unread: !n.is_read }"
-                     @click="notifOpen = false">
+                     @click="handleNotifClick(n)">
                     <div class="notif-icon">{{ getNotifIcon(n.type) }}</div>
                     <div class="notif-body">
                       <div class="notif-item-title">{{ n.title }}</div>
@@ -61,16 +69,23 @@
                     <div v-if="!n.is_read" class="unread-dot" />
                   </a>
                 </div>
+
+                <!-- Empty state -->
                 <div v-else class="notif-empty">
                   <span>🔔</span>
                   <p>No notifications yet</p>
                 </div>
-                <a href="/notifications" class="notif-footer" @click="notifOpen = false">
-                  See all notifications
-                </a>
+
+                <!-- Footer: only show if there are notifications -->
+                <div v-if="notifications.length > 0" class="notif-footer-wrap">
+                  <button class="notif-footer-btn" @click="showAllNotif">
+                    See all notifications
+                  </button>
+                </div>
               </div>
             </transition>
           </div>
+
           <div class="user-menu" ref="menuRef">
             <button class="avatar-btn" @click="menuOpen = !menuOpen">
               <img v-if="user.avatar_url"
@@ -154,7 +169,10 @@
             <span v-if="unreadCount > 0" class="mobile-badge-inline">{{ unreadCount }}</span>
           </div>
           <div v-if="showMobileNotif" class="mobile-notif-list">
-            <div v-for="n in notifications.slice(0,3)" :key="n.id"
+            <div v-if="notifications.length === 0" class="mobile-notif-item">
+              No notifications yet
+            </div>
+            <div v-for="n in notifications.slice(0, 3)" :key="n.id"
                  class="mobile-notif-item" :class="{ unread: !n.is_read }">
               {{ getNotifIcon(n.type) }} {{ n.title }}
             </div>
@@ -171,6 +189,40 @@
         </div>
       </div>
     </div>
+
+    <!-- All Notifications Modal -->
+    <transition name="fade">
+      <div v-if="showAllNotifModal" class="modal-overlay" @click.self="showAllNotifModal = false">
+        <div class="all-notif-modal">
+          <div class="all-notif-header">
+            <span class="notif-title">All Notifications</span>
+            <div class="all-notif-actions">
+              <button v-if="unreadCount > 0" class="mark-read-btn" @click="markAllRead">Mark all read</button>
+              <button class="modal-close-btn" @click="showAllNotifModal = false">✕</button>
+            </div>
+          </div>
+          <div class="all-notif-list" v-if="notifications.length > 0">
+            <a v-for="n in notifications" :key="n.id"
+               :href="getNotifLink(n)"
+               class="notif-item"
+               :class="{ unread: !n.is_read }"
+               @click="handleNotifClick(n); showAllNotifModal = false">
+              <div class="notif-icon">{{ getNotifIcon(n.type) }}</div>
+              <div class="notif-body">
+                <div class="notif-item-title">{{ n.title }}</div>
+                <div class="notif-item-msg" v-if="n.message">{{ n.message }}</div>
+                <div class="notif-item-time">{{ formatTime(n.created_at) }}</div>
+              </div>
+              <div v-if="!n.is_read" class="unread-dot" />
+            </a>
+          </div>
+          <div v-else class="notif-empty">
+            <span>🔔</span>
+            <p>No notifications yet</p>
+          </div>
+        </div>
+      </div>
+    </transition>
   </nav>
 </template>
 
@@ -183,22 +235,24 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 export default defineComponent({
   name: 'NavBar',
   setup() {
-    const mobileOpen      = ref(false)
-    const menuOpen        = ref(false)
-    const notifOpen       = ref(false)
-    const showMobileNotif = ref(false)
-    const menuRef         = ref<HTMLElement | null>(null)
-    const notifRef        = ref<HTMLElement | null>(null)
-    const router          = useRouter()
-    const route           = useRoute()
-    const currentPath     = computed(() => route.path)
-    const user            = ref<any>(null)
+    const mobileOpen        = ref(false)
+    const menuOpen          = ref(false)
+    const notifOpen         = ref(false)
+    const showMobileNotif   = ref(false)
+    const showAllNotifModal = ref(false)
+    const notifLoading      = ref(false)
+    const menuRef           = ref<HTMLElement | null>(null)
+    const notifRef          = ref<HTMLElement | null>(null)
+    const router            = useRouter()
+    const route             = useRoute()
+    const currentPath       = computed(() => route.path)
+    const user              = ref<any>(null)
 
     const notifications = ref<any[]>([])
     const unreadCount   = ref(0)
     const chatUnread    = ref(0)
-    let   notifInterval: any = null
-    let chatInterval: any = null
+    let notifInterval: any = null
+    let chatInterval:  any = null
 
     function loadUser() {
       const raw = localStorage.getItem('user_data')
@@ -214,58 +268,39 @@ export default defineComponent({
         user.value          = null
         notifications.value = []
         unreadCount.value   = 0
-        chatUnread.value = 0
+        chatUnread.value    = 0
       }
-      
     }
+
     async function loadChatUnread() {
       if (!user.value?.id) return
-      try{
+      try {
         const res = await fetch(`${API_URL}/chat/unread?userId=${user.value.id}`)
         if (res.ok) {
           const data       = await res.json()
           chatUnread.value = data.unread || 0
         }
-      } catch {chatUnread.value = 0}
-    }
-
-    function getAvatarSrc(url: string | null): string {
-      if (!url) return ''
-      if (url.startsWith('data:'))    return url               
-      if (url.startsWith('http'))     return url              
-      if (url.startsWith('/uploads')) return `${API_URL}${url}`
-      return url
-    }
-
-    function onAvatarError(e: Event) {
-      const img = e.target as HTMLImageElement
-      img.style.display = 'none'
-      if (user.value) {
-        user.value = { ...user.value, avatar_url: null }
-      }
-    }
-
-    function getInitials(name: string): string {
-      if (!name) return '?'
-      return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+      } catch { chatUnread.value = 0 }
     }
 
     async function loadNotifications() {
       if (!user.value?.id) return
+      notifLoading.value = true
       try {
         const res = await fetch(`${API_URL}/users/${user.value.id}/notifications`)
         if (res.ok) {
-          const data          = await res.json()
-          notifications.value = data.data  || []
-          unreadCount.value   = data.unread || 0
+          const data = await res.json()
+          if (data.success) {
+            notifications.value = data.data  || []
+            unreadCount.value   = data.unread || 0
+          }
         }
       } catch {
-        notifications.value = [
-          { id: '1', type: 'story_like',  title: 'Someone liked your story',   message: 'Your story got a new like!',           is_read: false, link: '/community', created_at: new Date(Date.now() - 5   * 60000).toISOString() },
-          { id: '2', type: 'new_message', title: 'New message',                message: 'Siem Reap Traveler sent you a message', is_read: false, link: '/chat',      created_at: new Date(Date.now() - 30  * 60000).toISOString() },
-          { id: '3', type: 'system',      title: 'Welcome to តោះទៅ! Cambodia', message: 'Start exploring Cambodia!',            is_read: true,  link: '/discover',  created_at: new Date(Date.now() - 120 * 60000).toISOString() },
-        ]
-        unreadCount.value = notifications.value.filter((n: any) => !n.is_read).length
+        // API failed — show empty, not fake data
+        notifications.value = []
+        unreadCount.value   = 0
+      } finally {
+        notifLoading.value = false
       }
     }
 
@@ -278,6 +313,37 @@ export default defineComponent({
       unreadCount.value   = 0
     }
 
+    // Mark single notification as read and navigate to its link
+    async function handleNotifClick(n: any) {
+      notifOpen.value = false
+      if (!n.is_read) {
+        n.is_read = true
+        unreadCount.value = Math.max(0, unreadCount.value - 1)
+        // Mark single notification read on backend if you have that endpoint
+        // For now markAllRead handles bulk
+      }
+    }
+
+    // Get the correct link for each notification type
+    function getNotifLink(n: any): string {
+      if (n.link) return n.link
+      const map: Record<string, string> = {
+        story_like:   '/community',
+        new_message:  '/chat',
+        trip_invite:  '/trip',
+        bookmark:     '/profile/bookmarks',
+        system:       '/discover',
+        comment:      '/community',
+        follow:       '/profile',
+      }
+      return map[n.type] || '#'
+    }
+
+    function showAllNotif() {
+      notifOpen.value         = false
+      showAllNotifModal.value = true
+    }
+
     function toggleNotif() {
       notifOpen.value = !notifOpen.value
       menuOpen.value  = false
@@ -285,7 +351,8 @@ export default defineComponent({
 
     function getNotifIcon(type: string): string {
       const icons: Record<string, string> = {
-        story_like: '❤️', new_message: '💬', trip_invite: '✈️', bookmark: '🔖', system: '🔔',
+        story_like: '❤️', new_message: '💬', trip_invite: '✈️',
+        bookmark: '🔖', system: '🔔', comment: '💬', follow: '👤',
       }
       return icons[type] || '🔔'
     }
@@ -302,6 +369,25 @@ export default defineComponent({
       return `${days}d ago`
     }
 
+    function getAvatarSrc(url: string | null): string {
+      if (!url) return ''
+      if (url.startsWith('data:'))    return url
+      if (url.startsWith('http'))     return url
+      if (url.startsWith('/uploads')) return `${API_URL}${url}`
+      return url
+    }
+
+    function onAvatarError(e: Event) {
+      const img = e.target as HTMLImageElement
+      img.style.display = 'none'
+      if (user.value) user.value = { ...user.value, avatar_url: null }
+    }
+
+    function getInitials(name: string): string {
+      if (!name) return '?'
+      return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    }
+
     function handleLogout() {
       localStorage.removeItem('user_data')
       localStorage.removeItem('user')
@@ -315,6 +401,7 @@ export default defineComponent({
       notifications.value = []
       unreadCount.value   = 0
       if (notifInterval) clearInterval(notifInterval)
+      if (chatInterval)  clearInterval(chatInterval)
       router.push('/login')
     }
 
@@ -330,8 +417,7 @@ export default defineComponent({
       window.addEventListener('storage',        loadUser)
       window.addEventListener('user-updated',   loadUser)
       notifInterval = setInterval(loadNotifications, 60000)
-      chatInterval = setInterval(loadChatUnread, 10000)
-      
+      chatInterval  = setInterval(loadChatUnread,    10000)
     })
 
     onUnmounted(() => {
@@ -340,15 +426,17 @@ export default defineComponent({
       window.removeEventListener('storage',        loadUser)
       window.removeEventListener('user-updated',   loadUser)
       if (notifInterval) clearInterval(notifInterval)
-      if (chatInterval) clearInterval(chatInterval)
+      if (chatInterval)  clearInterval(chatInterval)
     })
 
     return {
       mobileOpen, menuOpen, notifOpen, showMobileNotif,
+      showAllNotifModal, notifLoading,
       menuRef, notifRef, currentPath, user,
-      notifications, unreadCount,chatUnread,
+      notifications, unreadCount, chatUnread,
       getInitials, getAvatarSrc, onAvatarError, handleLogout,
       toggleNotif, markAllRead, getNotifIcon, formatTime,
+      handleNotifClick, getNotifLink, showAllNotif,
     }
   },
 })
@@ -366,7 +454,7 @@ export default defineComponent({
 .nav-link.active { color: #fff; border-bottom-color: #C8922A; }
 
 .nav-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.btn-login { padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 6px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
+.btn-login  { padding: 8px 18px; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 6px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
 .btn-login:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .btn-signup { padding: 8px 18px; background: #C8922A; border-radius: 6px; color: #fff; text-decoration: none; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: background 0.2s; white-space: nowrap; }
 .btn-signup:hover { background: #b07820; }
@@ -382,7 +470,7 @@ export default defineComponent({
 .mark-read-btn { font-size: 12px; color: #C8922A; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 .mark-read-btn:hover { text-decoration: underline; }
 .notif-list { max-height: 300px; overflow-y: auto; }
-.notif-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #E0DDD6; text-decoration: none; transition: background 0.15s; position: relative; }
+.notif-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #E0DDD6; text-decoration: none; transition: background 0.15s; position: relative; cursor: pointer; }
 .notif-item:hover { background: #F5F3EE; }
 .notif-item.unread { background: #FDFAF5; }
 .notif-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
@@ -393,8 +481,25 @@ export default defineComponent({
 .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: #C8922A; flex-shrink: 0; margin-top: 6px; }
 .notif-empty { text-align: center; padding: 32px 16px; color: #888; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .notif-empty span { font-size: 28px; }
-.notif-footer { display: block; text-align: center; padding: 12px; font-size: 13px; color: #C8922A; text-decoration: none; border-top: 1px solid #E0DDD6; font-family: 'DM Sans', sans-serif; }
-.notif-footer:hover { background: #F5F3EE; }
+.notif-spinner { width: 20px; height: 20px; border: 2px solid #E0DDD6; border-top-color: #C8922A; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* See all button — replaces the broken <a href="/notifications"> */
+.notif-footer-wrap { border-top: 1px solid #E0DDD6; }
+.notif-footer-btn { display: block; width: 100%; padding: 12px; font-size: 13px; color: #C8922A; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; text-align: center; }
+.notif-footer-btn:hover { background: #F5F3EE; }
+
+/* All notifications modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.all-notif-modal { background: #fff; border-radius: 16px; width: 420px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 48px rgba(0,0,0,0.2); }
+.all-notif-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E0DDD6; background: #F5F3EE; flex-shrink: 0; }
+.all-notif-actions { display: flex; align-items: center; gap: 12px; }
+.modal-close-btn { background: none; border: none; font-size: 16px; cursor: pointer; color: #888; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.modal-close-btn:hover { background: #E0DDD6; color: #1a1a1a; }
+.all-notif-list { overflow-y: auto; flex: 1; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .user-menu { position: relative; }
 .avatar-btn { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; }
@@ -431,26 +536,20 @@ export default defineComponent({
 .btn-login-m  { padding: 10px; border: 1.5px solid rgba(255,255,255,0.35); border-radius: 7px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14px; text-align: center; }
 .btn-signup-m { padding: 10px; background: #C8922A; border-radius: 7px; color: #fff; text-decoration: none; font-size: 14px; font-weight: 500; text-align: center; }
 .mobile-user { display: flex; flex-direction: column; gap: 8px; }
-
 .mobile-user-info { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 4px; }
 .mobile-avatar-wrap { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.3); }
 .mobile-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .mobile-avatar { width: 42px; height: 42px; background: #C8922A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
 .mobile-name  { color: #fff; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; }
 .mobile-email { color: rgba(255,255,255,0.5); font-size: 11px; font-family: 'DM Sans', sans-serif; margin-top: 1px; }
-
-.mobile-notif-row { display: flex; gap: 8px; }
-.mobile-notif-btn { flex: 1; padding: 9px 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.8); font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; position: relative; }
-.mobile-notif-btn:hover { background: rgba(255,255,255,0.15); }
-.mobile-badge { background: #AE2012; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 10px; }
 .mobile-notif-list { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 .mobile-notif-item { font-size: 12px; color: rgba(255,255,255,0.7); padding: 6px 8px; border-radius: 6px; }
 .mobile-notif-item.unread { color: #fff; background: rgba(200,146,42,0.15); }
 .mobile-mark-read { background: none; border: none; color: #C8922A; font-size: 12px; cursor: pointer; text-align: left; padding: 4px 8px; font-family: 'DM Sans', sans-serif; }
-
 .mobile-dd-link { padding: 10px 0; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-family: 'DM Sans', sans-serif; border-bottom: 1px solid rgba(255,255,255,0.07); }
 .mobile-dd-link:hover { color: #fff; }
 .btn-logout-m { padding: 10px; background: transparent; border: 1px solid rgba(255,60,60,0.5); border-radius: 7px; color: #ff6b6b; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 4px; }
+.mobile-badge-inline { background: #AE2012; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 10px; margin-left: 4px; }
 
 @media (max-width: 1024px) { .nav-links { display: none; } .nav-actions { display: none; } .hamburger { display: flex; } }
 @media (max-width: 600px) { .navbar-container { padding: 0 20px; } .logo-text { font-size: 14px; } }
