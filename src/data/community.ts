@@ -21,6 +21,7 @@ export interface CommunityAuthor {
   handle: string
   initials: string
   avatarColor: string
+  avatar?: string
   homeBase: string
 }
 
@@ -45,9 +46,9 @@ export interface ComposerSubmission {
   category: StoryCategory
   location: string
   rating: number
-  photoName: string
+  photoName?: string
   photoUrl?: string
-  videoName: string
+  videoName?: string
 }
 
 export interface TrendingPlace {

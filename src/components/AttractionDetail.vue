@@ -647,7 +647,7 @@ function getPlaceFromRoute() {
   return null
 }
 
-function buildGenericAttraction(place, provinceSlug, placeSlug) {
+function buildGenericAttraction(place: any, provinceSlug: string, placeSlug: string) {
   const nearby = (provincePlaceMap[provinceSlug] || [])
     .filter((item) => toSlug(item.name) !== placeSlug)
     .slice(0, 5)

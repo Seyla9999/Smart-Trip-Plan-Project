@@ -474,12 +474,12 @@ const applyStatus = (item, status) => {
 }
 
 const mapStory = (story) => {
-  if (!story || story.deleted_at) return null
+  if (!story || story.deletedAt) return null
   const normalizedStatus = normalizeStatus(story.status)
-  const authorName = story.author_name || 'Traveler'
-  const authorHandle = toHandle(story.author_handle)
-  const likes = Number.isFinite(story.likes_count) ? story.likes_count : 0
-  const comments = Number.isFinite(story.comments_count) ? story.comments_count : 0
+  const authorName = story.authorName || 'Traveler'
+  const authorHandle = toHandle(story.authorHandle)
+  const likes = Number.isFinite(story.likesCount) ? story.likesCount : 0
+  const comments = Number.isFinite(story.commentsCount) ? story.commentsCount : 0
   const category = story.category || 'Natural'
   const location = story.location || 'Cambodia'
 
@@ -488,10 +488,10 @@ const mapStory = (story) => {
     title: story.title || 'Untitled Story',
     authorName,
     authorHandle,
-    submitted: formatRelativeTime(story.created_at || story.published_at),
+    submitted: formatRelativeTime(story.createdAt || story.publishedAt),
     excerpt: toExcerpt(story.content),
     content: story.content || '',
-    image: story.image_url || '',
+    image: story.imageUrl || '',
     category,
     location,
     likesCount: likes,
