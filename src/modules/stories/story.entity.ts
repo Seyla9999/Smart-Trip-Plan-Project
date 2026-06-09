@@ -74,6 +74,14 @@ export class Story {
     default: '#1a2340',
   })
   authorAvatarColor: string;
+  
+  @Column({
+    name: 'author_avatar_url',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  authorAvatarUrl: string;
 
   @Column({
     name: 'author_home_base',

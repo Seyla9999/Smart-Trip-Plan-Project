@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
 import { Story } from './entities/story.entity';
 import { StoryComment } from './entities/story-comment.entity';
+import { UsersService } from '../modules/users/users.service';
 
 @Injectable()
 export class CommunityStoriesService {
@@ -11,6 +12,7 @@ export class CommunityStoriesService {
     private storyRepo: Repository<Story>,
     @InjectRepository(StoryComment)
     private commentRepo: Repository<StoryComment>,
+    private usersService: UsersService,
   ) {}
 
   async findAll(query: {
@@ -71,6 +73,33 @@ export class CommunityStoriesService {
     authorHomeBase?: string;
     userId?: string;
   }): Promise<Story> {
+    let authorName = dto.authorName ?? 'Traveler';
+    let authorHandle = dto.authorHandle ?? '@traveler';
+    let authorInitials = dto.authorInitials ?? 'T';
+    let authorAvatarColor = dto.authorAvatarColor ?? '#1a2340';
+    let authorAvatarUrl = dto.authorAvatarUrl;
+    let authorHomeBase = dto.authorHomeBase ?? '';
+
+    // If userId is provided, fetch actual user data
+    if (dto.userId) {
+      const user = await this.usersService.findById(dto.userId);
+      if (user) {
+        authorName = user.full_name || authorName;
+        authorHandle = user.username ? `@${user.username}` : authorHandle;
+        authorAvatarUrl = user.avatar_url || authorAvatarUrl;
+        
+        // Generate initials from full name
+        const names = user.full_name?.trim().split(/\s+/) || [];
+        if (names.length > 0) {
+          authorInitials = names
+            .slice(0, 2)
+            .map((n) => n[0]?.toUpperCase())
+            .join('')
+            .substring(0, 5);
+        }
+      }
+    }
+
     const data: DeepPartial<Story> = {
       title: dto.title,
       content: dto.content,
@@ -81,12 +110,12 @@ export class CommunityStoriesService {
       videoUrl: dto.videoUrl,
       likesCount: 0,
       commentsCount: 0,
-      authorName: dto.authorName,
-      authorHandle: dto.authorHandle,
-      authorInitials: dto.authorInitials,
-      authorAvatarColor: dto.authorAvatarColor ?? '#1a2340',
-      authorAvatarUrl: dto.authorAvatarUrl,
-      authorHomeBase: dto.authorHomeBase,
+      authorName,
+      authorHandle,
+      authorInitials,
+      authorAvatarColor,
+      authorAvatarUrl,
+      authorHomeBase,
       userId: dto.userId,
       status: 'pending',
       publishedAt: new Date(),
@@ -122,9 +151,19 @@ export class CommunityStoriesService {
     const story = await this.storyRepo.findOne({ where: { id: storyId } });
     if (!story) throw new NotFoundException('Story not found');
 
+    let authorName = dto.authorName ?? 'Traveler';
+
+    // If userId is provided, fetch actual user data
+    if (dto.userId) {
+      const user = await this.usersService.findById(dto.userId);
+      if (user) {
+        authorName = user.full_name || authorName;
+      }
+    }
+
     const data: DeepPartial<StoryComment> = {
       storyId,
-      authorName: dto.authorName,
+      authorName,
       body: dto.body,
       userId: dto.userId,
     };
