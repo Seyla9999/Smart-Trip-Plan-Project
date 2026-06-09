@@ -135,7 +135,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import API from '../api/axios'
-import * as groupChatService from '@/services/group-chat.service'
+import * as groupChatService from '../services/group-chat.service'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ItineraryItem {
@@ -236,21 +236,6 @@ function categoryIcon(cat?: string) {
   }
 }
 
-const deleteTrip = async () => {
-  if (!tripToDelete.value) return
-  isDeleting.value = true
-  try {
-    await API.delete(`/api/trips/${tripToDelete.value.id}`) // or /trips/${id} depending on baseURL
-    trips.value = trips.value.filter(t => t.id !== tripToDelete.value!.id)
-    showToast('Trip deleted', 'success')
-    tripToDelete.value = null
-  } catch (err) {
-    console.error('Delete trip failed', err)
-    showToast('Failed to delete trip', 'error')
-  } finally {
-    isDeleting.value = false
-  }
-}
 // ─── Group itinerary items by day ─────────────────────────────────────────────
 const groupedDays = computed(() => {
   const items = trip.value?.itinerary_items ?? []

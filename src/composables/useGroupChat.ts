@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
-import * as groupChatService from '@/services/group-chat.service'
-import type { GroupChat, GroupChatMessage, GroupChatMember } from '@/services/group-chat.service'
+import * as groupChatService from '../services/group-chat.service'
+import type { GroupChat, GroupChatMessage, GroupChatMember } from '../services/group-chat.service'
 
 export function useGroupChat() {
   const groupChats = ref<GroupChat[]>([])

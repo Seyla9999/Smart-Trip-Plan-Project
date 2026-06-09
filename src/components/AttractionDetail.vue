@@ -363,7 +363,7 @@
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import API from '../api/axios'
-import * as groupChatService from '@/services/group-chat.service'
+import * as groupChatService from '../services/group-chat.service'
 import { getProvinces } from '../services/home.service'
 
 function toSlug(value: string) {
