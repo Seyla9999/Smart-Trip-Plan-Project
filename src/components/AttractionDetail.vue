@@ -363,6 +363,7 @@
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import API from '../api/axios'
+import * as groupChatService from '@/services/group-chat.service'
 import { getProvinces } from '../services/home.service'
 
 function toSlug(value: string) {
@@ -799,7 +800,16 @@ async function createNewTrip() {
     if (newTripStart.value) payload.start_date = newTripStart.value
     if (newTripEnd.value)   payload.end_date   = newTripEnd.value
 
-    await API.post('/api/trips', payload)
+    const res = await API.post('/api/trips', payload)
+    const tripId = String(res.data?.id ?? res.data?.trip?.id ?? res.data?.data?.id ?? '')
+    if (tripId) {
+      try {
+        await groupChatService.getOrCreateGroupChat(tripId)
+      } catch (chatError) {
+        console.error('Failed to create group chat for new trip:', chatError)
+      }
+    }
+
     showTripModal.value = false
     newTripOrigin.value = ''
     router.push({ name: 'my-trips' })
@@ -819,6 +829,13 @@ async function addToExistingTrip() {
       attraction_id: attraction.value.id,
       day_number:    selectedDay.value,
     })
+
+    try {
+      await groupChatService.getOrCreateGroupChat(selectedTripId.value)
+    } catch (chatError) {
+      console.error('Failed to ensure group chat for existing trip:', chatError)
+    }
+
     tripSuccess.value = `Added to Day ${selectedDay.value}!`
     setTimeout(() => { showTripModal.value = false; tripSuccess.value = null }, 1500)
   } catch (e: any) {

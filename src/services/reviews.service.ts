@@ -18,13 +18,13 @@ export interface CreateReviewPayload {
   title?: string
 }
 
-export const getReviews = () => api.get('/reviews')
+export const getReviews = () => API.get('/reviews')
 
 export const getReviewsByAttraction = (attractionId: string) =>
-  api.get(`/reviews/attraction/${attractionId}`)
+  API.get(`/reviews/attraction/${attractionId}`)
 
 export async function getReviewsBySlug(attractionSlug: string): Promise<Review[]> {
-  const { data } = await api.get(`/reviews/attraction/${attractionSlug}`)
+  const { data } = await API.get(`/reviews/attraction/${attractionSlug}`)
   return data as Review[]
 }
 

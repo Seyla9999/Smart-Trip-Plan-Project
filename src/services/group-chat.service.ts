@@ -1,4 +1,4 @@
-import api from '@/api/axios'
+import API from '@/api/axios'
 
 export interface GroupChatMember {
   id: string
@@ -35,7 +35,7 @@ export interface GroupChatMessage {
  * Create a new group chat for a trip
  */
 export async function createGroupChat(tripId: string, members: GroupChatMember[]): Promise<GroupChat> {
-  const { data } = await api.post('/group-chats', {
+  const { data } = await API.post('/group-chats', {
     trip_id: tripId,
     members: members.map(m => m.id),
   })
@@ -46,7 +46,7 @@ export async function createGroupChat(tripId: string, members: GroupChatMember[]
  * Get or create a group chat for a trip
  */
 export async function getOrCreateGroupChat(tripId: string): Promise<GroupChat> {
-  const { data } = await api.post(`/group-chats/trip/${tripId}`)
+  const { data } = await API.post(`/group-chats/trip/${tripId}`)
   return data
 }
 
@@ -54,7 +54,7 @@ export async function getOrCreateGroupChat(tripId: string): Promise<GroupChat> {
  * Get group chat by ID
  */
 export async function getGroupChat(chatId: string): Promise<GroupChat> {
-  const { data } = await api.get(`/group-chats/${chatId}`)
+  const { data } = await API.get(`/group-chats/${chatId}`)
   return data
 }
 
@@ -62,7 +62,7 @@ export async function getGroupChat(chatId: string): Promise<GroupChat> {
  * Get all group chats for current user
  */
 export async function getUserGroupChats(): Promise<GroupChat[]> {
-  const { data } = await api.get('/group-chats')
+  const { data } = await API.get('/group-chats')
   return data.data || data
 }
 
@@ -74,7 +74,7 @@ export async function getGroupChatMessages(
   limit: number = 50,
   offset: number = 0,
 ): Promise<GroupChatMessage[]> {
-  const { data } = await api.get(`/group-chats/${chatId}/messages`, {
+  const { data } = await API.get(`/group-chats/${chatId}/messages`, {
     params: { limit, offset },
   })
   return data.data || data
@@ -88,7 +88,7 @@ export async function sendGroupMessage(
   text: string,
   imageUrl?: string,
 ): Promise<GroupChatMessage> {
-  const { data } = await api.post(`/group-chats/${chatId}/messages`, {
+  const { data } = await API.post(`/group-chats/${chatId}/messages`, {
     text,
     image_url: imageUrl,
   })
@@ -99,7 +99,7 @@ export async function sendGroupMessage(
  * Join a group chat
  */
 export async function joinGroupChat(chatId: string): Promise<GroupChat> {
-  const { data } = await api.post(`/group-chats/${chatId}/join`)
+  const { data } = await API.post(`/group-chats/${chatId}/join`)
   return data
 }
 
@@ -107,14 +107,14 @@ export async function joinGroupChat(chatId: string): Promise<GroupChat> {
  * Leave a group chat
  */
 export async function leaveGroupChat(chatId: string): Promise<void> {
-  await api.post(`/group-chats/${chatId}/leave`)
+  await API.post(`/group-chats/${chatId}/leave`)
 }
 
 /**
  * Add member to group chat
  */
 export async function addGroupChatMember(chatId: string, userId: string): Promise<GroupChat> {
-  const { data } = await api.post(`/group-chats/${chatId}/members`, {
+  const { data } = await API.post(`/group-chats/${chatId}/members`, {
     user_id: userId,
   })
   return data
@@ -124,21 +124,21 @@ export async function addGroupChatMember(chatId: string, userId: string): Promis
  * Remove member from group chat
  */
 export async function removeGroupChatMember(chatId: string, userId: string): Promise<void> {
-  await api.delete(`/group-chats/${chatId}/members/${userId}`)
+  await API.delete(`/group-chats/${chatId}/members/${userId}`)
 }
 
 /**
  * Mark message as seen
  */
 export async function markGroupMessageAsSeen(chatId: string, messageId: string): Promise<void> {
-  await api.put(`/group-chats/${chatId}/messages/${messageId}/seen`)
+  await API.put(`/group-chats/${chatId}/messages/${messageId}/seen`)
 }
 
 /**
  * Delete a message
  */
 export async function deleteGroupMessage(chatId: string, messageId: string): Promise<void> {
-  await api.delete(`/group-chats/${chatId}/messages/${messageId}`)
+  await API.delete(`/group-chats/${chatId}/messages/${messageId}`)
 }
 
 /**
@@ -148,6 +148,6 @@ export async function updateGroupChat(
   chatId: string,
   data: Partial<{ name: string; description: string }>,
 ): Promise<GroupChat> {
-  const { data: response } = await api.put(`/group-chats/${chatId}`, data)
+  const { data: response } = await API.put(`/group-chats/${chatId}`, data)
   return response
 }
