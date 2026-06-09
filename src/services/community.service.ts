@@ -19,6 +19,7 @@ function mapStory(raw: any): CommunityStory {
       handle: raw.authorHandle ?? '@traveler',
       initials: raw.authorInitials ?? 'T',
       avatarColor: raw.authorAvatarColor ?? '#1a2340',
+      avatar: raw.authorAvatarUrl ?? null,
       homeBase: raw.authorHomeBase ?? '',
     },
     liked: false,
@@ -37,14 +38,20 @@ export async function fetchStories(params?: {
   page?: number
   limit?: number
 }): Promise<StoriesResponse> {
-  const { data } = await api.get('/community', { params })
+  const { data } = await api.get('/stories', {
+    params: { ...params, status: 'published,approved' },
+  })
   return {
     data: (data.data ?? []).map(mapStory),
     total: data.total ?? 0,
   }
 }
 
-export async function createStory(payload: ComposerSubmission, imageUrl?: string): Promise<CommunityStory> {
+export async function createStory(
+  payload: ComposerSubmission, 
+  imageUrl?: string,
+  author?: { id?: string; name: string; initials: string; avatar?: string }
+): Promise<CommunityStory> {
   const body = {
     title: payload.title,
     content: payload.body,
@@ -52,21 +59,23 @@ export async function createStory(payload: ComposerSubmission, imageUrl?: string
     location: payload.location || 'Cambodia',
     rating: payload.rating,
     imageUrl: imageUrl ?? null,
-    authorName: 'You',
+    userId: author?.id ?? null,
+    authorName: author?.name ?? 'You',
     authorHandle: '@newtraveler',
-    authorInitials: 'YO',
+    authorInitials: author?.initials ?? 'YO',
     authorAvatarColor: '#1a2340',
+    authorAvatarUrl: author?.avatar ?? null,
     authorHomeBase: 'Community member',
   }
-  const { data } = await api.post('/community', body)
+  const { data } = await api.post('/stories', body)
   return mapStory(data)
 }
 
 export async function likeStory(id: string, liked: boolean): Promise<void> {
   if (liked) {
-    await api.post(`/community/${id}/like`)
+    await api.post(`/stories/${id}/like`)
   } else {
-    await api.delete(`/community/${id}/like`)
+    await api.delete(`/stories/${id}/like`)
   }
 }
 
@@ -79,16 +88,16 @@ export interface Comment {
 }
 
 export async function getComments(storyId: string): Promise<Comment[]> {
-  const { data } = await api.get(`/community/${storyId}/comments`)
+  const { data } = await api.get(`/stories/${storyId}/comments`)
   return data as Comment[]
 }
 
 export async function addComment(storyId: string, body: string, authorName: string): Promise<Comment> {
-  const { data } = await api.post(`/community/${storyId}/comments`, { body, authorName })
+  const { data } = await api.post(`/stories/${storyId}/comments`, { body, authorName })
   return data as Comment
 }
 
 export async function fetchStats(): Promise<{ totalStories: number; totalLikes: number }> {
-  const { data } = await api.get('/community/stats')
+  const { data } = await api.get('/stories/stats')
   return data
 }

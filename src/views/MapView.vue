@@ -22,15 +22,32 @@
         @click="refreshLocation"
         title="Refresh my location"
       >🔄</button>
+
     </div>
 
     <!-- Body -->
     <div class="map-body">
       <!-- Sidebar -->
       <aside class="sidebar">
+        <!-- Search box -->
+        <div class="sidebar-search">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            v-model="searchQuery"
+            class="search-input"
+            placeholder="Search attractions…"
+            autocomplete="off"
+            @input="buildMarkers"
+          />
+          <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''; buildMarkers()">✕</button>
+        </div>
+
         <p class="sidebar-count">
           <span v-if="loading">Loading…</span>
           <span v-else-if="nearMeActive">{{ filteredAttractions.length }} within 50 km</span>
+          <span v-else-if="searchQuery">{{ filteredAttractions.length }} results for "{{ searchQuery }}"</span>
           <span v-else>{{ filteredAttractions.length }} attractions</span>
         </p>
         <div
@@ -47,7 +64,9 @@
           </div>
         </div>
         <p v-if="!loading && filteredAttractions.length === 0" class="sidebar-empty">
-          {{ nearMeActive ? 'No attractions within 50 km of your location.' : 'No attractions in this category.' }}
+          <span v-if="searchQuery">No attractions match "{{ searchQuery }}".</span>
+          <span v-else-if="nearMeActive">No attractions within 50 km of your location.</span>
+          <span v-else>No attractions in this category.</span>
         </p>
       </aside>
 
@@ -61,7 +80,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import API from '@/api/axios'
 
-const fallback = 'https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg'
+const fallback = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Angkor_Wat_from_the_air.JPG/800px-Angkor_Wat_from_the_air.JPG'
 const NEAR_ME_KM = 50
 
 const categories = [
@@ -71,14 +90,16 @@ const categories = [
 
 const attractions      = ref<any[]>([])
 const selectedCategory = ref('All')
+const searchQuery      = ref('')
 const loading          = ref(true)
 const mapEl            = ref<HTMLElement | null>(null)
 const nearMeActive     = ref(false)
 const userLocation     = ref<{ lat: number; lng: number } | null>(null)
 
-let leafletMap: any   = null
-let userMarker: any   = null
-let radiusCircle: any = null
+let leafletMap: any        = null
+let userMarker: any        = null
+let radiusCircle: any      = null
+let watchId: number | null = null
 const activeMarkers   = new Map<string, any>()
 
 // ── Haversine distance (km) ───────────────────────────────────────────
@@ -115,6 +136,15 @@ const filteredAttractions = computed(() => {
   let list = selectedCategory.value === 'All'
     ? attractions.value
     : attractions.value.filter(a => a.category === selectedCategory.value)
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter(a =>
+      (a.name_en ?? '').toLowerCase().includes(q) ||
+      (a.name_kh ?? '').toLowerCase().includes(q) ||
+      (a.category ?? '').toLowerCase().includes(q)
+    )
+  }
 
   if (nearMeActive.value && userLocation.value) {
     list = list.filter(a => {
@@ -175,10 +205,16 @@ function buildMarkers() {
       popupAnchor: [0, -34],
     })
 
+    const imgHtml = a.hero_image
+      ? `<img src="${a.hero_image}" alt="${a.name_en}"
+             style="width:100%;height:110px;object-fit:cover;border-radius:6px;margin-bottom:8px;display:block">`
+      : ''
+
     const marker = L.marker([coords.lat, coords.lng], { icon })
       .addTo(leafletMap)
       .bindPopup(`
-        <div style="min-width:160px">
+        <div style="min-width:180px;max-width:200px">
+          ${imgHtml}
           <b style="font-size:14px">${a.name_en}</b><br>
           <span style="color:#888;font-size:12px">${a.category || 'Attraction'}</span><br>
           <span style="font-size:13px">${renderStars(Number(a.average_rating))}</span><br>
@@ -187,7 +223,7 @@ function buildMarkers() {
             View Details →
           </a>
         </div>
-      `)
+      `, { maxWidth: 220 })
 
     activeMarkers.set(a.id, marker)
   }
@@ -279,33 +315,57 @@ function panToAttraction(a: any) {
 }
 
 // ── Near Me helpers ───────────────────────────────────────────────────
-function placeUserMarker(lat: number, lng: number) {
+function placeUserMarker(lat: number, lng: number, flyTo = false, accuracyM = 0) {
   const L = (window as any).L
-  if (userMarker)   { leafletMap.removeLayer(userMarker);   userMarker   = null }
-  if (radiusCircle) { leafletMap.removeLayer(radiusCircle); radiusCircle = null }
 
   userLocation.value = { lat, lng }
 
-  userMarker = L.circleMarker([lat, lng], {
-    radius: 10, color: '#1a73e8', fillColor: '#4a90e2', fillOpacity: 0.9, weight: 2,
-  }).addTo(leafletMap).bindPopup('📍 You are here').openPopup()
+  const accuracyTxt = accuracyM > 0
+    ? (accuracyM < 1000 ? `±${Math.round(accuracyM)}m` : `±${(accuracyM / 1000).toFixed(1)}km`)
+    : ''
 
-  radiusCircle = L.circle([lat, lng], {
-    radius: NEAR_ME_KM * 1000,
-    color: '#1a73e8', fillColor: '#4a90e2', fillOpacity: 0.07,
-    weight: 1.5, dashArray: '6 4',
-  }).addTo(leafletMap)
+  const popupHtml =
+    `<b style="font-size:13px">📍 You are here</b><br>
+     <span style="font-size:11px;color:#666">${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E</span><br>
+     <span style="font-size:10px;color:#aaa">Accuracy: ${accuracyTxt || 'unknown'}</span>`
 
-  leafletMap.flyTo([lat, lng], 9, { duration: 1 })
+  if (userMarker) {
+    // update in place — no flicker
+    userMarker.setLatLng([lat, lng])
+    userMarker.setPopupContent(popupHtml)
+    radiusCircle.setLatLng([lat, lng])
+  } else {
+    userMarker = L.circleMarker([lat, lng], {
+      radius: 10, color: '#1a73e8', fillColor: '#4a90e2', fillOpacity: 0.9, weight: 2,
+    }).addTo(leafletMap)
+      .bindPopup(popupHtml)
+      .openPopup()
+
+    radiusCircle = L.circle([lat, lng], {
+      radius: NEAR_ME_KM * 1000,
+      color: '#1a73e8', fillColor: '#4a90e2', fillOpacity: 0.07,
+      weight: 1.5, dashArray: '6 4',
+    }).addTo(leafletMap)
+  }
+
+  if (flyTo) leafletMap.flyTo([lat, lng], 9, { duration: 1 })
   buildMarkers()
 }
 
-const geoOptions = { maximumAge: 0, timeout: 10000, enableHighAccuracy: true }
+const geoOptions = { maximumAge: 0, timeout: 15000, enableHighAccuracy: true }
+
+function stopWatching() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId)
+    watchId = null
+  }
+}
 
 function toggleNearMe() {
   if (nearMeActive.value) {
     nearMeActive.value = false
     userLocation.value = null
+    stopWatching()
     if (userMarker)   { leafletMap.removeLayer(userMarker);   userMarker   = null }
     if (radiusCircle) { leafletMap.removeLayer(radiusCircle); radiusCircle = null }
     buildMarkers()
@@ -315,24 +375,36 @@ function toggleNearMe() {
     alert('Geolocation is not supported by your browser.')
     return
   }
-  navigator.geolocation.getCurrentPosition(
+  let firstFix = true
+  watchId = navigator.geolocation.watchPosition(
     ({ coords }) => {
       nearMeActive.value = true
-      placeUserMarker(coords.latitude, coords.longitude)
+      placeUserMarker(coords.latitude, coords.longitude, firstFix, coords.accuracy)
+      firstFix = false
     },
-    () => alert('Could not get your location. Please allow location access and try again.'),
+    (err) => {
+      if (err.code === err.PERMISSION_DENIED) {
+        alert('Location access denied. Please allow location in your browser settings.')
+        nearMeActive.value = false
+      }
+    },
     geoOptions,
   )
 }
 
 function refreshLocation() {
-  if (!navigator.geolocation) return
-  navigator.geolocation.getCurrentPosition(
-    ({ coords }) => placeUserMarker(coords.latitude, coords.longitude),
-    () => alert('Could not refresh your location.'),
+  stopWatching()
+  let firstFix = true
+  watchId = navigator.geolocation.watchPosition(
+    ({ coords }) => {
+      placeUserMarker(coords.latitude, coords.longitude, firstFix, coords.accuracy)
+      firstFix = false
+    },
+    () => alert('Could not get your location.'),
     geoOptions,
   )
 }
+
 
 onMounted(async () => {
   try {
@@ -348,6 +420,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  stopWatching()
   if (leafletMap) { leafletMap.remove(); leafletMap = null }
 })
 </script>
@@ -406,6 +479,8 @@ onUnmounted(() => {
 .refresh-chip { padding: 6px 12px; }
 .refresh-chip:hover { border-color: #1a73e8; color: #1a73e8; }
 
+
+
 /* Body */
 .map-body {
   display: flex;
@@ -421,6 +496,38 @@ onUnmounted(() => {
   border-right: 1px solid #e8e8e8;
   background: #fafafa;
 }
+
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #efefef;
+  background: #fff;
+}
+.search-icon { color: #aaa; flex-shrink: 0; }
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a1a1a;
+  background: transparent;
+}
+.search-input::placeholder { color: #bbb; }
+.search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #bbb;
+  font-size: 13px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.search-clear:hover { color: #666; }
 
 .sidebar-count {
   padding: 12px 16px 8px;
