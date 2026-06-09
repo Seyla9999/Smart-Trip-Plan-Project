@@ -1,9 +1,4 @@
-import axios from 'axios'
-
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  timeout: 10000,
-})
+import API from '@/api/axios'
 
 export interface Province {
   id:                  number
@@ -47,6 +42,7 @@ export interface Sponsor {
   website_url: string
   description: string
   tier:        string
+  is_active?:  boolean
 }
 
 export interface Weather {
@@ -60,6 +56,11 @@ export interface Weather {
 
 export async function getProvinces(): Promise<Province[]> {
   const res = await API.get('/provinces')
+  return res.data.data
+}
+
+export async function createProvince(data: any): Promise<any> {
+  const res = await API.post('/provinces', data)
   return res.data.data
 }
 
@@ -80,13 +81,20 @@ export async function getHiddenGems(limit = 5): Promise<Attraction[]> {
 }
 
 export async function getStories(limit = 5): Promise<Story[]> {
-  const res = await API.get('/stories', { params: { limit } })
+  const res = await API.get('/stories', {
+    params: { limit, status: 'published,approved' },
+  })
   return res.data.data
 }
 
 export async function getSponsors(): Promise<Sponsor[]> {
   const res = await API.get('/sponsors')
   return res.data.data
+}
+
+export async function createSponsor(data: any): Promise<any> {
+  const res = await API.post('/sponsors/save', data)
+  return res.data
 }
 
 export async function getAllWeather(): Promise<Record<number, Weather>> {

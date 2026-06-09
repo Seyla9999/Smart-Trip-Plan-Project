@@ -68,12 +68,13 @@
           <h2>Location & Nearby Services</h2>
           <div v-if="mapCoords" class="map-wrapper">
             <div ref="mapEl" class="map-iframe"></div>
-            <a
-              :href="`https://www.openstreetmap.org/?mlat=${mapCoords.lat}&mlon=${mapCoords.lng}#map=14/${mapCoords.lat}/${mapCoords.lng}`"
-              target="_blank"
-              rel="noopener"
-              class="map-link"
-            >Open in OpenStreetMap Ã¢â€ â€”</a>
+            <div class="map-actions">
+              <a
+                :href="`https://www.google.com/maps?q=${mapCoords.lat},${mapCoords.lng}`"
+                target="_blank" rel="noopener"
+                class="map-btn map-btn--google"
+              >🗺️ Open in Google Maps</a>
+            </div>
           </div>
           <div v-else class="map-placeholder">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="#C8922A" stroke="white" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3" fill="white" stroke="#C8922A"/></svg>
@@ -87,7 +88,20 @@
           <h2>Reviews{{ reviews.length ? ` (${reviews.length})` : '' }}</h2>
 
           <!-- Write a review -->
-          <div v-if="isLoggedIn" class="review-form">
+          <div v-if="!isLoggedIn" class="review-login-prompt">
+            Please <span class="review-login-link" @click="$router.push('/login')">log in</span> to leave a review.
+          </div>
+          <div v-else-if="canReview === null" class="review-login-prompt">
+            Checking eligibility…
+          </div>
+          <div v-else-if="canReview === false" class="review-locked">
+            <div class="review-locked-icon">🔒</div>
+            <p class="review-locked-title">Review Locked</p>
+            <p class="review-locked-desc">
+              Complete a trip that includes <strong>{{ attraction?.name }}</strong> to unlock the ability to leave a review.
+            </p>
+          </div>
+          <div v-else class="review-form">
             <p class="review-form-title">Write a Review</p>
             <div class="star-picker">
               <span
@@ -102,18 +116,15 @@
             </div>
             <p class="review-author-name">Reviewing as <strong>{{ currentUserName }}</strong></p>
             <input v-model="newReview.title" class="review-input" placeholder="Title (optional)" maxlength="200" />
-            <textarea v-model="newReview.comment" class="review-textarea" placeholder="Share your experienceÃ¢â‚¬Â¦" rows="4" maxlength="2000"></textarea>
+            <textarea v-model="newReview.comment" class="review-textarea" placeholder="Share your experience…" rows="4" maxlength="2000"></textarea>
             <div class="review-form-footer">
-              <span v-if="reviewSuccess" class="review-success">Ã¢Å“â€œ Review submitted!</span>
+              <span v-if="reviewSuccess" class="review-success">✓ Review submitted!</span>
               <button
                 class="btn-submit-review"
                 :disabled="submittingReview || !newReview.comment.trim()"
                 @click="submitReview"
-              >{{ submittingReview ? 'SubmittingÃ¢â‚¬Â¦' : 'Submit Review' }}</button>
+              >{{ submittingReview ? 'Submitting…' : 'Submit Review' }}</button>
             </div>
-          </div>
-          <div v-else class="review-login-prompt">
-            Please <span class="review-login-link" @click="$router.push('/login')">log in</span> to leave a review.
           </div>
 
           <div v-if="reviews.length" class="reviews-list" style="margin-top:1.5rem">
@@ -169,7 +180,7 @@
           <h3>Plan your visit</h3>
           <p class="sidebar-sub">Add this to your trip itinerary</p>
 
-          <button class="btn-add-trip">
+          <button class="btn-add-trip" @click="openTripModal">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             Add to my trip
           </button>
@@ -188,7 +199,7 @@
             >
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            {{ savingFavorite ? 'SavingÃ¢â‚¬Â¦' : isFavorited ? 'Favorited' : 'Save to favorites' }}
+            {{ savingFavorite ? 'Saving…' : isFavorited ? 'Favorited' : 'Save to favorites' }}
           </button>
 
           <div class="info-list">
@@ -203,7 +214,7 @@
               <div class="info-icon duration"></div>
               <div>
                 <p class="info-label">VISIT DURATION</p>
-                <p class="info-value">{{ attraction.info?.duration || '2Ã¢â‚¬â€œ4 hours' }}</p>
+                <p class="info-value">{{ attraction.info?.duration || '2–4 hours' }}</p>
               </div>
             </div>
             <div class="info-row">
@@ -231,12 +242,120 @@
 
           <div class="cta-box" v-if="!isLoggedIn">
             <p>Sign up free to save this to a trip and invite friends to join you.</p>
-            <button class="btn-cta" @click="$router.push('/register')">Sign up to save Ã¢â€ â€™</button>
+            <button class="btn-cta" @click="$router.push('/register')">Sign up to save</button>
           </div>
         </div>
       </aside>
     </div>
 
+  <!-- ── Add to Trip Modal ─────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="showTripModal" class="trip-modal-backdrop" @click.self="showTripModal = false">
+      <div class="trip-modal">
+
+        <!-- Header -->
+        <div class="trip-modal-header">
+          <div>
+            <h3 class="trip-modal-title">Add to My Trip</h3>
+            <p class="trip-modal-sub">{{ attraction?.name }}</p>
+          </div>
+          <button class="trip-modal-close" @click="showTripModal = false">✕</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="trip-modal-tabs">
+          <button :class="['trip-tab', { active: tripModalTab === 'new' }]"      @click="tripModalTab = 'new'">✈️ New Trip</button>
+          <button :class="['trip-tab', { active: tripModalTab === 'existing' }]" @click="tripModalTab = 'existing'">📋 Existing Trip</button>
+        </div>
+
+        <!-- New Trip tab -->
+        <div v-if="tripModalTab === 'new'" class="trip-modal-body">
+
+          <!-- Route: origin → destination -->
+          <div class="trip-route-row">
+            <div class="trip-route-group" style="position:relative">
+              <label>Starting from</label>
+              <div
+                class="trip-route-select"
+                :class="{ open: showOriginDropdown }"
+                tabindex="0"
+                @click="showOriginDropdown = !showOriginDropdown"
+                @blur="showOriginDropdown = false"
+              >
+                <span :style="newTripOrigin ? 'color:#1e293b' : 'color:#94a3b8'">
+                  {{ newTripOrigin ? cambodiaProvinces.find(p => p.slug === newTripOrigin)?.name : 'Select province…' }}
+                </span>
+                <span class="trip-select-caret">▾</span>
+                <div v-if="showOriginDropdown" class="trip-select-dropdown" @mousedown.prevent>
+                  <div
+                    v-for="p in cambodiaProvinces" :key="p.slug"
+                    class="trip-select-option"
+                    :class="{ selected: newTripOrigin === p.slug }"
+                    @click.stop="newTripOrigin = p.slug; showOriginDropdown = false"
+                  >{{ p.name }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="trip-route-arrow">→</div>
+            <div class="trip-route-group">
+              <label>Destination</label>
+              <div class="trip-destination-preset">{{ attraction?.province?.nameEn || '—' }}<span v-if="attraction?.name" style="color:#64748b;font-weight:400"> / {{ attraction.name }}</span></div>
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <p class="trip-modal-hint">Dates are optional — skip them if you haven't decided yet.</p>
+          <div class="trip-date-row">
+            <div class="trip-date-group">
+              <label>Start date</label>
+              <input type="date" v-model="newTripStart" :min="today" />
+            </div>
+            <div class="trip-date-group">
+              <label>End date</label>
+              <input type="date" v-model="newTripEnd" :min="newTripStart || today" />
+            </div>
+          </div>
+
+          <p v-if="tripModalError" class="trip-modal-error">{{ tripModalError }}</p>
+          <button class="trip-modal-btn" :disabled="addingToTrip || !newTripOrigin" @click="createNewTrip">
+            <span v-if="addingToTrip" class="trip-spinner"></span>
+            {{ addingToTrip ? 'Creating…' : 'Create Trip & Go' }}
+          </button>
+          <p v-if="!newTripOrigin" style="font-size:11px;color:#aaa;text-align:center;margin-top:4px">Select a starting province to continue</p>
+        </div>
+
+        <!-- Existing Trip tab -->
+        <div v-else class="trip-modal-body">
+          <div v-if="userTrips.length === 0" class="trip-modal-empty">
+            No saved trips yet. Create one first!
+          </div>
+          <template v-else>
+            <div class="trip-list">
+              <label v-for="trip in userTrips" :key="trip.id"
+                :class="['trip-list-item', { selected: selectedTripId === trip.id }]"
+                @click="selectedTripId = trip.id">
+                <span class="trip-list-name">{{ trip.title }}</span>
+                <span class="trip-list-dest">{{ trip.destination || '—' }}</span>
+              </label>
+            </div>
+            <div class="trip-day-row">
+              <label>Add to day</label>
+              <select v-model="selectedDay">
+                <option v-for="d in 14" :key="d" :value="d">Day {{ d }}</option>
+              </select>
+            </div>
+            <p v-if="tripSuccess"    class="trip-modal-success">{{ tripSuccess }}</p>
+            <p v-if="tripModalError" class="trip-modal-error">{{ tripModalError }}</p>
+            <button class="trip-modal-btn" :disabled="addingToTrip || !selectedTripId" @click="addToExistingTrip">
+              <span v-if="addingToTrip" class="trip-spinner"></span>
+              {{ addingToTrip ? 'Adding…' : 'Add to Trip' }}
+            </button>
+          </template>
+        </div>
+
+      </div>
+    </div>
+  </Teleport>
   </div>
 </template>
 
@@ -244,6 +363,23 @@
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import API from '../api/axios'
+import { getProvinces } from '../services/home.service'
+
+function toSlug(value: string) {
+  if (!value) return ''
+  return value.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')
+}
+
+interface PlaceSummary {
+  name: string
+  category: string
+  province: string
+  rating: number
+  reviews: number
+  description: string
+  image: string
+  tags: string[]
+}
 
 const route  = useRoute()
 const router = useRouter()
@@ -267,6 +403,53 @@ let   leafletMap: any = null
 const isFavorited   = ref(false)
 const bookmarkId    = ref<string | null>(null)
 const savingFavorite = ref(false)
+
+// null = not yet checked, true = allowed, false = not allowed
+const canReview = ref<boolean | null>(null)
+
+// ── Add to Trip modal ────────────────────────────────────────────────────────
+const showTripModal  = ref(false)
+const tripModalTab   = ref<'new' | 'existing'>('new')
+const today          = new Date().toISOString().split('T')[0]
+const newTripStart   = ref(today)
+const newTripEnd     = ref('')
+const newTripOrigin       = ref('')
+const showOriginDropdown  = ref(false)
+const userTrips           = ref<any[]>([])
+
+const cambodiaProvinces = [
+  { slug: 'phnom-penh',       name: 'Phnom Penh' },
+  { slug: 'siem-reap',        name: 'Siem Reap' },
+  { slug: 'battambang',       name: 'Battambang' },
+  { slug: 'sihanoukville',    name: 'Sihanoukville' },
+  { slug: 'kampot',           name: 'Kampot' },
+  { slug: 'kep',              name: 'Kep' },
+  { slug: 'koh-kong',         name: 'Koh Kong' },
+  { slug: 'kratie',           name: 'Kratie' },
+  { slug: 'mondulkiri',       name: 'Mondulkiri' },
+  { slug: 'ratanakiri',       name: 'Ratanakiri' },
+  { slug: 'kampong-cham',     name: 'Kampong Cham' },
+  { slug: 'kampong-chhnang',  name: 'Kampong Chhnang' },
+  { slug: 'kampong-speu',     name: 'Kampong Speu' },
+  { slug: 'kampong-thom',     name: 'Kampong Thom' },
+  { slug: 'kandal',           name: 'Kandal' },
+  { slug: 'prey-veng',        name: 'Prey Veng' },
+  { slug: 'svay-rieng',       name: 'Svay Rieng' },
+  { slug: 'takeo',            name: 'Takeo' },
+  { slug: 'pursat',           name: 'Pursat' },
+  { slug: 'pailin',           name: 'Pailin' },
+  { slug: 'preah-vihear',     name: 'Preah Vihear' },
+  { slug: 'stung-treng',      name: 'Stung Treng' },
+  { slug: 'oddar-meanchey',   name: 'Oddar Meanchey' },
+  { slug: 'banteay-meanchey', name: 'Banteay Meanchey' },
+  { slug: 'tboung-khmum',     name: 'Tboung Khmum' },
+]
+
+const selectedTripId = ref<string | null>(null)
+const selectedDay    = ref(1)
+const addingToTrip   = ref(false)
+const tripModalError = ref<string | null>(null)
+const tripSuccess    = ref<string | null>(null)
 
 const isLoggedIn = computed(() => !!localStorage.getItem('auth_token'))
 
@@ -295,64 +478,207 @@ const mapCoords = computed(() => {
 
 // Normalise raw DB fields into the shape the template needs
 function normalizeAttraction(data: any) {
-  const provinceSlug = (data.province?.name_en || '')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
+  if (!data) return null
+  return normalizeAttractionData(data, data.id || '')
+}
 
-  const badges: string[] = []
-  if (data.is_hidden_gem) badges.push('HIDDEN GEM')
-  if (data.category)      badges.push(data.category.toUpperCase())
-  if (Number(data.average_rating) >= 4.5) badges.push('TOP RATED')
+function toProvinceObject(province: any) {
+  if (!province) {
+    return { nameEn: 'Unknown Province', name_en: 'Unknown Province' }
+  }
 
-  // Prefer curated nearby_images JSONB over the generic province query
-  const nearby = data.nearby_images?.length
-    ? data.nearby_images.map((n: any) => ({
-        name:     n.name,
-        slug:     n.slug || (n.name || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        location: n.location || '',
-        image:    n.image,
-      }))
-    : (data.nearby || []).map((n: any) => ({
-        name:     n.name_en,
-        slug:     (n.name_en || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        location: (n.province?.name_en || '').toUpperCase(),
-        image:    n.hero_image || '',
-      }))
+  if (typeof province === 'string') {
+    return { nameEn: province, name_en: province }
+  }
 
-  const slug = (data.name_en || '')
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
+  const name = province.nameEn ?? province.name_en ?? province.name ?? 'Unknown Province'
+  return { ...province, nameEn: name, name_en: name }
+}
+
+function normalizeNearbyPlaces(nearbyPlaces: any, provinceName: string) {
+  if (!Array.isArray(nearbyPlaces)) return []
+
+  return nearbyPlaces
+    .map((item: any, index: number) => {
+      const name = item?.name ?? item?.title ?? "Nearby Place " + (index + 1)
+      return {
+        name,
+        slug: item?.slug ?? "",
+        location: item?.location ?? provinceName.toUpperCase(),
+        image: item?.image ?? item?.image_url ?? "",
+      }
+    })
+    .filter((item: any) => Boolean(item.name))
+}
+
+function normalizeAttractionData(rawAttraction: any, attractionId: string) {
+  const provinceId = Number(rawAttraction?.province_id ?? rawAttraction?.province?.id)
+  const provinceNameFromId = Number.isFinite(provinceId)
+    ? provinceNameById.value[provinceId]
+    : undefined
+
+  const province = toProvinceObject(
+    rawAttraction?.province ??
+      rawAttraction?.province_name_en ??
+      rawAttraction?.province_name ??
+      rawAttraction?.provinceName ??
+      provinceNameFromId,
+  )
+  const provinceName = province.nameEn
+  const attractionName =
+    rawAttraction?.name ?? rawAttraction?.name_en ?? rawAttraction?.name_kh ?? 'Attraction'
+  const primaryImage =
+    rawAttraction?.heroImage ??
+    rawAttraction?.hero_image ??
+    rawAttraction?.image_url ??
+    rawAttraction?.image ??
+    'https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg'
+
+  const nearbyFromAttraction = normalizeNearbyPlaces(rawAttraction?.nearby, provinceName)
+  const nearbyFromImages = normalizeNearbyPlaces(rawAttraction?.nearby_images, provinceName)
+  const normalizedNearby = nearbyFromAttraction.length ? nearbyFromAttraction : nearbyFromImages
+  const normalizedPhotos =
+    Array.isArray(rawAttraction?.photos) && rawAttraction.photos.length
+      ? rawAttraction.photos
+      : [primaryImage, primaryImage, primaryImage]
 
   return {
-    id:          data.id,
-    slug,
-    name:        data.name_en,
-    name_kh:     data.name_kh,
-    province:    {
-      nameEn: data.province?.name_en || '',
-      nameKh: data.province?.name_kh || '',
+    id: rawAttraction?.id ?? attractionId,
+    name: attractionName,
+    province,
+    provinceSlug: rawAttraction?.provinceSlug ?? toSlug(provinceName),
+    rating: Number(rawAttraction?.rating ?? rawAttraction?.average_rating ?? 0),
+    reviews: Number(rawAttraction?.reviews ?? rawAttraction?.review_count ?? 0),
+    heroImage: primaryImage,
+    badges:
+      Array.isArray(rawAttraction?.badges) && rawAttraction.badges.length
+        ? rawAttraction.badges
+        : [
+            rawAttraction?.is_hidden_gem ? 'HIDDEN GEM' : 'ATTRACTION',
+            String(rawAttraction?.category ?? 'Attraction').toUpperCase(),
+            'TOP RATED',
+          ],
+    tags:
+      Array.isArray(rawAttraction?.tags) && rawAttraction.tags.length
+        ? rawAttraction.tags
+        : [rawAttraction?.category ?? 'Attraction'],
+    about:
+      Array.isArray(rawAttraction?.about) && rawAttraction.about.length
+        ? rawAttraction.about
+        : [
+            rawAttraction?.description ??
+              `${attractionName} is one of the notable places to visit in ${provinceName}.`,
+            `Explore more of ${provinceName} through nearby attractions and local experiences.`,
+          ],
+    photos: normalizedPhotos,
+    info: {
+      bestTime: rawAttraction?.info?.bestTime ?? 'Year-round',
+      duration: rawAttraction?.info?.duration ?? '2-3 hours',
+      difficulty: rawAttraction?.info?.difficulty ?? 'Moderate',
+      bestFor: rawAttraction?.info?.bestFor ?? 'All travelers',
+      province: provinceName,
     },
+    nearby: normalizedNearby,
+  }
+}
+
+async function loadProvinceNames() {
+  if (Object.keys(provinceNameById.value).length > 0) return
+
+  try {
+    const provinces = await getProvinces()
+    provinceNameById.value = Object.fromEntries(
+      provinces.map((province) => [Number(province.id), province.name_en]),
+    )
+  } catch (err) {
+    console.error('Failed to load provinces for attraction detail:', err)
+  }
+}
+
+const provincePlaceMap: Record<string, PlaceSummary[]> = {
+  'koh-kong': [
+    { name: 'Tatai Waterfall', category: 'Nature', province: 'Koh Kong', rating: 4.9, reviews: 743, description: 'A two-tiered semi-natural waterfall in the heart of the jungle. Perfect for travelers seeking peace and nature.', image: 'https://www.asiakingtravel.com/cuploads/files/Tatai-waterfall-2.jpg', tags: ['Nature', 'Photography', 'Adventure'] },
+    { name: 'Koh Kong Beach', category: 'Beach', province: 'Koh Kong', rating: 4.6, reviews: 352, description: 'A relaxing beach with soft sand and calm sea views, great for sunset walks.', image: 'https://merrytravelasia.com/wp-content/uploads/2023/06/Koh-Rong.jpg', tags: ['Beach', 'Relax', 'Sunset'] },
+    { name: 'Mangrove Forest Kayaking', category: 'Adventure', province: 'Koh Kong', rating: 4.8, reviews: 286, description: 'Paddle through beautiful mangrove forests and enjoy peaceful eco-adventure moments.', image: 'https://kura2bus.com/blog/wp-content/uploads/2023/10/DSC_0887.jpg', tags: ['Nature', 'Adventure', 'Kayaking'] },
+    { name: 'Peam Krasaop Wildlife Sanctuary', category: 'Nature', province: 'Koh Kong', rating: 4.7, reviews: 401, description: 'A protected natural area with boardwalks, birdlife, and lush coastal scenery.', image: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/%E1%9E%88%E1%9E%9A%E1%9E%96%E1%9E%B8%E1%9E%9B%E1%9E%BE%E1%9E%94%E1%9F%89%E1%9E%98%E1%9E%98%E1%9E%BE%E1%9E%9B%E1%9E%91%E1%9F%85%E1%9E%96%E1%9F%92%E1%9E%9A%E1%9F%83%E1%9E%80%E1%9F%84%E1%9E%84%E1%9E%80%E1%9E%B6%E1%9E%84_-_panoramio.jpg', tags: ['Nature', 'Wildlife', 'Photography'] },
+    { name: 'Dong Tong Market', category: 'Food', province: 'Koh Kong', rating: 4.4, reviews: 198, description: 'A local market where you can try fresh seafood and discover daily Khmer life.', image: 'https://travelsetu.com/apps/uploads/new_destinations_photos/destination/2024/06/28/0dc327612f9e0a519a343ecc3329b2b3_1000x1000.jpg', tags: ['Food', 'Market', 'Local Life'] },
+    { name: 'Chi Phat Eco Village', category: 'Nature', province: 'Koh Kong', rating: 4.9, reviews: 265, description: 'A community-based ecotourism destination surrounded by forests, rivers, and wildlife.', image: 'https://thealtruistictraveller.com/s/51524087023470235/blog/SAM_4897.jpg', tags: ['Nature', 'Eco Tour', 'Adventure'] },
+  ],
+  'siem-reap': [
+    { name: 'Angkor Wat Sunrise', category: 'Cultural', province: 'Siem Reap', rating: 5, reviews: 1250, description: "Experience the breathtaking sunrise over Angkor Wat, Cambodia's most iconic temple.", image: 'https://toursbyjeeps.com/wp-content/uploads/2021/07/Untitled-1-2.jpg', tags: ['Temple', 'Sunrise', 'Photography'] },
+    { name: 'Bayon Temple', category: 'Cultural', province: 'Siem Reap', rating: 4.9, reviews: 980, description: 'Famous for its giant smiling stone faces and rich Khmer architecture.', image: 'https://cambodiatravel.com/images/2020/12/intro-Bayon-Temple-Travel-Guide.jpg', tags: ['Temple', 'History', 'Architecture'] },
+    { name: 'Ta Prohm', category: 'Nature', province: 'Siem Reap', rating: 4.8, reviews: 875, description: 'A temple beautifully wrapped by jungle roots and ancient stone walls.', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRVuujeN6cK9EnoskxVGvkvPaKFnQo6HnjAQ&s', tags: ['Temple', 'Nature', 'Photography'] },
+    { name: 'Phare Cambodian Circus', category: 'Cultural', province: 'Siem Reap', rating: 4.9, reviews: 620, description: 'A lively performance mixing theatre, music, and Cambodian storytelling.', image: 'https://www.siemreapshuttle.com/wp-content/uploads/2022/08/Phare-Circus-SiemreapShuttle.jpg', tags: ['Show', 'Culture', 'Family'] },
+    { name: 'Pub Street Food Walk', category: 'Food', province: 'Siem Reap', rating: 4.5, reviews: 712, description: 'Taste local snacks, desserts, and street food in the center of the city.', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmnSH7ICljEFXf4-k-vYqmnMW3LiyYanjy5g&s', tags: ['Food', 'Nightlife', 'Local Life'] },
+    { name: 'Kulen Mountain Day Trip', category: 'Nature', province: 'Siem Reap', rating: 4.7, reviews: 430, description: 'Enjoy waterfalls, sacred sites, and mountain views outside the city.', image: 'https://www.siemreap.net/wp-content/uploads/2017/12/phnom-kulen-waterfall.jpg', tags: ['Nature', 'Waterfall', 'Adventure'] },
+  ],
+  'phnom-penh': [
+    { name: 'Royal Palace', category: 'Cultural', province: 'Phnom Penh', rating: 4.8, reviews: 940, description: "Visit the majestic Royal Palace, one of Phnom Penh's most famous landmarks.", image: 'https://www.asiakingtravel.com/cuploads/files/royalpalace-att-b.jpg', tags: ['Palace', 'History', 'Photography'] },
+    { name: 'National Museum of Cambodia', category: 'Cultural', province: 'Phnom Penh', rating: 4.7, reviews: 683, description: "Explore Khmer art, sculpture, and ancient history in Cambodia's leading museum.", image: 'https://image-tc.galaxy.tf/wijpeg-87c83dri3kglj836kubeiybcf/the-national-museum-3.jpg', tags: ['Museum', 'History', 'Culture'] },
+    { name: 'Wat Phnom', category: 'Cultural', province: 'Phnom Penh', rating: 4.6, reviews: 510, description: 'A peaceful hilltop temple and one of the most symbolic places in Phnom Penh.', image: 'https://files.intocambodia.org/wp-content/uploads/2024/08/10143531/Wat-Phnom.jpg', tags: ['Temple', 'History', 'Photography'] },
+    { name: 'Central Market', category: 'Food', province: 'Phnom Penh', rating: 4.5, reviews: 860, description: 'A popular local market known for food, souvenirs, clothes, and Khmer daily life.', image: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Aerial_view_of_Phnom_Penh%27s_Central_Market_%28September_2021%29.jpg', tags: ['Food', 'Market', 'Shopping'] },
+    { name: 'Sisowath Riverside', category: 'Nature', province: 'Phnom Penh', rating: 4.6, reviews: 445, description: 'Walk along the riverfront with wide views, cafes, and a lively city atmosphere.', image: 'https://thumbs.dreamstime.com/b/busy-boulevard-sisowath-quay-along-phnom-penh-s-popular-riverside-area-cambodia-december-rd-alongside-tonle-sap-river-272947819.jpg', tags: ['River', 'Walk', 'Sunset'] },
+    { name: 'Tuol Sleng Genocide Museum', category: 'Cultural', province: 'Phnom Penh', rating: 4.7, reviews: 799, description: "An important historical site for learning about Cambodia's recent past.", image: 'https://www.unesco.org/sites/default/files/styles/paragraph_medium_desktop/public/thumbnail_image.jpg.webp?itok=gSv1xJWw', tags: ['Museum', 'History', 'Education'] },
+    { name: 'Independence Monument', category: 'Cultural', province: 'Phnom Penh', rating: 4.4, reviews: 320, description: 'A beautiful city landmark best seen in the evening with lights and open space around it.', image: 'https://www.novotelphnompenhbkk1.com/wp-content/uploads/sites/53/2023/08/Indepedence-monument-2200x1200.jpg', tags: ['Landmark', 'Photography', 'City'] },
+    { name: 'Russian Market', category: 'Food', province: 'Phnom Penh', rating: 4.5, reviews: 570, description: 'A lively market famous for local food, clothes, souvenirs, and street shopping.', image: 'https://d122axpxm39woi.cloudfront.net/images/destinations/origin/64be1fb570dee.jpg', tags: ['Market', 'Food', 'Shopping'] },
+    { name: 'Bassac Lane', category: 'Food', province: 'Phnom Penh', rating: 4.6, reviews: 265, description: 'A stylish small street filled with cafes, bars, and evening hangout spots.', image: 'https://ctp.r24k.app/wp-content/uploads/2025/03/vvTlcTqutrNFTxTyLETB.jpg', tags: ['Food', 'Nightlife', 'Friends'] },
+  ],
+}
+
+function getPlaceFromRoute() {
+  const provinceSlug = (route.params.slug as string) || 'koh-kong'
+  const placeSlugFromRoute = (route.params.placeSlug as string) || (route.params.id as string)
+
+  if (!placeSlugFromRoute) return null
+
+  const provincePlaces = provincePlaceMap[provinceSlug] || []
+  const byProvince = provincePlaces.find((item) => toSlug(item.name) === placeSlugFromRoute)
+  if (byProvince) {
+    return { place: byProvince, provinceSlug, placeSlug: placeSlugFromRoute }
+  }
+
+  for (const [mapProvinceSlug, mapPlaces] of Object.entries(provincePlaceMap)) {
+    const found = mapPlaces.find((item) => toSlug(item.name) === placeSlugFromRoute)
+    if (found) {
+      return { place: found, provinceSlug: mapProvinceSlug, placeSlug: placeSlugFromRoute }
+    }
+  }
+
+  return null
+}
+
+function buildGenericAttraction(place: any, provinceSlug: string, placeSlug: string) {
+  const nearby = (provincePlaceMap[provinceSlug] || [])
+    .filter((item) => toSlug(item.name) !== placeSlug)
+    .slice(0, 5)
+    .map((item) => ({
+      name: item.name,
+      slug: toSlug(item.name),
+      location: place.province.toUpperCase(),
+      image: item.image,
+    }))
+
+  return {
+    id: placeSlug,
+    slug: placeSlug,
+    name: place.name,
+    province: { nameEn: place.province },
     provinceSlug,
-    rating:      Number(data.average_rating) || 0,
-    reviewCount: data.reviews?.length || 0,
-    heroImage:   data.hero_image,
-    badges,
-    tags:        data.category ? [data.category] : [],
-    about:       data.description
-      ? data.description.split('\n\n').filter(Boolean)
-      : ['No description available yet.'],
-    photos:      data.photos || [],
-    location:    data.location,
+    rating: place.rating,
+    reviewCount: place.reviews,
+    heroImage: place.image,
+    badges: ['ATTRACTION', place.category.toUpperCase()],
+    tags: place.tags,
+    about: [place.description],
+    photos: [place.image],
     info: {
       bestTime:   'Year-round',
-      duration:   '2Ã¢â‚¬â€œ4 hours',
+      duration:   '2–4 hours',
       difficulty: 'Moderate',
       bestFor:    'All travelers',
       province:   data.province?.name_en || '',
     },
-    nearby,
+    nearby: nearbyList,
   }
 }
 
@@ -367,6 +693,8 @@ async function loadAttraction() {
   showAllReviews.value = false
   newReview.value    = { rating: 5, title: '', comment: '' }
   reviewSuccess.value = false
+
+  await loadProvinceNames()
 
   // Support both /province/:slug/:placeSlug and /attraction/:id
   const identifier = (route.params.placeSlug as string) || (route.params.id as string)
@@ -387,7 +715,12 @@ async function loadAttraction() {
       router.replace(`/attraction/${attraction.value.slug}`)
     }
 
-    if (isLoggedIn.value) checkBookmark(data.id)
+    if (isLoggedIn.value) {
+      checkBookmark(data.id)
+      checkCanReview(data.id)
+    } else {
+      canReview.value = false
+    }
   } catch (err: any) {
     if (err.response?.status === 404) {
       error.value = `Attraction "${identifier}" not found.`
@@ -401,16 +734,87 @@ async function loadAttraction() {
   }
 }
 
+// ── Trip modal functions ──────────────────────────────────────────────────────
+async function openTripModal() {
+  if (!isLoggedIn.value) { router.push('/login'); return }
+  tripModalError.value = null
+  tripSuccess.value    = null
+  tripModalTab.value   = 'new'
+  showTripModal.value  = true
+  // Pre-load existing trips for the "existing" tab
+  try {
+    const { data } = await API.get('/api/trips')
+    userTrips.value = Array.isArray(data) ? data : []
+    if (userTrips.value.length) selectedTripId.value = userTrips.value[0].id
+  } catch {
+    userTrips.value = []
+  }
+}
+
+async function createNewTrip() {
+  if (!attraction.value || !newTripOrigin.value) return
+  addingToTrip.value   = true
+  tripModalError.value = null
+  try {
+    const destName   = attraction.value.province.nameEn
+    const payload: any = {
+      title:       `Trip to ${destName}`,
+      origin:      newTripOrigin.value,
+      destination: attraction.value.provinceSlug,
+      itinerary_items: [{ attraction_id: attraction.value.id, day_number: 1 }],
+    }
+    if (newTripStart.value) payload.start_date = newTripStart.value
+    if (newTripEnd.value)   payload.end_date   = newTripEnd.value
+
+    await API.post('/api/trips', payload)
+    showTripModal.value = false
+    newTripOrigin.value = ''
+    router.push({ name: 'my-trips' })
+  } catch (e: any) {
+    tripModalError.value = e?.response?.data?.message || 'Failed to create trip'
+  } finally {
+    addingToTrip.value = false
+  }
+}
+
+async function addToExistingTrip() {
+  if (!attraction.value || !selectedTripId.value) return
+  addingToTrip.value   = true
+  tripModalError.value = null
+  try {
+    await API.post(`/api/trips/${selectedTripId.value}/itinerary-items`, {
+      attraction_id: attraction.value.id,
+      day_number:    selectedDay.value,
+    })
+    tripSuccess.value = `Added to Day ${selectedDay.value}!`
+    setTimeout(() => { showTripModal.value = false; tripSuccess.value = null }, 1500)
+  } catch (e: any) {
+    tripModalError.value = e?.response?.data?.message || 'Failed to add to trip'
+  } finally {
+    addingToTrip.value = false
+  }
+}
+
 async function checkBookmark(attractionId: string) {
   try {
     const { data } = await API.get('/bookmarks')
-    const found = (data || []).find((b: any) => b.entity_id === attractionId)
+    const bookmarks = Array.isArray(data) ? data : []
+    const found = bookmarks.find((b: any) => b.entity_id === attractionId)
     if (found) {
       isFavorited.value = true
       bookmarkId.value  = found.id
     }
   } catch {
-    // silently ignore Ã¢â‚¬â€ user may not be authenticated
+    // silent — heart stays empty if fetch fails
+  }
+}
+
+async function checkCanReview(attractionId: string) {
+  try {
+    const { data } = await API.get(`/api/trips/can-review/${attractionId}`)
+    canReview.value = data?.allowed === true
+  } catch {
+    canReview.value = false
   }
 }
 
@@ -418,7 +822,7 @@ async function toggleFavorite() {
   if (savingFavorite.value) return
   if (!isLoggedIn.value) { router.push('/login'); return }
 
-  // Optimistic update Ã¢â‚¬â€ flip state immediately so UI responds instantly
+  // Optimistic update — flip state immediately so UI responds instantly
   const prevFavorited  = isFavorited.value
   const prevBookmarkId = bookmarkId.value
   isFavorited.value = !prevFavorited
@@ -439,13 +843,11 @@ async function toggleFavorite() {
     // Revert on failure
     isFavorited.value = prevFavorited
     bookmarkId.value  = prevBookmarkId
-    console.error('Bookmark error:', e?.response?.data || e)
   } finally {
     savingFavorite.value = false
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Reviews Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function submitReview() {
   if (!newReview.value.comment.trim() || !newReview.value.rating) return
@@ -458,18 +860,27 @@ async function submitReview() {
       author_name:   currentUserName.value || 'Anonymous',
       title:         newReview.value.title || undefined,
     })
-    reviews.value.unshift(data)
+    // Normalise to snake_case so the review card renders the same as loaded reviews
+    reviews.value.unshift({
+      id:          data.id,
+      rating:      Number(data.rating ?? data.rating),
+      comment:     data.comment,
+      author_name: data.author_name ?? data.authorName ?? currentUserName.value ?? 'Anonymous',
+      title:       data.title ?? null,
+      created_at:  data.created_at ?? data.createdAt ?? new Date().toISOString(),
+    })
     newReview.value = { rating: 5, title: '', comment: '' }
     reviewSuccess.value = true
     setTimeout(() => { reviewSuccess.value = false }, 3000)
   } catch (e: any) {
+    const msg = e?.response?.data?.message || 'Failed to submit review'
+    alert(msg)
     console.error('Review error:', e?.response?.data || e)
   } finally {
     submittingReview.value = false
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Leaflet map Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function loadLeaflet(): Promise<void> {
   return new Promise((resolve) => {
@@ -502,7 +913,7 @@ async function initMap() {
 
   leafletMap = L.map(mapEl.value).setView([mapCoords.value.lat, mapCoords.value.lng], 14)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'Ã‚Â© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(leafletMap)
 
   // Main attraction pin
@@ -546,13 +957,19 @@ async function initMap() {
         L.marker([Number(poi.latitude), Number(poi.longitude)], { icon: poiIcon })
           .addTo(leafletMap)
           .bindPopup(
-            `<b>${poi.name}</b><br><i>${cfg.title}</i><br>${Math.round(poi.distance_meters)}m away${poi.isOpen24h ? ' Ã‚Â· Open 24h' : ''}`,
+            `<b>${poi.name}</b><br><i>${cfg.title}</i><br>${Math.round(poi.distance_meters)}m away${poi.isOpen24h ? ' · Open 24h' : ''}`,
           )
       }
     }
   }
 }
 
+watch(
+  () => [route.params.slug, route.params.placeSlug, route.params.id],
+  () => {
+    loadAttraction()
+  },
+)
 // Initialise map once attraction data (and the map div) are ready
 watch(
   () => [attraction.value, nearbyPOIs.value],
@@ -568,7 +985,6 @@ onUnmounted(() => {
   if (leafletMap) { leafletMap.remove(); leafletMap = null }
 })
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 watch(
   () => [route.params.slug, route.params.placeSlug, route.params.id],
@@ -680,11 +1096,12 @@ watch(
 /* Map */
 .map-wrapper { position: relative; }
 .map-iframe  { border-radius: 12px; border: 1px solid #e0e0e0; display: block; height: 420px; width: 100%; }
-.map-link    {
-  display: block; text-align: right; font-size: 12px;
-  color: #C8922A; margin-top: 6px; text-decoration: none;
-}
-.map-link:hover { text-decoration: underline; }
+.map-actions      { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.map-btn          { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+                    border-radius: 8px; font-size: 13px; font-weight: 600;
+                    text-decoration: none; transition: opacity 0.2s; }
+.map-btn:hover    { opacity: 0.82; }
+.map-btn--google  { background: #4285F4; color: #fff; }
 .map-placeholder {
   border: 2px dashed #d0d0d0; border-radius: 12px; padding: 3rem;
   display: flex; flex-direction: column; align-items: center;
@@ -776,6 +1193,15 @@ watch(
 }
 .review-login-link:hover { color: #b07820; }
 
+.review-locked {
+  background: #f9fafb; border: 1.5px dashed #d1d5db;
+  border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;
+  text-align: center;
+}
+.review-locked-icon  { font-size: 28px; margin-bottom: 6px; }
+.review-locked-title { font-size: 15px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+.review-locked-desc  { font-size: 13px; color: #6b7280; line-height: 1.6; }
+
 /* Nearby */
 .nearby-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px;
@@ -787,14 +1213,6 @@ watch(
 .nearby-name { font-size: 13px; font-weight: 600; color: #222; margin: 8px 4px 2px; }
 .nearby-location { font-size: 11px; color: #888; margin: 0 4px 8px; }
 
-/* Nearby */
-.nearby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.nearby-card { cursor: pointer; border-radius: 10px; overflow: hidden; transition: transform 0.2s; }
-.nearby-card:hover { transform: translateY(-4px); }
-.nearby-img { aspect-ratio: 4/3; overflow: hidden; }
-.nearby-img img { width: 100%; height: 100%; object-fit: cover; }
-.nearby-name { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-top: 6px; padding: 0 4px; }
-.nearby-location { font-size: 10px; color: #888; padding: 0 4px; letter-spacing: 0.05em; }
 
 /* Sidebar */
 .sidebar { position: sticky; top: 76px; }
@@ -881,5 +1299,121 @@ watch(
   font-family: sans-serif;
   box-shadow: 0 2px 6px rgba(0,0,0,0.35);
   border: 2px solid rgba(255,255,255,0.8);
+}
+
+/* ── Trip modal ─────────────────────────────────────────────────────────────── */
+.trip-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 16px;
+}
+.trip-modal {
+  background: #fff; border-radius: 16px; width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden;
+}
+.trip-modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 20px 20px 0;
+}
+.trip-modal-title { font-size: 17px; font-weight: 700; color: #15543f; margin: 0 0 2px; }
+.trip-modal-sub   { font-size: 12px; color: #888; margin: 0; }
+.trip-modal-close {
+  background: none; border: none; font-size: 18px; color: #aaa;
+  cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.trip-modal-close:hover { color: #333; }
+.trip-modal-tabs {
+  display: flex; gap: 0; padding: 16px 20px 0;
+}
+.trip-tab {
+  flex: 1; padding: 8px 0; font-size: 13px; font-weight: 600;
+  border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b;
+  cursor: pointer; transition: all 0.15s;
+}
+.trip-tab:first-child { border-radius: 8px 0 0 8px; }
+.trip-tab:last-child  { border-radius: 0 8px 8px 0; border-left: none; }
+.trip-tab.active { background: #15543f; color: #fff; border-color: #15543f; }
+.trip-modal-body  { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+.trip-modal-hint  { font-size: 12px; color: #888; margin: 0; }
+.trip-date-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.trip-date-group  { display: flex; flex-direction: column; gap: 4px; }
+.trip-date-group label { font-size: 11px; font-weight: 600; color: #15543f; text-transform: uppercase; letter-spacing: 0.5px; }
+.trip-date-group input {
+  padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-family: inherit;
+}
+.trip-date-group input:focus { outline: none; border-color: #15543f; }
+.trip-modal-btn {
+  padding: 11px; background: #15543f; color: #fff; border: none;
+  border-radius: 9999px; font-size: 14px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.2s;
+}
+.trip-modal-btn:hover:not(:disabled) { background: #0f3d2c; }
+.trip-modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.trip-modal-error   { font-size: 12px; color: #dc2626; margin: 0; }
+.trip-modal-success { font-size: 12px; color: #16a34a; font-weight: 600; margin: 0; }
+.trip-modal-empty   { font-size: 13px; color: #888; text-align: center; padding: 16px 0; }
+.trip-spinner {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+.trip-list { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+.trip-list-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.trip-list-item:hover    { border-color: #15543f; }
+.trip-list-item.selected { border-color: #15543f; background: #f0fdf4; }
+.trip-list-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+.trip-list-dest { font-size: 11px; color: #888; }
+.trip-day-row { display: flex; align-items: center; gap: 10px; }
+.trip-day-row label { font-size: 12px; font-weight: 600; color: #15543f; white-space: nowrap; }
+.trip-day-row select {
+  flex: 1; padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-family: inherit;
+}
+.trip-day-row select:focus { outline: none; border-color: #15543f; }
+
+/* Route row (origin → destination) */
+.trip-route-row {
+  display: flex; align-items: flex-end; gap: 8px;
+}
+.trip-route-group {
+  flex: 1; display: flex; flex-direction: column; gap: 4px;
+}
+.trip-route-group label {
+  font-size: 11px; font-weight: 600; color: #15543f;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.trip-route-select {
+  padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; background: #fff; cursor: pointer; width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  user-select: none; outline: none;
+}
+.trip-route-select:focus,
+.trip-route-select.open { border-color: #15543f; }
+.trip-select-caret { font-size: 11px; color: #94a3b8; flex-shrink: 0; margin-left: 4px; }
+.trip-select-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  max-height: 200px; overflow-y: auto; z-index: 9999;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+.trip-select-option {
+  padding: 9px 12px; font-size: 13px; cursor: pointer; color: #1e293b;
+}
+.trip-select-option:hover    { background: #f0fdf4; color: #15543f; }
+.trip-select-option.selected { font-weight: 700; color: #15543f; }
+.trip-route-arrow {
+  font-size: 18px; color: #94a3b8; font-weight: 700;
+  padding-bottom: 10px; flex-shrink: 0;
+}
+.trip-destination-preset {
+  padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: #15543f;
+  background: #f0fdf4; cursor: default;
 }
 </style>

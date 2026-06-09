@@ -450,6 +450,10 @@ export default defineComponent({
       }
     }
 
+    const isLoggedIn = computed(() => {
+      return !!(localStorage.getItem('user_data') || localStorage.getItem('user') || localStorage.getItem('token') || localStorage.getItem('access_token'))
+    })
+
     return {
       current,
       slides,

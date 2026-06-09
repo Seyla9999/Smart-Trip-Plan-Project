@@ -192,7 +192,7 @@ async function addProvinceBoundary(slug: string) {
       {
         type: "FeatureCollection",
         features: matchedFeatures,
-      },
+      } as any,
       {
         pane: "boundaryPane",
         interactive: false,
