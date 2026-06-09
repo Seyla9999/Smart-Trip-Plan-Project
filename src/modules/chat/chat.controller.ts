@@ -53,14 +53,7 @@ export class ChatController {
     @Query('limit')         limit?: string,
     @Query('offset')        offset?: string,
   ) {
-    const parsedLimit  = limit  ? parseInt(limit, 10)  : undefined
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined
-    return this.service.getMessages(
-      id,
-      userId,
-      parsedLimit  ?? 100,
-      parsedOffset ?? 0,
-    )
+    return this.service.getMessages(id, userId)
   }
 
   @Get('conversations/:id')

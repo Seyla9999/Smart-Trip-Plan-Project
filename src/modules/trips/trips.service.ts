@@ -155,8 +155,8 @@ export class TripsService {
       origin: dto.origin,
       travel_type: dto.travel_type,
       ai_summary: dto.ai_summary,
-      start_date: dto.start_date ? new Date(dto.start_date) : null,
-      end_date: dto.end_date ? new Date(dto.end_date) : null,
+      start_date: dto.start_date ? new Date(dto.start_date) : undefined,
+      end_date: dto.end_date ? new Date(dto.end_date) : undefined,
       owner_id: userId,
       invite_token: token,
       status: 'planning'
@@ -282,6 +282,19 @@ export class TripsService {
           role: 'member',
         } as Partial<TripMember>),
       );
+
+      // ── Notify trip owner ──────────────────────────────────
+      try {
+        const joiner = await this.dataSource.query(
+          `SELECT full_name FROM users WHERE id = $1`, [userId],
+        )
+        const joinerName = joiner[0]?.full_name || 'Someone'
+        await this.dataSource.query(
+          `INSERT INTO notifications (user_id, type, title, message, link, is_read)
+           VALUES ($1, 'trip_invite', $2, $3, '/trip', false)`,
+          [trip.owner_id, `${joinerName} joined your trip ✈️`, `"${trip.title}"`],
+        )
+      } catch { /* notification failure never breaks join */ }
     }
     return this.tripRepo.findOne({
       where: { id: trip.id },
