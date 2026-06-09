@@ -258,9 +258,11 @@
                 </div>
 
                 <div class="history-right">
-                  <span class="history-badge">Completed</span>
-                  <button class="btn-detail-sm" @click="viewPlanDetail(trip)" title="View plan">📋</button>
-                  <button class="btn-delete-sm" @click="confirmDelete(trip)" title="Delete">🗑️</button>
+                  <span v-if="trip.status === 'completed'" class="history-badge">✓ Completed</span>
+                  <button v-else class="btn-finish-history" @click="finishFromHistory(trip)" title="Mark as finished">✓ Finish</button>
+                  <button class="btn-action-text" @click="reviewTrip(trip)" title="Leave review">Review</button>
+                  <button class="btn-action-text" @click="viewPlanDetail(trip)" title="View details">Details</button>
+                  <button class="btn-action-delete-text" @click="confirmDelete(trip)" title="Delete trip">Delete</button>
                 </div>
               </div>
             </article>
@@ -353,7 +355,16 @@
                     <div v-for="item in group.items" :key="item.id" class="plan-item">
                       <div class="plan-item-icon">{{ categoryIcon(item.attraction?.category) }}</div>
                       <div class="plan-item-info">
-                        <div class="plan-item-name">{{ item.attraction?.name_en ?? item.notes ?? 'Unnamed stop' }}</div>
+                        <div class="plan-item-name">
+                          <button
+                            v-if="item.attraction?.name_en"
+                            class="plan-item-link"
+                            @click="reviewAttraction(item.attraction.name_en)"
+                          >
+                            {{ item.attraction.name_en }}
+                          </button>
+                          <span v-else>{{ item.notes ?? 'Unnamed stop' }}</span>
+                        </div>
                         <div v-if="item.attraction?.category" class="plan-item-cat">{{ item.attraction.category }}</div>
                         <div v-if="item.start_time || item.end_time" class="plan-item-time">
                           🕐 {{ item.start_time ?? '?' }}<template v-if="item.end_time"> – {{ item.end_time }}</template>
@@ -687,6 +698,64 @@ const goToReview = () => {
   }
 }
 
+const finishFromHistory = async (trip: Trip) => {
+  if (trip.status === 'completed') {
+    showToast('Trip already completed', 'success')
+    return
+  }
+  
+  isFinishing.value = true
+  const tripId = trip.id
+  const items  = trip.itinerary_items ?? []
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/trips/${tripId}/complete`,
+      { method: 'PATCH', headers: authHeaders() }
+    )
+    if (!res.ok) throw new Error(`${res.status}`)
+
+    // Update local list so badge appears immediately
+    const idx = trips.value.findIndex(t => t.id === tripId)
+    if (idx !== -1) trips.value[idx] = { ...trips.value[idx], status: 'completed' }
+
+    // Collect attractions for the review prompt
+    finishedAttractions.value = items
+      .filter(item => item.attraction?.id)
+      .map(item => {
+        const name = item.attraction!.name_en
+        return {
+          id:   item.attraction!.id,
+          name,
+          slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        }
+      })
+
+    showReviewPrompt.value = true
+    showToast('Trip marked as completed!', 'success')
+  } catch {
+    showToast('Failed to complete trip', 'error')
+  } finally {
+    isFinishing.value = false
+  }
+}
+
+const buildAttractionSlug = (name: string) =>
+  name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+
+const reviewTrip = (trip: Trip) => {
+  const attraction = trip.itinerary_items?.find(item => item.attraction?.name_en)?.attraction
+  if (!attraction?.name_en) {
+    showToast('No attraction available to review for this trip.', 'error')
+    return
+  }
+  router.push(`/attraction/${buildAttractionSlug(attraction.name_en)}`)
+}
+
+const reviewAttraction = (name: string) => {
+  router.push(`/attraction/${buildAttractionSlug(name)}`)
+}
+
 // ─── Navigation ───────────────────────────────────────────────────────────────
 const goToTrip = (trip: Trip) => {
   router.push({ name: 'trip-results', params: { id: trip.id } })
@@ -1006,16 +1075,48 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
 
 .history-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .history-badge {
-  background: #f3f4f6; color: #6b7280;
-  font-size: 11px; font-weight: 700; padding: 4px 10px;
+  background: #f0fdf4; color: #15803d;
+  font-size: 11px; font-weight: 700; padding: 6px 12px;
   border-radius: 999px; text-transform: uppercase; letter-spacing: .5px;
 }
-.btn-delete-sm {
-  background: none; border: none; cursor: pointer;
-  font-size: 16px; opacity: .4; transition: opacity .15s;
-  padding: 4px;
+
+.btn-finish-history {
+  background: #15803d; color: white;
+  padding: 6px 12px; border-radius: 8px;
+  border: none; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background .15s;
+  white-space: nowrap;
 }
-.btn-delete-sm:hover { opacity: 1; }
+.btn-finish-history:hover { background: #166534; }
+
+.btn-action-text {
+  background: none; border: none;
+  color: #374151; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: color .15s;
+  padding: 4px 8px; border-radius: 6px;
+}
+.btn-action-text:hover { color: #0369a1; background: #f0f4f8; }
+
+.btn-action-delete-text {
+  background: none; border: none;
+  color: #6b7280; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: color .15s;
+  padding: 4px 8px; border-radius: 6px;
+}
+.btn-action-delete-text:hover { color: #ef4444; background: #fef2f2; }
+
+.plan-item-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #1d4ed8;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+.plan-item-link:hover {
+  text-decoration: underline;
+}
 
 /* ── Modals ───────────────────────────────────────────────────────────────── */
 .modal-overlay {
@@ -1095,13 +1196,6 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
   cursor: pointer; transition: background .15s;
 }
 .btn-detail:hover { background: #075985; }
-
-.btn-detail-sm {
-  background: none; border: none; cursor: pointer;
-  font-size: 16px; opacity: .5; transition: opacity .15s;
-  padding: 4px;
-}
-.btn-detail-sm:hover { opacity: 1; }
 
 /* ── Plan Detail Modal ────────────────────────────────────────────────────── */
 .plan-modal-box {

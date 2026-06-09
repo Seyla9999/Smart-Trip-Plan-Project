@@ -450,6 +450,7 @@ const selectedDay    = ref(1)
 const addingToTrip   = ref(false)
 const tripModalError = ref<string | null>(null)
 const tripSuccess    = ref<string | null>(null)
+const provinceNameById = ref<Record<number, string>>({})
 
 const isLoggedIn = computed(() => !!localStorage.getItem('auth_token'))
 
@@ -500,15 +501,22 @@ function normalizeNearbyPlaces(nearbyPlaces: any, provinceName: string) {
 
   return nearbyPlaces
     .map((item: any, index: number) => {
-      const name = item?.name ?? item?.title ?? "Nearby Place " + (index + 1)
+      const name = item?.name ?? item?.title ?? null
+      const image = item?.image ?? item?.image_url ?? null
+      
+      // Skip items without proper names or images
+      if (!name || !image || name.startsWith('Nearby Place')) {
+        return null
+      }
+      
       return {
         name,
-        slug: item?.slug ?? "",
+        slug: item?.slug ?? toSlug(name),
         location: item?.location ?? provinceName.toUpperCase(),
-        image: item?.image ?? item?.image_url ?? "",
+        image: image,
       }
     })
-    .filter((item: any) => Boolean(item.name))
+    .filter((item: any) => Boolean(item))
 }
 
 function normalizeAttractionData(rawAttraction: any, attractionId: string) {
@@ -676,9 +684,9 @@ function buildGenericAttraction(place, provinceSlug, placeSlug) {
       duration:   '2–4 hours',
       difficulty: 'Moderate',
       bestFor:    'All travelers',
-      province:   data.province?.name_en || '',
+      province:   place.province || '',
     },
-    nearby: nearbyList,
+    nearby: nearby,
   }
 }
 
@@ -700,18 +708,42 @@ async function loadAttraction() {
   const identifier = (route.params.placeSlug as string) || (route.params.id as string)
   if (!identifier) {
     loading.value = false
+    error.value = 'No attraction identifier provided'
     return
   }
 
   try {
-    const { data } = await API.get(`/attractions/${identifier}`)
+    // Try the attraction API first
+    let data: any = null
+    try {
+      const res = await API.get(`/attractions/${identifier}`)
+      data = res.data
+    } catch (apiErr: any) {
+      // If API returns 404, try fallback from static provincePlaceMap
+      if (apiErr.response?.status === 404) {
+        const placeData = getPlaceFromRoute()
+        if (placeData) {
+          data = buildGenericAttraction(placeData.place, placeData.provinceSlug, placeData.placeSlug)
+        } else {
+          throw apiErr
+        }
+      } else {
+        throw apiErr
+      }
+    }
+
+    if (!data) {
+      error.value = `Attraction "${identifier}" not found.`
+      return
+    }
+
     attraction.value = normalizeAttraction(data)
     nearbyPOIs.value = data.nearbyPOIs || null
     reviews.value    = data.reviews    || []
 
     // Replace UUID in URL with human-readable slug
     const isUuid = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(identifier)
-    if (isUuid && attraction.value.slug) {
+    if (isUuid && attraction.value?.slug) {
       router.replace(`/attraction/${attraction.value.slug}`)
     }
 
@@ -722,8 +754,9 @@ async function loadAttraction() {
       canReview.value = false
     }
   } catch (err: any) {
+    console.error('Attraction load error:', err)
     if (err.response?.status === 404) {
-      error.value = `Attraction "${identifier}" not found.`
+      error.value = `Attraction "${identifier}" not found. Try browsing from the Discover page.`
     } else if (err.code === 'ERR_NETWORK') {
       error.value = 'Cannot connect to the backend. Make sure it is running on port 3000.'
     } else {
