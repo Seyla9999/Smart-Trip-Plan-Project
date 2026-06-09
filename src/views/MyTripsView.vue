@@ -301,6 +301,9 @@
             <div class="modal-icon">🔗</div>
             <h3 class="modal-title">Invite Friends</h3>
             <p class="modal-desc">Share this link so friends can join your trip</p>
+            <div v-if="isGeneratingShareToken" class="share-generating">
+              <span class="mini-spinner"></span> Generating invite link…
+            </div>
             <div class="share-link-row">
               <input :value="shareLink" readonly class="share-input" @focus="selectInput($event)" />
               <button class="btn-copy" @click="copyLink">{{ copiedText }}</button>
@@ -415,6 +418,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import API from '@/api/axios'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
@@ -590,16 +594,14 @@ const deleteTrip = async () => {
   if (!tripToDelete.value) return
   isDeleting.value = true
   try {
-    const res = await fetch(
-      `${API_BASE}/api/trips/${tripToDelete.value.id}`,
-      { method: 'DELETE', headers: authHeaders() }
-    )
-    if (!res.ok) throw new Error(`${res.status}`)
+    await API.delete(`/api/trips/${tripToDelete.value.id}`)
     trips.value = trips.value.filter(t => t.id !== tripToDelete.value!.id)
     showToast('Trip deleted', 'success')
     tripToDelete.value = null
-  } catch {
-    showToast('Failed to delete trip', 'error')
+  } catch (err: any) {
+    console.error('Failed to delete trip', err)
+    const msg = err?.response?.data?.message || 'Failed to delete trip'
+    showToast(msg, 'error')
   } finally {
     isDeleting.value = false
   }
@@ -687,7 +689,7 @@ const goToReview = () => {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 const goToTrip = (trip: Trip) => {
-  router.push({ name: 'trip-results-saved', params: { id: trip.id } })
+  router.push({ name: 'trip-results', params: { id: trip.id } })
 }
 
 // ─── Share ────────────────────────────────────────────────────────────────────
@@ -698,7 +700,37 @@ const shareLink = computed(() => {
     : `${window.location.origin}/trip/results/${tripToShare.value.id}`
 })
 
-const shareTrip     = (trip: Trip)  => { tripToShare.value = trip }
+const isGeneratingShareToken = ref(false)   
+
+const shareTrip = async (trip: Trip) => {
+  tripToShare.value = trip
+  if (!trip.invite_token && trip.id) {     
+    isGeneratingShareToken.value = true
+    try {
+      const endpoints = [
+        `/api/trips/${trip.id}/invite-token`,
+        `/api/trips/${trip.id}/invite`,
+        `/api/trips/${trip.id}/share`,
+      ]
+      for (const ep of endpoints) {
+        try {
+          const res = await API.post(ep)
+          const data = res.data
+          const generated = data?.invite_token ?? data?.token
+                          ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
+          if (generated) {
+            trip.invite_token = String(generated)  // patch local object
+            tripToShare.value = { ...trip }         // trigger reactivity
+            break
+          }
+        } catch { /* try next */ }
+      }
+    } catch { /* ignore */ } finally {
+      isGeneratingShareToken.value = false
+    }
+  }
+}
+
 const copyLink      = async ()      => {
   await navigator.clipboard.writeText(shareLink.value).catch(() => {})
   copiedText.value = '✓ Copied!'
@@ -859,9 +891,9 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
 /* Make the whole card clickable via an invisible overlay while keeping buttons clickable */
 .trip-card { position: relative; }
 .card-overlay {
-  position: absolute; inset: 0; display: block; z-index: 2;
+  position: absolute; inset: 0; display: block; z-index: 1;
 }
-.card-body { position: relative; z-index: 1; }
+.card-body { position: relative; z-index: 2; }
 .card-actions button, .btn-delete, .btn-share, .btn-view { position: relative; z-index: 3; }
 
 .card-route {
@@ -1180,6 +1212,15 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
   border: 2px solid rgba(255,255,255,.4);
   border-top-color: white; border-radius: 50%;
   animation: spin .7s linear infinite;
+}
+
+.share-generating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 4px;
 }
 
 /* ── Animations ───────────────────────────────────────────────────────────── */

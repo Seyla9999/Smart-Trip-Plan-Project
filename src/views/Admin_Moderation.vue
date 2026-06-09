@@ -305,7 +305,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api/axios'
+import { useAdminToast } from '@/composables/useAdminToast'
 
+const { showAdminToast } = useAdminToast()
 const searchQuery = ref('')
 const queue = ref([])
 const isLoading = ref(false)
@@ -606,6 +608,11 @@ const applyBulkAction = async (action) => {
       ? applyStatus(item, statusMap.get(item.id) || nextStatus)
       : item,
   )
+  showAdminToast({
+    message: `Bulk ${action} complete`,
+    detail: `Updated status for ${updated.length} stories.`,
+    tone: action === 'approve' ? 'success' : 'delete'
+  })
   syncSelectedStory()
 }
 
@@ -621,12 +628,20 @@ const handleAction = async (item, action) => {
     queue.value = queue.value.map((q) =>
       q.id === item.id ? applyStatus(q, nextStatus) : q,
     )
+    showAdminToast({
+      message: 'Story approved',
+      tone: 'success'
+    })
     syncSelectedStory()
   } else if (action.key === 'flag') {
     const nextStatus = await updateStoryStatus(item.id, 'flagged')
     queue.value = queue.value.map((q) =>
       q.id === item.id ? applyStatus(q, nextStatus) : q,
     )
+    showAdminToast({
+      message: 'Story flagged',
+      tone: 'delete'
+    })
     syncSelectedStory()
   }
 }

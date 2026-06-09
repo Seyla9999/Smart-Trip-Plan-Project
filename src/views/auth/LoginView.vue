@@ -1,6 +1,6 @@
 <template>
   <AuthLayout imagePosition="right">
-    <div class="form">
+    <form class="form" @submit.prevent="handleLogin">
       <h1>Welcome Back</h1>
 
       <input v-model="email" placeholder="Email" :class="{ invalid: emailError }" />
@@ -28,7 +28,7 @@
       </div>
       <p v-if="passwordError" class="field-error">{{ passwordError }}</p>
 
-      <button :disabled="loading" @click="handleLogin">
+      <button type="submit" :disabled="loading">
         {{ loading ? 'Signing in...' : 'Sign in' }}
       </button>
 
@@ -37,7 +37,7 @@
       <p @click="$router.push('/register')" class="link">
         Don’t have account? Sign up
       </p>
-    </div>
+    </form>
     <div v-if="dialogVisible" class="dialog-overlay">
       <div class="dialog-box">
         
@@ -54,8 +54,8 @@
 </template>
 
 <script setup>
-import { ref, computed} from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { login } from '@/services/auth.service'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
@@ -72,6 +72,19 @@ const dialogMessage = ref('')
 const dialogType = ref('success') 
 
 const router = useRouter()
+const route = useRoute()
+const REDIRECT_KEY = 'post_auth_redirect'
+
+const timeoutMessage = computed(() => {
+  const timeoutValue = route.query.timeout
+  return timeoutValue === '1' || timeoutValue === 'true'
+})
+
+onMounted(() => {
+  if (timeoutMessage.value) {
+    showDialog('Your session has timed out. Please log in again.', 'error')
+  }
+})
 
 const getNormalizedRole = (user) => {
   const role = user?.role || user?.user_role || ''
@@ -116,7 +129,12 @@ const handleLogin = async () => {
     success.value = res.data.message
 
     setTimeout(() => {
-      const nextRoute = getNormalizedRole(res.data.user) === 'admin' ? '/admin' : '/'
+      const redirectPath = typeof route.query.redirect === 'string'
+        ? route.query.redirect
+        : localStorage.getItem(REDIRECT_KEY) || ''
+      if (redirectPath) localStorage.removeItem(REDIRECT_KEY)
+
+      const nextRoute = redirectPath || (getNormalizedRole(res.data.user) === 'admin' ? '/admin' : '/')
       router.replace(nextRoute)
     }, 1200)
 

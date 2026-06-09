@@ -242,6 +242,14 @@
               <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Last login</p>
               <p class="text-slate-700">{{ selectedUser.lastLoginLabel }}</p>
             </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Stories Uploaded</p>
+              <p class="text-slate-700 font-bold text-emerald-600">{{ selectedUser.storyCount }} stories</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Trips Planned</p>
+              <p class="text-slate-700 font-bold text-sky-600">{{ selectedUser.tripCount }} trips</p>
+            </div>
             <div class="col-span-2">
               <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Bio</p>
               <p class="text-slate-700">{{ selectedUser.bio || 'No bio provided' }}</p>
@@ -361,7 +369,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { createUser, getAdminUsers, updateUserStatus } from '@/services/users.service'
+import { useAdminToast } from '@/composables/useAdminToast'
+import API from '@/api/axios'
 
+const { showAdminToast } = useAdminToast()
 const searchQuery = ref('')
 const activeTab = ref('All Users')
 const sortBy = ref('Recently Joined')
@@ -514,6 +525,11 @@ const handleAddAdmin = async () => {
     if (createdUser) {
       syncUser(createdUser)
     }
+    showAdminToast({
+      message: 'Admin added',
+      detail: `${payload.full_name} account is ready.`,
+      tone: 'success'
+    })
     closeAddAdminModal()
   } catch (error) {
     const message = error?.response?.data?.message
@@ -524,9 +540,45 @@ const handleAddAdmin = async () => {
   }
 }
 
-const openUserDetails = (user) => {
+const openUserDetails = async (user) => {
   statusUpdateError.value = ''
-  selectedUser.value = { ...user }
+  // Set initial state with 0 counts
+  selectedUser.value = { 
+    ...user, 
+    storyCount: 0, 
+    tripCount: 0 
+  }
+  
+  try {
+    const [storiesRes, tripsRes] = await Promise.allSettled([
+      API.get('/stories', { params: { userId: user.id } }),
+      API.get('/trips', { params: { ownerId: user.id } })
+    ])
+    
+    // Create a fresh update object to ensure reactivity
+    const statsUpdate = { ...selectedUser.value }
+    
+    if (storiesRes.status === 'fulfilled') {
+      console.log('Stories API response:', storiesRes.value.data)
+      statsUpdate.storyCount = storiesRes.value.data?.meta?.total ?? 0
+    } else {
+      console.error('Failed to fetch user story count:', storiesRes.reason)
+    }
+
+    if (tripsRes.status === 'fulfilled') {
+      console.log('Trips API response:', tripsRes.value.data)
+      statsUpdate.tripCount = tripsRes.value.data?.meta?.total ?? 0
+    } else {
+      console.error('Failed to fetch user trip count:', tripsRes.reason)
+    }
+
+    // Only update if the user hasn't switched to someone else
+    if (selectedUser.value && selectedUser.value.id === user.id) {
+      selectedUser.value = statsUpdate
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching user statistics:', error)
+  }
 }
 
 const closeUserDetails = () => {
@@ -544,6 +596,10 @@ const changeUserStatus = async (user, nextStatus) => {
     if (updatedUser) {
       syncUser(updatedUser)
     }
+    showAdminToast({
+      message: nextStatus === 'active' ? 'User activated' : 'User banned',
+      tone: nextStatus === 'active' ? 'success' : 'delete'
+    })
   } catch (error) {
     statusUpdateError.value = 'Unable to update user status.'
     console.error('Failed to update status:', error)

@@ -23,7 +23,7 @@ const showGlobalLayout = computed(() => {
 
 const redirectToLogin = () => {
   clearAuthSession()
-  window.location.href = '/login'
+  window.location.href = '/login?timeout=1'
 }
 
 const checkSession = () => {

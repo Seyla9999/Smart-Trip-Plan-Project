@@ -291,7 +291,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const COLORS  = ['#1D3557','#2D6A4F','#C8922A','#5C4B8A','#AE2012','#2196A6','#6B4C3B']
@@ -311,6 +311,7 @@ export default defineComponent({
   name: 'ChatView',
   setup() {
     const router = useRouter()
+    const route = useRoute()
 
     const loggedInUser   = ref<any>(null)
     const conversations  = ref<any[]>([])
@@ -345,6 +346,8 @@ export default defineComponent({
     const currentEmojis   = computed(() =>
       EMOJI_CATEGORIES.find(c => c.name === activeEmojiCat.value)?.emojis ?? []
     )
+
+    const targetConvId = computed(() => String(route.query.convId || route.query.chatId || ''))
     function insertEmoji(emoji: string) {
       newMessage.value += emoji
     }
@@ -402,10 +405,24 @@ export default defineComponent({
         try {
           loggedInUser.value = JSON.parse(raw)
           await loadConversations()
+          if (targetConvId.value) {
+            const conv = conversations.value.find((c: any) => c.id === targetConvId.value)
+            if (conv) {
+              await selectConversation(conv)
+            }
+          }
           await pingLastSeen()
           pollInterval = setInterval(pollUpdates, 5000)
           pingInterval = setInterval(pingLastSeen, 30000)
         } catch { loggedInUser.value = null }
+      }
+    })
+
+    watch([conversations, targetConvId], async ([newConvs, newTarget]) => {
+      if (!newTarget || activeConv.value) return
+      const conv = newConvs.find((c: any) => c.id === newTarget)
+      if (conv) {
+        await selectConversation(conv)
       }
     })
 

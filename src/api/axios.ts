@@ -11,7 +11,7 @@ API.interceptors.request.use((config) => {
 
   if (token && isAuthSessionExpired()) {
     clearAuthSession()
-    window.location.href = '/login'
+    window.location.href = '/login?timeout=1'
     return Promise.reject(new axios.Cancel('Auth session expired'))
   }
 
@@ -31,7 +31,7 @@ API.interceptors.response.use(
       const token = localStorage.getItem('auth_token')
       if (token) {
         clearAuthSession()
-        window.location.href = '/login'
+        window.location.href = '/login?timeout=1'
       }
     }
     return Promise.reject(error)

@@ -65,7 +65,7 @@
       <div v-if="activeTab === 'trips'">
         <div class="trips-tab-header">
           <span class="trips-tab-count" v-if="!tripsLoading">{{ trips.length }} {{ trips.length === 1 ? 'trip' : 'trips' }}</span>
-          <router-link to="/my-trips" class="btn-view-all">View Detail →</router-link>
+          <router-link :to="{ name: 'my-trips' }" class="btn-view-all">View Detail →</router-link>
         </div>
         <div v-if="tripsLoading" class="loading-state"><div class="spinner" /> Loading trips...</div>
         <div v-else-if="trips.length === 0" class="empty-state">
