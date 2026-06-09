@@ -10,7 +10,7 @@
         <div v-else class="avatar av-you">{{ currentUser.initials }}</div>
         <div class="composer-user-info">
           <div class="composer-user-name">{{ currentUser.name }}</div>
-          <div v-if="currentUser.id" class="composer-user-handle">@{{ currentUser.name.split(' ')[0].toLowerCase() }}</div>
+          <div v-if="currentUser.name" class="composer-user-handle">@{{ currentUser.name.split(' ')[0].toLowerCase() }}</div>
         </div>
         
         <div class="composer-search-bar">
@@ -247,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   communityCategories,
 } from '@/data/community'
@@ -453,6 +453,13 @@ function loadMore() {
 onMounted(() => {
   loadStories()
   updateCurrentUser()
+  window.addEventListener('user-updated', updateCurrentUser)
+  window.addEventListener('storage', updateCurrentUser)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('user-updated', updateCurrentUser)
+  window.removeEventListener('storage', updateCurrentUser)
 })
 
 const showComposer = ref(false)

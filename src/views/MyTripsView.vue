@@ -91,8 +91,8 @@
             <article
               v-for="trip in upcomingTrips" :key="trip.id"
               class="trip-card trip-card--upcoming"
+              @click="goToTrip(trip)"
             >
-              <a class="card-overlay" :href="`/trip/results/${trip.id}`" @click.prevent="goToTrip(trip)" aria-hidden></a>
               <!-- Card top bar -->
               <div class="card-bar" :style="{ background: tripColor(trip.id) }"></div>
 
@@ -185,8 +185,8 @@
             <article
               v-for="trip in ongoingTrips" :key="trip.id"
               class="trip-card trip-card--ongoing"
+              @click="goToTrip(trip)"
             >
-              <a class="card-overlay" :href="`/trip/results/${trip.id}`" @click.prevent="goToTrip(trip)" aria-hidden></a>
               <div class="card-bar" style="background: linear-gradient(90deg,#f59e0b,#f97316)"></div>
               <div class="card-body">
                 <div class="card-title-row">
@@ -960,9 +960,9 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
 /* Make the whole card clickable via an invisible overlay while keeping buttons clickable */
 .trip-card { position: relative; }
 .card-overlay {
-  position: absolute; inset: 0; display: block; z-index: 1;
+  position: absolute; inset: 0; display: block; z-index: 2;
 }
-.card-body { position: relative; z-index: 2; }
+.card-body { position: relative; z-index: 1; }
 .card-actions button, .btn-delete, .btn-share, .btn-view { position: relative; z-index: 3; }
 
 .card-route {
