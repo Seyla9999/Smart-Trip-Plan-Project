@@ -22,6 +22,14 @@ interface PendingUser {
   is_verified: boolean;
 }
 
+interface PasswordResetTokenPayload {
+  sub: string;
+  email: string;
+  type: 'password-reset';
+  iat?: number;
+  exp?: number;
+}
+
 @Injectable()
 export class AuthService {
   private pendingUsers = new Map<string, PendingUser>();
@@ -177,6 +185,158 @@ export class AuthService {
 
     return {
       message: 'Verification code resent successfully',
+    };
+  }
+
+  async sendPasswordResetEmail(email: string, code: string) {
+    const resendApiKey = process.env.RESEND_API_KEY || process.env.SMTP_PASS;
+
+    if (!resendApiKey) {
+      throw new BadRequestException(
+        'Email provider is not configured. Set RESEND_API_KEY in .env.',
+      );
+    }
+
+    if (!this.resend) {
+      this.resend = new Resend(resendApiKey);
+    }
+
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
+        <h2 style="color: #d32f2f; text-align: center;">Password Reset Request</h2>
+        <p style="font-size: 16px; color: #333;">We received a request to reset your password. Use the code below to set a new password for your account:</p>
+        <div style="background-color: #f4f4f4; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <h1 style="margin: 0; font-size: 32px; letter-spacing: 5px; color: #1a2340;">${code}</h1>
+        </div>
+        <p style="font-size: 14px; color: #666;">This code is valid for a short time. If you did not request a password reset, please ignore this email.</p>
+      </div>
+    `;
+
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: 'Travel Cambodia <admin@travelcambodia.site>',
+        to: email,
+        subject: 'Reset your TravelCambodia password',
+        html: emailHtml,
+      });
+
+      if (error) {
+        const errorMessage = error.message || 'Resend returned an unknown error';
+        console.error('Resend rejected password reset email to', email, errorMessage, error);
+        throw new BadRequestException(
+          `Failed to send password reset email: ${errorMessage}`,
+        );
+      }
+
+      console.log('Password reset email queued for', email, 'message id:', data?.id);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown email provider error';
+      console.error('Mailer error sending password reset email to', email, errorMessage, err);
+      throw new BadRequestException(
+        `Failed to send password reset email: ${errorMessage}`,
+      );
+    }
+  }
+
+  async forgotPassword(email: string) {
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail) {
+      throw new BadRequestException('Email is required');
+    }
+
+    const user = await this.userRepo.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      throw new NotFoundException('No user found with that email');
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verification_code = code;
+    await this.userRepo.save(user);
+
+    await this.sendPasswordResetEmail(normalizedEmail, code);
+
+    return {
+      message: 'Password reset code sent to your email',
+    };
+  }
+
+  async verifyForgotPassword(email: string, code: string) {
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail || !code) {
+      throw new BadRequestException('Email and code are required');
+    }
+
+    const user = await this.userRepo.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user || user.verification_code !== code) {
+      throw new BadRequestException('Invalid email or reset code');
+    }
+
+    const resetToken = this.jwtService.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        type: 'password-reset',
+      },
+      { expiresIn: '15m' },
+    );
+
+    user.verification_code = null;
+    await this.userRepo.save(user);
+
+    return {
+      message: 'OTP verified successfully',
+      resetToken,
+    };
+  }
+
+  async resetPassword(email: string, resetToken: string, newPassword: string) {
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail || !resetToken || !newPassword) {
+      throw new BadRequestException(
+        'Email, reset token, and new password are required',
+      );
+    }
+
+    let payload: PasswordResetTokenPayload;
+    try {
+      payload = this.jwtService.verify<PasswordResetTokenPayload>(resetToken);
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    if (
+      payload.type !== 'password-reset' ||
+      payload.email !== normalizedEmail ||
+      !payload.sub
+    ) {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    const user = await this.userRepo.findOne({
+      where: { id: payload.sub, email: normalizedEmail },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.password_hash = await bcrypt.hash(newPassword, 10);
+    await this.userRepo.save(user);
+
+    return {
+      message: 'Password has been reset successfully',
     };
   }
 
