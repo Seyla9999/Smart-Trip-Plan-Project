@@ -5,6 +5,7 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
 import VerifyView from '../views/auth/VerifyView.vue'
+import ForgotPasswordView from '../views/auth/ForgotPasswordView.vue'
 import AdminView from '../views/AdminView.vue'
 import Admin_Dashboard from '../views/Admin_Dashboard.vue'
 import Admin_Destination from '../views/Admin_Destination.vue'
@@ -49,6 +50,11 @@ const router = createRouter({
       path: '/verify',   
       name: 'verify',   
       component: VerifyView 
+    },
+    { 
+      path: '/forgot-password',   
+      name: 'forgot-password',   
+      component: ForgotPasswordView 
     },
     { 
       path: '/about',    
@@ -180,7 +186,7 @@ router.beforeEach((to, _from, next) => {
   ]
 
   const routeName = typeof to.name === 'string' ? to.name : ''
-  const authRoutes = ['/login', '/register', '/verify']
+  const authRoutes = ['/login', '/register', '/verify', '/forgot-password']
 
   if (!token && !publicRoutes.includes(routeName) && !authRoutes.includes(to.path)) {
     next('/login')

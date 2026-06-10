@@ -32,7 +32,7 @@
         {{ loading ? 'Signing in...' : 'Sign in' }}
       </button>
 
-      <p class="forgot">Forgot Password?</p>
+      <p @click="$router.push('/forgot-password')" class="forgot">Forgot Password?</p>
 
       <p @click="$router.push('/register')" class="link">
         Don’t have account? Sign up

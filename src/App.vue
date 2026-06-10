@@ -14,7 +14,7 @@ import NavBar from './components/NavBar.vue'
 import Footer from './components/Footer.vue'
 
 const route = useRoute()
-const authPaths = ['/login', '/register', '/verify']
+const authPaths = ['/login', '/register', '/verify', '/forgot-password']
 const showGlobalLayout = computed(() => {
   const isAuthRoute = authPaths.includes(route.path)
   const isAdminRoute = route.path.startsWith('/admin')
