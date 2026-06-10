@@ -26,7 +26,7 @@ import MapView from '../views/MapView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import MyTripsView from '../views/MyTripsView.vue'
 import ChatView from '../views/ChatView.vue'
-
+import NotificationsView from '../views/NotificationsView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -158,6 +158,7 @@ const router = createRouter({
     { path: '/chat', name: 'chat', component: ChatView },
 
     { path: '/:pathMatch(.*)*', redirect: '/' },
+    { path: '/notifications', name: 'notifications', component: NotificationsView },
   ],
   scrollBehavior(_to, _from, savedPosition) {
     return savedPosition || { top: 0 }
