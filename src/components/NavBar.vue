@@ -53,11 +53,11 @@
                 </div>
 
                 <div v-else-if="notifications.length > 0" class="notif-list">
-                  <a v-for="n in notifications" :key="n.id"
-                     :href="getNotifLink(n)"
+                  <div v-for="n in notifications" :key="n.id"
                      class="notif-item"
                      :class="{ unread: !n.is_read }"
-                     @click="handleNotifClick(n)">
+                     @click="handleNotifClick(n)"
+                     style="cursor:pointer">
                     <div class="notif-icon">{{ getNotifIcon(n.type) }}</div>
                     <div class="notif-body">
                       <div class="notif-item-title">{{ n.title }}</div>
@@ -65,16 +65,15 @@
                       <div class="notif-item-time">{{ formatTime(n.created_at) }}</div>
                     </div>
                     <div v-if="!n.is_read" class="unread-dot" />
-                  </a>
+                  </div>
                 </div>
 
                 <div v-else class="notif-empty">
                   <span>🔔</span>
                   <p>No notifications yet</p>
                 </div>
-
                 <div v-if="notifications.length > 0" class="notif-footer-wrap">
-                  <button class="notif-footer-btn" @click="showAllNotif">
+                  <button class="notif-footer-btn" @click="goToAllNotifications">
                     See all notifications
                   </button>
                 </div>
@@ -185,7 +184,6 @@
         </div>
       </div>
     </div>
-
 
     <transition name="fade">
       <div v-if="showAllNotifModal" class="modal-overlay" @click.self="showAllNotifModal = false">
@@ -309,7 +307,6 @@ export default defineComponent({
           }
         }
       } catch {
-
         notifications.value = []
         unreadCount.value   = 0
       } finally {
@@ -331,26 +328,44 @@ export default defineComponent({
       if (!n.is_read) {
         n.is_read = true
         unreadCount.value = Math.max(0, unreadCount.value - 1)
+        if (user.value?.id) {
+          try {
+            await fetch(`${API_URL}/users/${user.value.id}/notifications/read`, { method: 'PUT' })
+          } catch {}
+        }
       }
+      const link = getNotifLink(n)
+      if (link && link !== '#') router.push(link)
+    }
+
+    function goToAllNotifications() {
+      notifOpen.value = false
+      router.push('/notifications')
     }
 
     function getNotifLink(n: any): string {
-      if (n.link) return n.link
-      const map: Record<string, string> = {
-        story_like:   '/community',
-        new_message:  '/chat',
-        trip_invite:  '/trip',
-        bookmark:     '/profile/bookmarks',
-        system:       '/discover',
-        comment:      '/community',
-        follow:       '/profile',
-      }
-      return map[n.type] || '#'
-    }
+      if (n.type === 'trip_invite') return '/trip'
 
-    function showAllNotif() {
-      notifOpen.value         = false
-      showAllNotifModal.value = true
+      if (n.type === 'new_message') {
+        if (n.link) {
+          try { return new URL(n.link).pathname + new URL(n.link).search } catch {}
+          return n.link
+        }
+        return '/chat'
+      }
+
+      if (['story_like', 'story_comment', 'story_status'].includes(n.type)) return '/community'
+
+
+      if (n.link) {
+        try {
+          const url = new URL(n.link)
+          return url.pathname
+        } catch {
+          return n.link
+        }
+      }
+      return '/'
     }
 
     function toggleNotif() {
@@ -445,7 +460,7 @@ export default defineComponent({
       notifications, unreadCount, chatUnread,
       getInitials, getAvatarSrc, onAvatarError, handleLogout,
       toggleNotif, markAllRead, getNotifIcon, formatTime,
-      handleNotifClick, getNotifLink, showAllNotif,
+      handleNotifClick, getNotifLink, goToAllNotifications,
     }
   },
 })
@@ -493,9 +508,11 @@ export default defineComponent({
 .notif-spinner { width: 20px; height: 20px; border: 2px solid #E0DDD6; border-top-color: #C8922A; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+
 .notif-footer-wrap { border-top: 1px solid #E0DDD6; }
 .notif-footer-btn { display: block; width: 100%; padding: 12px; font-size: 13px; color: #C8922A; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; text-align: center; }
 .notif-footer-btn:hover { background: #F5F3EE; }
+
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .all-notif-modal { background: #fff; border-radius: 16px; width: 420px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 48px rgba(0,0,0,0.2); }
