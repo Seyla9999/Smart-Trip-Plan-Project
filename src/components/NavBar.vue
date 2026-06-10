@@ -24,8 +24,14 @@
         </template>
 
         <template v-else>
-          <a href="/chat" class="icon-btn" title="Messages">
-            <span>💬</span>
+          <a href="/chat" class="icon-btn chat-btn" title="Messages">
+            <span class="chat-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 5.5C4 4.11929 5.11929 3 6.5 3H17.5C18.8807 3 20 4.11929 20 5.5V15.5C20 16.8807 18.8807 18 17.5 18H8.41421L4 22.4142V5.5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 8H16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M8 12H14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              </svg>
+            </span>
             <span v-if="chatUnread > 0" class="notif-badge chat-badge">
               {{ chatUnread > 9 ? '9+' : chatUnread }}
             </span>
@@ -483,9 +489,32 @@ export default defineComponent({
 .btn-signup { padding: 8px 18px; background: #C8922A; border-radius: 6px; color: #fff; text-decoration: none; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: background 0.2s; white-space: nowrap; }
 .btn-signup:hover { background: #b07820; }
 
-.icon-btn { position: relative; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: background 0.2s; font-size: 16px; }
-.icon-btn:hover { background: rgba(255,255,255,0.15); }
-.notif-badge { position: absolute; top: -2px; right: -2px; background: #AE2012; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 10px; min-width: 16px; text-align: center; border: 1.5px solid #1a2340; }
+.icon-btn { position: relative; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.2s; font-size: 16px; }
+.icon-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+
+.chat-btn {
+  background: linear-gradient(135deg, #fdfdfda8 0%, #ffffff 100%);
+  color: #00077c;
+  box-shadow: 0 12px 24px rgba(134, 156, 135, 0.22);
+}
+.chat-btn:hover {
+  color: #e7e7eb;
+  background: linear-gradient(135deg, #289336 0%, #5fa960 100%);
+}
+.chat-btn .chat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+.chat-btn .chat-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.notif-badge { position: absolute; top: -4px; right: -4px; background: #ff4d6d; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 999px; min-width: 18px; text-align: center; border: 2px solid #1a2340; }
+.chat-badge { border-color: #2e7d32; }
 
 .notif-wrap { position: relative; }
 .notif-dropdown { position: absolute; top: calc(100% + 12px); right: 0; width: 320px; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); border: 1px solid #E0DDD6; overflow: hidden; z-index: 999; }
