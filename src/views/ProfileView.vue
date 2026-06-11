@@ -79,7 +79,7 @@
           <div v-for="t in trips" :key="t.id" class="trip-card">
             <div class="tc-top">
               <div class="tc-province" v-if="t.province_id">📍 Province {{ t.province_id }}</div>
-              <span class="tc-status" :class="t.status">{{ t.status }}</span>
+              <span class="tc-status" :class="getEffectiveStatus(t)">{{ getEffectiveStatus(t) }}</span>
             </div>
             <div class="tc-title">{{ t.title }}</div>
             <div class="tc-dates" v-if="t.start_date">📅 {{ formatDate(t.start_date) }} → {{ formatDate(t.end_date) }}</div>
@@ -271,6 +271,7 @@ export default defineComponent({
     const stories   = ref<any[]>([])
     const bookmarks = ref<any[]>([])
     const stats     = ref({ trips: 0, stories: 0, bookmarks: 0 })
+    const now       = ref(new Date())
     const tripsLoading     = ref(false)
     const storiesLoading   = ref(false)
     const bookmarksLoading = ref(false)
@@ -577,7 +578,30 @@ export default defineComponent({
       return text.length > max ? text.slice(0, max) + '...' : text
     }
 
-    onMounted(loadProfile)
+    const parseTripDate = (value?: string) => {
+      if (!value) return null
+      const normalized = value.trim()
+      if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return new Date(`${normalized}T23:59:59`)
+      return new Date(value)
+    }
+
+    const isTripExpired = (trip: any) => {
+      if (!trip?.end_date) return false
+      const endDate = parseTripDate(trip.end_date)
+      return endDate && endDate.getTime() < now.value.getTime()
+    }
+
+    const getEffectiveStatus = (trip: any) => {
+      const baseStatus = (trip.status || 'planning').toLowerCase()
+      if (baseStatus === 'completed') return 'completed'
+      if (isTripExpired(trip)) return 'expired'
+      return baseStatus
+    }
+
+    onMounted(() => {
+      loadProfile()
+      setInterval(() => { now.value = new Date() }, 60000)
+    })
 
     return {
       user, activeTab, visibleTabs, previewUrl, loadingOtherProfile,
@@ -590,7 +614,7 @@ export default defineComponent({
       formatRole, getAvatarSrc,
       saveProfile, changePassword, deleteAccount,
       removeBookmark, onAvatarChange, formatDate, truncate,
-      startChat, goToStory,
+      startChat, goToStory, getEffectiveStatus,
     }
   },
 })
@@ -666,6 +690,7 @@ export default defineComponent({
 .tc-status.planning  { background: #E6F1FB; color: #185FA5; }
 .tc-status.active    { background: #EAF3DE; color: #3B6D11; }
 .tc-status.completed { background: #F5F3EE; color: #6B6B6B; }
+.tc-status.expired   { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
 .tc-title { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; }
 .tc-dates { font-size: 12px; color: #6B6B6B; margin-bottom: 4px; }
 .tc-type  { font-size: 12px; color: #C8922A; font-weight: 500; margin-bottom: 4px; text-transform: capitalize; }
