@@ -65,7 +65,7 @@
 
         <!-- Map -->
         <section class="section">
-          <h2>Location & Nearby Services</h2>
+          <h2>Location</h2>
           <div v-if="mapCoords" class="map-wrapper">
             <div ref="mapEl" class="map-iframe"></div>
             <div class="map-actions">

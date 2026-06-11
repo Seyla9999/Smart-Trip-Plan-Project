@@ -11,7 +11,7 @@
         <li><a href="/"          class="nav-link" :class="{ active: currentPath === '/' }">Home</a></li>
         <li><a href="/about"     class="nav-link" :class="{ active: currentPath === '/about' }">About</a></li>
         <li><a href="/discover"  class="nav-link" :class="{ active: currentPath === '/discover' }">Discover</a></li>
-        <li><a href="/plan-trip" class="nav-link" :class="{ active: currentPath === '/plan-trip' }">Plan Trip</a></li>
+        <li><a href="/trip" class="nav-link" :class="{ active: currentPath === '/trip' || currentPath.startsWith('/trip/') }">Plan Trip</a></li>
         <li><a href="/map"       class="nav-link" :class="{ active: currentPath === '/map' }">Map</a></li>
         <li><a href="/community" class="nav-link" :class="{ active: currentPath === '/community' }">Community</a></li>
       </ul>

@@ -243,6 +243,40 @@
         {{ loading ? 'Loading...' : 'Load more stories' }}
       </button>
     </div>
+    <!-- Sidebar -->
+    <aside class="community-sidebar">
+      <!-- User Profile Card -->
+      <div class="profile-card">
+        <div class="profile-header">
+          <div v-if="currentUser.avatar" class="profile-avatar-wrap">
+            <img :src="currentUser.avatar" :alt="currentUser.name" class="profile-avatar" />
+          </div>
+          <div v-else class="profile-avatar av-profile">{{ currentUser.initials }}</div>
+        </div>
+        <div class="profile-body">
+          <h3 class="profile-name">{{ currentUser.name }}</h3>
+          <p v-if="currentUser.name" class="profile-handle">@{{ currentUser.name.split(' ')[0].toLowerCase() }}</p>
+          <div class="profile-stats">
+            <div class="stat">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Stories</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Followers</div>
+            </div>
+          </div>
+          <a href="/profile" class="profile-link">View Profile</a>
+        </div>
+      </div>
+
+      <Sidebar 
+        :trending-places="trendingPlaces"
+        :travelers="topTravelers"
+        :provinces="popularProvinces"
+        @toggle-follow="toggleFollowTraveler"
+      />
+    </aside>
   </div>
 </template>
 
@@ -251,6 +285,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   communityCategories,
 } from '@/data/community'
+import Sidebar from '@/components/community/sidebar/Sidebar.vue'
 import { fetchStories, createStory, likeStory, getComments, addComment } from '@/services/community.service'
 import { uploadImage } from '@/lib/supabase'
 import type { Comment } from '@/services/community.service'
@@ -259,6 +294,9 @@ import type {
   CommunitySortOption,
   CommunityStory,
   StoryCategory,
+  TopTraveler,
+  TrendingPlace,
+  PopularProvince,
 } from '@/data/community'
 
 const props = defineProps<{
@@ -272,6 +310,27 @@ const loading = ref(false)
 const page = ref(1)
 const total = ref(0)
 const hasMore = computed(() => stories.value.length < total.value)
+
+// Sidebar data
+const trendingPlaces = ref<TrendingPlace[]>([
+  { id: 1, name: 'Angkor Wat', visits: 5234, category: 'Cultural' },
+  { id: 2, name: 'Tonle Sap Lake', visits: 3421, category: 'Natural' },
+  { id: 3, name: 'Koh Rong Island', visits: 2890, category: 'Beach' },
+  { id: 4, name: 'Kbal Spean', visits: 1567, category: 'Waterfall' },
+  { id: 5, name: 'Phnom Penh Markets', visits: 2103, category: 'Cultural' },
+])
+
+const topTravelers = ref<TopTraveler[]>([
+  { id: 1, name: 'Sarah Chen', avatar: 'https://i.pravatar.cc/150?img=1', following: false, stories: 24 },
+  { id: 2, name: 'Marco Rodriguez', avatar: 'https://i.pravatar.cc/150?img=2', following: false, stories: 18 },
+  { id: 3, name: 'Emma Thompson', avatar: 'https://i.pravatar.cc/150?img=3', following: false, stories: 15 },
+])
+
+const popularProvinces = ref<PopularProvince[]>([
+  { id: 1, name: 'Siem Reap', slug: 'siem-reap', image: '/provinces/siem-reap.jpg', stories: 523 },
+  { id: 2, name: 'Phnom Penh', slug: 'phnom-penh', image: '/provinces/phnom-penh.jpg', stories: 412 },
+  { id: 3, name: 'Sihanoukville', slug: 'sihanoukville', image: '/provinces/sihanoukville.jpg', stories: 287 },
+])
 
 // Search state
 const localSearchQuery = ref(props.searchQuery || '')
@@ -568,6 +627,13 @@ const filteredStories = computed(() => {
   })
 })
 
+function toggleFollowTraveler(travelerId: number) {
+  const traveler = topTravelers.value.find(t => t.id === travelerId)
+  if (traveler) {
+    traveler.following = !traveler.following
+  }
+}
+
 function formatDate(iso: string) {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return 'Recently'
@@ -607,15 +673,22 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   --radius-sm: 8px;
   --radius-pill: 999px;
 
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 320px;
   gap: 24px;
-  max-width: 700px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 32px 16px 64px;
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   min-height: 100vh;
+}
+
+@media (max-width: 1100px) {
+  .community-view {
+    grid-template-columns: 1fr;
+    max-width: 700px;
+  }
 }
 
 .composer-card {
@@ -795,6 +868,146 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   max-height: 300px;
   object-fit: contain;
   display: block;
+}
+
+.remove-img {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.2s;
+  padding: 0;
+}
+
+.remove-img:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.community-sidebar {
+  display: grid;
+  gap: 18px;
+  position: sticky;
+  top: 128px;
+  height: fit-content;
+}
+
+.profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.profile-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.profile-header {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.profile-avatar-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--border);
+}
+
+.profile-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.av-profile {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #C8922A 0%, #b07820 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  border: 3px solid var(--border);
+}
+
+.profile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.profile-handle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stat {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-link {
+  display: inline-block;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.profile-link:hover {
+  background: var(--accent-hover);
 }
 
 .remove-img {
