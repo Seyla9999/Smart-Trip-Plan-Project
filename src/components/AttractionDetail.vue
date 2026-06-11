@@ -587,6 +587,7 @@ function normalizeAttractionData(rawAttraction: any, attractionId: string) {
       bestFor: rawAttraction?.info?.bestFor ?? 'All travelers',
       province: provinceName,
     },
+    location: rawAttraction?.location ?? null,
     nearby: normalizedNearby,
   }
 }
