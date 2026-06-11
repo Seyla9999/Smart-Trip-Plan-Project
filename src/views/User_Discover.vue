@@ -219,11 +219,16 @@ const resolveCategoryLabel = (category: unknown) => {
   return String(category)
 }
 
+const searchFrom = ref('')
+const searchTo   = ref('')
+
 function readQueryParams() {
   selectedCategory.value = (route.query.category as string) || ''
   selectedProvince.value = (route.query.province as string) || ''
   showHiddenOnly.value   = route.query.hidden === 'true'
   if (showHiddenOnly.value) selectedCategory.value = ''
+  searchFrom.value = (route.query.from as string) || ''
+  searchTo.value   = (route.query.to   as string) || ''
 }
 
 watch(
@@ -367,7 +372,10 @@ function clearHiddenFilter() {
 }
 
 function goToAttractionDetail(attraction: any) {
-  router.push({ name: 'AttractionDetail', params: { id: attraction.id } })
+  const query: any = {}
+  if (searchFrom.value) query.from = searchFrom.value
+  if (searchTo.value)   query.to   = searchTo.value
+  router.push({ name: 'AttractionDetail', params: { id: attraction.id }, query })
 }
 </script>
 

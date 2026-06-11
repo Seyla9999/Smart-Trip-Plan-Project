@@ -237,7 +237,10 @@ function toSlug(value: string) {
 }
 
 function openPlaceDetail(place: Place) {
-  router.push(`/province/${slug.value}/${toSlug(place.name)}`);
+  const query: any = {}
+  if (fromDate.value) query.from = fromDate.value
+  if (toDate.value)   query.to   = toDate.value
+  router.push({ path: `/province/${slug.value}/${toSlug(place.name)}`, query })
 }
 </script>
 
