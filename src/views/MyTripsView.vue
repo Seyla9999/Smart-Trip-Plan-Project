@@ -259,7 +259,10 @@
 
                 <div class="history-right">
                   <span v-if="trip.status === 'completed'" class="history-badge">✓ Completed</span>
-                  <button v-else class="btn-finish-history" @click="finishFromHistory(trip)" title="Mark as finished">✓ Finish</button>
+                  <span v-else class="history-badge history-badge--expired">Expired</span>
+                  <button class="btn-finish-history" @click="finishFromHistory(trip)" title="Mark as finished">
+                    {{ trip.status === 'completed' ? '✓ Completed' : 'Mark Completed' }}
+                  </button>
                   <button class="btn-action-text" @click="reviewTrip(trip)" title="Leave review">Review</button>
                   <button class="btn-action-text" @click="viewPlanDetail(trip)" title="View details">Details</button>
                   <button class="btn-action-delete-text" @click="confirmDelete(trip)" title="Delete trip">Delete</button>
@@ -384,7 +387,7 @@
                 @click="finishTrip"
               >
                 <span v-if="isFinishing" class="mini-spinner"></span>
-                {{ isFinishing ? 'Saving…' : tripToView?.status === 'completed' ? '✓ Completed' : '✓ Finish Trip' }}
+                {{ isFinishing ? 'Saving…' : finishButtonLabel(tripToView) }}
               </button>
             </div>
           </div>
@@ -479,22 +482,70 @@ let clockInterval: ReturnType<typeof setInterval> | null = null
 // ─── Derived ─────────────────────────────────────────────────────────────────
 const totalTrips = computed(() => trips.value.length)
 
+const parseTripDate = (value?: string) => {
+  if (!value) return null
+  const normalized = value.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return new Date(`${normalized}T00:00:00`)
+  return new Date(normalized)
+}
+
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0)
+const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999)
+
+const tripStartAt = (trip: Trip) => {
+  const date = parseTripDate(trip.start_date)
+  return date ? startOfDay(date).getTime() : null
+}
+
+const tripEndAt = (trip: Trip) => {
+  const date = parseTripDate(trip.end_date)
+  return date ? endOfDay(date).getTime() : null
+}
+
+const isTripExpired = (trip: Trip) => {
+  const endAt = tripEndAt(trip)
+  return endAt !== null && endAt < now.value.getTime()
+}
+
+const isTripOngoing = (trip: Trip) => {
+  const startAt = tripStartAt(trip)
+  const endAt = tripEndAt(trip)
+  const current = now.value.getTime()
+  return startAt !== null && endAt !== null && startAt <= current && current <= endAt
+}
+
+const isTripUpcoming = (trip: Trip) => {
+  const startAt = tripStartAt(trip)
+  return startAt !== null && startAt > now.value.getTime()
+}
+
+const finishButtonLabel = (trip: Trip | null) => {
+  if (!trip) return '✓ Finish Trip'
+  if (trip.status === 'completed') return '✓ Completed'
+  return isTripExpired(trip) ? 'Mark Completed' : '✓ Finish Trip'
+}
+
 const undatedTrips = computed(() =>
   trips.value.filter(t => !t.start_date || !t.end_date)
 )
 const upcomingTrips = computed(() =>
-  trips.value.filter(t => t.start_date && t.end_date && new Date(t.start_date) > now.value)
-    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+  trips.value.filter(isTripUpcoming)
+    .sort((a, b) => {
+      const aStart = tripStartAt(a) ?? 0
+      const bStart = tripStartAt(b) ?? 0
+      return aStart - bStart
+    })
 )
 const ongoingTrips = computed(() =>
-  trips.value.filter(t =>
-    t.start_date && t.end_date &&
-    new Date(t.start_date) <= now.value && new Date(t.end_date) >= now.value
-  )
+  trips.value.filter(isTripOngoing)
 )
 const pastTrips = computed(() =>
-  trips.value.filter(t => t.start_date && t.end_date && new Date(t.end_date) < now.value)
-    .sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime())
+  trips.value.filter(isTripExpired)
+    .sort((a, b) => {
+      const aEnd = tripEndAt(a) ?? 0
+      const bEnd = tripEndAt(b) ?? 0
+      return bEnd - aEnd
+    })
 )
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -503,9 +554,32 @@ const formatDate = (d: string) =>
 
 const tripDuration = (trip: Trip) => {
   if (!trip.start_date || !trip.end_date) return 0
-  return Math.max(1, Math.ceil(
-    (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / 86_400_000
-  ))
+  const start = tripStartAt(trip)
+  const end = tripEndAt(trip)
+  if (start === null || end === null) return 0
+  return Math.max(1, Math.ceil((end - start + 1) / 86_400_000))
+}
+
+const countdown = (trip: Trip) => {
+  const startAt = tripStartAt(trip)
+  if (startAt === null) return { days: '00', hours: '00', minutes: '00' }
+  const diff = startAt - now.value.getTime()
+  if (diff <= 0) return { days: '00', hours: '00', minutes: '00' }
+  const d = Math.floor(diff / 86_400_000)
+  const h = Math.floor((diff % 86_400_000) / 3_600_000)
+  const m = Math.floor((diff % 3_600_000) / 60_000)
+  return {
+    days:    String(d).padStart(2, '0'),
+    hours:   String(h).padStart(2, '0'),
+    minutes: String(m).padStart(2, '0'),
+  }
+}
+
+const currentDay = (trip: Trip) => {
+  const startAt = tripStartAt(trip)
+  if (startAt === null) return 1
+  const diff = now.value.getTime() - startAt
+  return Math.min(tripDuration(trip), Math.max(1, Math.floor(diff / 86_400_000) + 1))
 }
 
 function selectInput(e: Event) { try { (e.target as HTMLInputElement).select() } catch {} }
@@ -531,20 +605,6 @@ const destinationEmoji = (trip: Trip) => {
   return '✈️'
 }
 
-// Countdown (days, hours, minutes until start_date)
-const countdown = (trip: Trip) => {
-  const diff = new Date(trip.start_date).getTime() - now.value.getTime()
-  if (diff <= 0) return { days: '00', hours: '00', minutes: '00' }
-  const d = Math.floor(diff / 86_400_000)
-  const h = Math.floor((diff % 86_400_000) / 3_600_000)
-  const m = Math.floor((diff % 3_600_000)  / 60_000)
-  return {
-    days:    String(d).padStart(2, '0'),
-    hours:   String(h).padStart(2, '0'),
-    minutes: String(m).padStart(2, '0'),
-  }
-}
-
 // % of time elapsed from trip creation → start date (for progress bar)
 const tripProgress = (trip: Trip) => {
   const created  = new Date(trip.created_at).getTime()
@@ -553,12 +613,6 @@ const tripProgress = (trip: Trip) => {
   if (total <= 0) return 100
   const elapsed  = now.value.getTime() - created
   return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)))
-}
-
-// Which day of the trip we're on (for ongoing)
-const currentDay = (trip: Trip) => {
-  const diff = now.value.getTime() - new Date(trip.start_date).getTime()
-  return Math.min(tripDuration(trip), Math.max(1, Math.floor(diff / 86_400_000) + 1))
 }
 
 const dayProgress = (trip: Trip) =>
@@ -1078,6 +1132,11 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
   background: #f0fdf4; color: #15803d;
   font-size: 11px; font-weight: 700; padding: 6px 12px;
   border-radius: 999px; text-transform: uppercase; letter-spacing: .5px;
+}
+.history-badge--expired {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .btn-finish-history {
