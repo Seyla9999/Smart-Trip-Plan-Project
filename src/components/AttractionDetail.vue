@@ -341,7 +341,7 @@
             <div class="trip-day-row">
               <label>Add to day</label>
               <select v-model="selectedDay">
-                <option v-for="d in 14" :key="d" :value="d">Day {{ d }}</option>
+                <option v-for="d in selectedTripDays" :key="d" :value="d">Day {{ d }}</option>
               </select>
             </div>
             <p v-if="tripSuccess"    class="trip-modal-success">{{ tripSuccess }}</p>
@@ -448,6 +448,15 @@ const cambodiaProvinces = [
 
 const selectedTripId = ref<string | null>(null)
 const selectedDay    = ref(1)
+
+const selectedTripDays = computed(() => {
+  const trip = userTrips.value.find((t: any) => t.id === selectedTripId.value)
+  if (!trip?.start_date || !trip?.end_date) return 14
+  const start = new Date(trip.start_date)
+  const end   = new Date(trip.end_date)
+  const days  = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+  return days > 0 ? days : 1
+})
 const addingToTrip   = ref(false)
 const tripModalError = ref<string | null>(null)
 const tripSuccess    = ref<string | null>(null)
@@ -779,7 +788,12 @@ async function openTripModal() {
   // Pre-load existing trips for the "existing" tab
   try {
     const { data } = await API.get('/api/trips')
-    userTrips.value = Array.isArray(data) ? data.filter((t: any) => t.status !== 'completed') : []
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    userTrips.value = Array.isArray(data) ? data.filter((t: any) => {
+      if (t.status === 'completed') return false
+      if (t.end_date && new Date(t.end_date) < today) return false
+      return true
+    }) : []
     if (userTrips.value.length) selectedTripId.value = userTrips.value[0].id
   } catch {
     userTrips.value = []
@@ -1042,6 +1056,10 @@ watch(
   () => loadAttraction(),
   { immediate: true },
 )
+
+watch(selectedTripId, () => {
+  selectedDay.value = 1
+})
 </script>
 
 <style scoped>
