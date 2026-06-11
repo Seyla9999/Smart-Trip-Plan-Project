@@ -144,7 +144,9 @@ export async function getStories(limit = 5): Promise<Story[]> {
 
 export async function getSponsors(): Promise<Sponsor[]> {
   const res = await API.get('/sponsors')
-  return res.data.data
+  if (Array.isArray(res.data)) return res.data
+  if (Array.isArray(res.data?.data)) return res.data.data
+  return []
 }
 
 export async function createSponsor(data: any): Promise<any> {
