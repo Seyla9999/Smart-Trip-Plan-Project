@@ -412,8 +412,8 @@ const canReview = ref<boolean | null>(null)
 const showTripModal  = ref(false)
 const tripModalTab   = ref<'new' | 'existing'>('new')
 const today          = new Date().toISOString().split('T')[0]
-const newTripStart   = ref(today)
-const newTripEnd     = ref('')
+const newTripStart   = ref((route.query.from as string) || today)
+const newTripEnd     = ref((route.query.to   as string) || '')
 const newTripOrigin       = ref('')
 const showOriginDropdown  = ref(false)
 const userTrips           = ref<any[]>([])
@@ -779,7 +779,7 @@ async function openTripModal() {
   // Pre-load existing trips for the "existing" tab
   try {
     const { data } = await API.get('/api/trips')
-    userTrips.value = Array.isArray(data) ? data : []
+    userTrips.value = Array.isArray(data) ? data.filter((t: any) => t.status !== 'completed') : []
     if (userTrips.value.length) selectedTripId.value = userTrips.value[0].id
   } catch {
     userTrips.value = []
