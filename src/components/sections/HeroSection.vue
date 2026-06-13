@@ -1,13 +1,14 @@
 <template>
-  <section class="hero">
-    <div
-      v-for="(slide, i) in slides"
-      :key="i"
-      class="hero-bg"
-      :class="{ active: i === current }"
-      :style="{ backgroundImage: `url(${slide.image})` }"
-    />
-    <div class="hero-overlay" />
+  <div class="hero-section-wrapper">
+    <section class="hero">
+      <div
+        v-for="(slide, i) in slides"
+        :key="i"
+        class="hero-bg"
+        :class="{ active: i === current }"
+        :style="{ backgroundImage: `url(${slide.image})` }"
+      />
+      <div class="hero-overlay" />
 
     <div class="hero-stats">
       <div class="stat-card">
@@ -169,6 +170,7 @@
       <a href="/register">Sign up</a> to save trips &amp; invite friends.
     </p>
   </div>
+</div>
 </template>
 
 <script lang="ts">
