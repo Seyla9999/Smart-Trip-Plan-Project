@@ -1,7 +1,5 @@
 <template>
   <div class="community-view">
-
-    <!-- Composer -->
     <div class="composer-card">
       <div class="composer-top">
         <div v-if="currentUser.avatar" class="avatar-img-wrap">
@@ -26,86 +24,119 @@
           Post
         </button>
       </div>
+    </div>
 
-      <transition name="expand">
-        <div v-if="showComposer" class="composer-form">
-          <div class="form-divider" />
+    <!-- Composer Modal -->
+    <Teleport to="body">
+      <transition name="modal-fade">
+        <div v-if="showComposer" class="modal-overlay" @click.self="cancelComposer">
+          <div class="modal-container">
+            <div class="modal-header">
+              <div class="header-left">
+                <div v-if="currentUser.avatar" class="avatar-sm">
+                  <img :src="currentUser.avatar" :alt="currentUser.name" class="avatar-img" />
+                </div>
+                <div v-else class="avatar-sm av-you">{{ currentUser.initials }}</div>
+                <h3>Create New Story</h3>
+              </div>
+              <button class="close-modal" @click="cancelComposer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
 
-          <textarea
-            v-model="newPost.body"
-            class="form-textarea"
-            placeholder="Write something inspiring..."
-            rows="4"
-          />
-
-          <!-- Image Upload -->
-          <div class="form-group mb-4">
-            <label class="form-label">Add Photos</label>
-            <div class="image-upload-area" :class="{ 'has-image': imagePreview }">
-              <input 
-                type="file" 
-                ref="fileInput" 
-                @change="handleFileChange" 
-                accept="image/*" 
-                class="hidden-input" 
-                id="story-image-upload" 
+            <div class="modal-body">
+              <textarea
+                v-model="newPost.body"
+                class="form-textarea"
+                placeholder="Write something inspiring..."
+                rows="4"
               />
-              <label for="story-image-upload" class="upload-trigger">
-                <div v-if="!imagePreview" class="upload-placeholder">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                  <span>Upload a photo to your story</span>
-                </div>
-                <div v-else class="preview-wrap">
-                  <img :src="imagePreview" class="image-preview" />
-                  <button class="remove-img" @click.prevent="removeImage">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </div>
-              </label>
-            </div>
-          </div>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Title</label>
-              <input v-model="newPost.title" class="form-input" placeholder="Give it a headline" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Location</label>
-              <input v-model="newPost.location" class="form-input" placeholder="Where were you?" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Category</label>
-              <select v-model="newPost.category" class="form-input form-select">
-                <option value="">Select category</option>
-                <option v-for="c in composerCategories" :key="c" :value="c">{{ c }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Rating</label>
-              <div class="stars-input">
-                <button
-                  v-for="n in 5" :key="n"
-                  class="star-btn"
-                  :class="{ on: n <= newPost.rating }"
-                  @click="newPost.rating = n"
-                  type="button"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" :fill="n <= newPost.rating ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                </button>
+              <div class="form-group mb-6">
+                <label class="form-label">Add Photos</label>
+                <div class="image-upload-wrapper">
+                  <label v-if="imagePreviews.length === 0" for="story-image-upload" class="upload-box-full">
+                    <input 
+                      type="file" 
+                      ref="fileInput" 
+                      @change="handleFileChange" 
+                      accept="image/*" 
+                      multiple
+                      class="hidden-input" 
+                      id="story-image-upload" 
+                    />
+                  </label>
+                  
+                  <div v-else class="image-upload-grid">
+                    <div v-for="(preview, idx) in imagePreviews" :key="idx" class="preview-item">
+                      <img :src="preview" class="image-preview" />
+                      <button class="remove-img-btn" @click.prevent="removeImage(idx)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                    
+                    <label v-if="imagePreviews.length < 5" for="story-image-upload" class="upload-box">
+                      <input 
+                        type="file" 
+                        ref="fileInput" 
+                        @change="handleFileChange" 
+                        accept="image/*" 
+                        multiple
+                        class="hidden-input" 
+                        id="story-image-upload" 
+                      />
+                      <div class="upload-box-content">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Add more</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Title</label>
+                  <input v-model="newPost.title" class="form-input" placeholder="Give it a headline" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Location</label>
+                  <input v-model="newPost.location" class="form-input" placeholder="Where were you?" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Category</label>
+                  <select v-model="newPost.category" class="form-input form-select">
+                    <option value="">Select category</option>
+                    <option v-for="c in composerCategories" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Rating</label>
+                  <div class="stars-input">
+                    <button
+                      v-for="n in 5" :key="n"
+                      class="star-btn"
+                      :class="{ on: n <= newPost.rating }"
+                      @click="newPost.rating = n"
+                      type="button"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" :fill="n <= newPost.rating ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="form-actions">
-            <button class="btn-ghost" @click="cancelComposer" :disabled="isSubmitting">Discard</button>
-            <button class="btn-primary" :disabled="!newPost.body.trim() || isSubmitting" @click="submitPost">
-              {{ isSubmitting ? 'Publishing...' : 'Publish Story' }}
-            </button>
+            <div class="modal-footer">
+              <button class="btn-ghost" @click="cancelComposer" :disabled="isSubmitting">Discard</button>
+              <button class="btn-primary" :disabled="!newPost.body.trim() || isSubmitting" @click="submitPost">
+                {{ isSubmitting ? 'Publishing...' : 'Publish Story' }}
+              </button>
+            </div>
           </div>
         </div>
       </transition>
-    </div>
+    </Teleport>
 
     <!-- Empty -->
     <div v-if="!loading && stories.length === 0" class="empty-state">
@@ -152,7 +183,23 @@
         </div>
       </div>
 
-      <div v-if="story.image" class="post-img-wrap">
+      <!-- Single Image -->
+      <div v-if="story.images && story.images.length === 1" class="post-img-wrap">
+        <img :src="story.images[0]" :alt="story.title" class="post-img" loading="lazy" />
+      </div>
+
+      <!-- Multiple Images Grid -->
+      <div v-else-if="story.images && story.images.length > 1" class="post-img-grid" :class="'count-' + Math.min(story.images.length, 4)">
+        <div v-for="(img, idx) in story.images.slice(0, 4)" :key="idx" class="post-img-item">
+          <img :src="img" :alt="story.title" class="post-img" loading="lazy" />
+          <div v-if="idx === 3 && story.images.length > 4" class="more-images-overlay">
+            +{{ story.images.length - 3 }}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Fallback for legacy single image if images array is somehow empty but item.image exists (though mapStory handles this) -->
+      <div v-else-if="story.image" class="post-img-wrap">
         <img :src="story.image" :alt="story.title" class="post-img" loading="lazy" />
       </div>
 
@@ -233,7 +280,6 @@
 
     </article>
     
-    <!-- Load More -->
     <div v-if="hasMore" class="load-more-wrap">
       <button class="btn-ghost" @click="loadMore" :disabled="loading">
         {{ loading ? 'Loading...' : 'Load more stories' }}
@@ -453,8 +499,8 @@ onMounted(() => {
 
 const showComposer = ref(false)
 const isSubmitting = ref(false)
-const selectedFile = ref<File | null>(null)
-const imagePreview = ref<string | null>(null)
+const selectedFiles = ref<File[]>([])
+const imagePreviews = ref<string[]>([])
 
 const newPost = ref({
   title: '',
@@ -467,22 +513,30 @@ const newPost = ref({
 const composerCategories = communityCategories.filter((c): c is StoryCategory => c !== 'All')
 
 function handleFileChange(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) {
-    selectedFile.value = file
-    imagePreview.value = URL.createObjectURL(file)
+  const files = (e.target as HTMLInputElement).files
+  if (files) {
+    const newFiles = Array.from(files)
+    // Limit to 5 images
+    const remainingSlots = 5 - selectedFiles.value.length
+    const filesToAdd = newFiles.slice(0, remainingSlots)
+    
+    filesToAdd.forEach(file => {
+      selectedFiles.value.push(file)
+      imagePreviews.value.push(URL.createObjectURL(file))
+    })
   }
 }
 
-function removeImage() {
-  selectedFile.value = null
-  imagePreview.value = null
+function removeImage(index: number) {
+  selectedFiles.value.splice(index, 1)
+  imagePreviews.value.splice(index, 1)
 }
 
 function cancelComposer() {
   showComposer.value = false
   newPost.value = { title: '', body: '', location: '', category: '', rating: 5 }
-  removeImage()
+  selectedFiles.value = []
+  imagePreviews.value = []
 }
 
 async function submitPost() {
@@ -490,10 +544,11 @@ async function submitPost() {
   
   isSubmitting.value = true
   try {
-    let imageUrl = null
-    if (selectedFile.value) {
-      const uploadedUrl = await uploadImage(selectedFile.value, 'story-images')
-      if (uploadedUrl) imageUrl = uploadedUrl
+    let imageUrls: string[] = []
+    if (selectedFiles.value.length > 0) {
+      const uploadPromises = selectedFiles.value.map(file => uploadImage(file, 'story-images'))
+      const results = await Promise.all(uploadPromises)
+      imageUrls = results.filter((url): url is string => !!url)
     }
 
     const story = await createStory({
@@ -502,14 +557,13 @@ async function submitPost() {
       location: newPost.value.location,
       category: (newPost.value.category || 'Natural') as StoryCategory,
       rating: newPost.value.rating,
-    }, imageUrl || undefined, {
+    }, imageUrls, {
       id: currentUser.value.id || undefined,
       name: currentUser.value.name,
       initials: currentUser.value.initials,
       avatar: currentUser.value.avatar || undefined
     })
 
-    // stories.value.unshift(story) // Don't unshift immediately as it's pending
     alert('Your story has been submitted and is awaiting admin approval!')
     cancelComposer()
   } catch (error) {
@@ -578,7 +632,8 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap');
 
-.community-view {
+.community-view,
+.modal-overlay {
   --bg: white ;
   --surface: #ffffff;
   --surface-hover: #f3f4f6;
@@ -595,7 +650,9 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   --radius: 12px;
   --radius-sm: 8px;
   --radius-pill: 999px;
+}
 
+.community-view {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -706,75 +763,172 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   object-fit: cover;
 }
 
-/* Image Upload Styles */
-.image-upload-area {
+/* ── Modal Composer ───────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-container {
+  background: var(--surface);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modal-slide-up 0.3s ease-out;
+}
+
+@keyframes modal-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-left h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  margin: 0;
+  color: var(--text);
+}
+
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  overflow: hidden;
+}
+
+.close-modal {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-modal:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.upload-box-full {
+  width: 100%;
   border: 2px dashed var(--border);
   border-radius: var(--radius-sm);
+  padding: 40px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   transition: all 0.2s;
-  position: relative;
   background: var(--surface-hover);
 }
 
-.image-upload-area:hover {
+.upload-box-full:hover {
   border-color: var(--accent);
   background: var(--accent-light);
 }
 
-.image-upload-area.has-image {
-  border-style: solid;
-  border-color: var(--border);
-  background: #fff;
-}
-
-.hidden-input {
-  display: none;
-}
-
-.upload-trigger {
-  display: block;
-  cursor: pointer;
-  width: 100%;
-}
-
-.upload-placeholder {
-  padding: 30px;
+.upload-box-full .upload-box-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-dim);
-  font-size: 14px;
 }
 
-.upload-placeholder svg {
-  color: var(--text-dim);
-  opacity: 0.6;
+.upload-text-main {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
 }
 
-.preview-wrap {
+.upload-text-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Image Upload Grid */
+.image-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.preview-item {
   position: relative;
-  width: 100%;
-  max-height: 300px;
-  overflow: hidden;
+  aspect-ratio: 1;
   border-radius: var(--radius-sm);
-  display: flex;
-  justify-content: center;
-  background: #000;
+  overflow: hidden;
+  border: 1px solid var(--border);
 }
 
-.image-preview {
-  max-width: 100%;
-  max-height: 300px;
-  object-fit: contain;
-  display: block;
+.preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.remove-img {
+.remove-img-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
@@ -783,15 +937,139 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
-  z-index: 10;
+  transition: all 0.2s;
 }
 
-.remove-img:hover {
-  background: rgba(220, 38, 38, 0.8);
+.remove-img-btn:hover {
+  background: var(--red);
 }
 
-.mb-4 { margin-bottom: 1.5rem; }
+.upload-box {
+  height: 100px;
+  aspect-ratio: 1;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--surface-hover);
+}
+
+.upload-box:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.upload-box-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.upload-box:hover .upload-box-content {
+  color: var(--accent);
+}
+
+/* Image */
+.post-img-wrap {
+  width: 100%;
+  max-height: 420px;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: #f3f4f6;
+}
+
+.post-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Post Image Grid ─────────────────────────────────────── */
+.post-img-grid {
+  display: grid;
+  gap: 2px;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.post-img-grid.count-2 { grid-template-columns: 1fr 1fr; }
+.post-img-grid.count-3 { 
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.post-img-grid.count-3 .post-img-item:first-child {
+  grid-row: span 2;
+}
+.post-img-grid.count-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.post-img-item {
+  position: relative;
+  overflow: hidden;
+  background: #f3f4f6;
+  aspect-ratio: 1.5;
+}
+
+.post-img-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.more-images-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Transitions */
+.modal-fade-enter-active, .modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter-from, .modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .modal-container {
+  animation: modal-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-fade-leave-active .modal-container {
+  animation: modal-out 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modal-in {
+  from { transform: scale(0.95) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes modal-out {
+  from { transform: scale(1) translateY(0); opacity: 1; }
+  to { transform: scale(0.95) translateY(10px); opacity: 0; }
+}
+
+.mb-6 { margin-bottom: 1.5rem; }
 
 .compose-btn {
   display: flex;
@@ -820,13 +1098,6 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   display: flex;
   justify-content: center;
   padding-top: 16px;
-}
-
-/* Composer form */
-.form-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 20px 0;
 }
 
 .form-textarea {
@@ -957,18 +1228,6 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   background: #d1d5db;
   color: #9ca3af;
   cursor: not-allowed;
-}
-
-/* Expand transition */
-.expand-enter-active, .expand-leave-active {
-  transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
-  max-height: 600px;
-  opacity: 1;
-  overflow: hidden;
-}
-.expand-enter-from, .expand-leave-to {
-  max-height: 0;
-  opacity: 0;
 }
 
 /* ── Avatar ──────────────────────────────────────────────── */
@@ -1129,23 +1388,6 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   border: 1px solid var(--border);
   padding: 5px 12px;
   border-radius: var(--radius-pill);
-}
-
-/* Image */
-.post-img-wrap {
-  width: 100%;
-  max-height: 380px;
-  overflow: hidden;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  position: relative;
-}
-
-.post-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 /* Footer */

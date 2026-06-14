@@ -7,7 +7,7 @@
         <span v-if="formattedDate" class="story-card__date">{{ formattedDate }}</span>
       </div>
 
-      <div v-if="!image" class="story-card__fallback">{{ author.initials }}</div>
+      <div v-if="!images || images.length === 0" class="story-card__fallback">{{ author.initials }}</div>
     </div>
 
     <div class="story-card__body">
@@ -52,7 +52,7 @@ const props = withDefaults(
   defineProps<{
     id: string
     title: string
-    image?: string
+    images: string[]
     category: string
     location: string
     likes: number
@@ -70,7 +70,7 @@ const props = withDefaults(
     publishedAt: '',
     featured: false,
     liked: false,
-    image: undefined,
+    images: () => [],
   },
 )
 
@@ -79,9 +79,9 @@ const emit = defineEmits<{
 }>()
 
 const mediaStyle = computed(() => {
-  if (props.image) {
+  if (props.images && props.images.length > 0) {
     return {
-      backgroundImage: `url(${props.image})`,
+      backgroundImage: `url(${props.images[0]})`,
     }
   }
 

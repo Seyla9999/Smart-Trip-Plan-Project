@@ -13,7 +13,7 @@
       <StoryCard
         :id="featuredStory.id"
         :title="featuredStory.title"
-        :image="featuredStory.image"
+        :images="featuredStory.images"
         :category="featuredStory.category"
         :location="featuredStory.location"
         :likes="featuredStory.likes"
@@ -43,7 +43,7 @@
           :key="story.id"
           :id="story.id"
           :title="story.title"
-          :image="story.image"
+          :images="story.images"
           :category="story.category"
           :location="story.location"
           :likes="story.likes"

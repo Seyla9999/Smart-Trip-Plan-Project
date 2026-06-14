@@ -1,13 +1,28 @@
 import api from '@/api/axios'
 import type { CommunityStory, StoryCategory, ComposerSubmission } from '@/data/community'
-
-// Map backend story → frontend CommunityStory shape
 function mapStory(raw: any): CommunityStory {
+  let images: string[] = []
+
+  if (Array.isArray(raw.imageUrls) && raw.imageUrls.length > 0) {
+    images = raw.imageUrls
+  } else if (Array.isArray(raw.imageUrl) && raw.imageUrl.length > 0) {
+    images = raw.imageUrl
+  } else {
+    const single = raw.imageUrl || raw.image_url || raw.image || raw.imageUrls || null
+    if (single && typeof single === 'string') {
+      images = [single]
+    } else if (single && Array.isArray(single)) {
+      images = single
+    }
+  }
+
+  images = images.filter(img => typeof img === 'string' && img.trim() !== '')
+
   return {
     id: raw.id,
     title: raw.title,
     excerpt: raw.content ?? '',
-    image: raw.imageUrl ?? '',
+    images: images,
     category: (raw.category ?? 'Natural') as StoryCategory,
     location: raw.location ?? 'Cambodia',
     likes: raw.likesCount ?? 0,
@@ -49,7 +64,7 @@ export async function fetchStories(params?: {
 
 export async function createStory(
   payload: ComposerSubmission, 
-  imageUrl?: string,
+  imageUrls?: string[],
   author?: { id?: string; name: string; initials: string; avatar?: string }
 ): Promise<CommunityStory> {
   const body = {
@@ -58,7 +73,7 @@ export async function createStory(
     category: payload.category,
     location: payload.location || 'Cambodia',
     rating: payload.rating,
-    imageUrl: imageUrl ?? null,
+    imageUrls: imageUrls ?? [],
     userId: author?.id ?? null,
     authorName: author?.name ?? 'You',
     authorHandle: '@newtraveler',
