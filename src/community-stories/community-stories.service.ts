@@ -61,7 +61,7 @@ export class CommunityStoriesService {
     category: string;
     location?: string;
     rating?: number;
-    imageUrl?: string;
+    imageUrls?: string[];
     videoUrl?: string;
     authorName: string;
     authorHandle: string;
@@ -77,7 +77,7 @@ export class CommunityStoriesService {
       category: dto.category,
       location: dto.location ?? 'Cambodia',
       rating: dto.rating,
-      imageUrl: dto.imageUrl,
+      imageUrls: dto.imageUrls,
       videoUrl: dto.videoUrl,
       likesCount: 0,
       commentsCount: 0,
