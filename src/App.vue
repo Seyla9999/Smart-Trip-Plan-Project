@@ -3,15 +3,29 @@
     <NavBar v-if="showGlobalLayout" />
     <router-view />
     <Footer v-if="showGlobalLayout" />
+
+    <ChatBotButton
+  @toggle="chatbotOpen = !chatbotOpen"
+/>
+
+<ChatBotWindow
+  v-if="chatbotOpen"
+  @close="chatbotOpen = false"
+/>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { clearAuthSession, isAuthSessionExpired, markAuthActivity } from '@/services/auth-session.service'
 import NavBar from './components/NavBar.vue'
 import Footer from './components/Footer.vue'
+
+import ChatBotButton from '@/components/chatbot/ChatBotButton.vue'
+import ChatBotWindow from '@/components/chatbot/ChatBotWindow.vue'
+
+const chatbotOpen = ref(false)
 
 const route = useRoute()
 const authPaths = ['/login', '/register', '/verify', '/forgot-password']
