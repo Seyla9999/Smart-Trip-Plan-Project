@@ -29,7 +29,7 @@ export interface CommunityStory {
   id: string
   title: string
   excerpt: string
-  image?: string
+  images: string[]
   category: StoryCategory
   location: string
   likes: number
@@ -165,7 +165,7 @@ export const communityStories: CommunityStory[] = [
     title: 'Kayaking through Koh Kong mangroves before the tide changed',
     excerpt:
       'We left at sunrise with a local guide, found glassy water, and stopped at a floating platform for coffee while hornbills crossed overhead.',
-    image: categoryCoverMap.Natural,
+    images: [categoryCoverMap.Natural],
     category: 'Natural',
     location: 'Koh Kong',
     likes: 486,
@@ -180,7 +180,7 @@ export const communityStories: CommunityStory[] = [
     title: 'A full day on Koh Rong with no plan except finding the quietest beach',
     excerpt:
       'Long walks, clear water, and a sunset that made the entire west coast glow. The smaller coves were worth the extra hike.',
-    image: categoryCoverMap.Sea,
+    images: [categoryCoverMap.Sea],
     category: 'Sea',
     location: 'Sihanoukville',
     likes: 412,
@@ -195,7 +195,7 @@ export const communityStories: CommunityStory[] = [
     title: 'Bou Sra waterfall was louder and wider than I expected',
     excerpt:
       'The second drop had fewer people in the afternoon, and the mist kept the whole trail cool even in the dry season.',
-    image: categoryCoverMap.Waterfall,
+    images: [categoryCoverMap.Waterfall],
     category: 'Waterfall',
     location: 'Mondulkiri',
     likes: 355,
@@ -210,7 +210,7 @@ export const communityStories: CommunityStory[] = [
     title: 'Bokor viewpoints, abandoned buildings, and the best road trip fog',
     excerpt:
       'The mountain road felt cinematic all morning. Start early, stop often, and bring a jacket because the wind is real near the top.',
-    image: categoryCoverMap.Mountain,
+    images: [categoryCoverMap.Mountain],
     category: 'Mountain',
     location: 'Kampot',
     likes: 297,
@@ -225,7 +225,7 @@ export const communityStories: CommunityStory[] = [
     title: 'Siem Reap after dark: temple stories, Apsara dance, and old market lanes',
     excerpt:
       'This was not a checklist day. We slowed down, talked to guides, and ended up learning more from the people than from the itinerary.',
-    image: categoryCoverMap.Cultural,
+    images: [categoryCoverMap.Cultural],
     category: 'Cultural',
     location: 'Siem Reap',
     likes: 441,
@@ -240,7 +240,7 @@ export const communityStories: CommunityStory[] = [
     title: 'Kep crab market lunch guide for anyone who wants the fresh stuff',
     excerpt:
       'Go before the biggest lunch rush, order Kampot pepper crab first, and save room for grilled squid from the stalls near the pier.',
-    image: categoryCoverMap.Food,
+    images: [categoryCoverMap.Food],
     category: 'Food',
     location: 'Kep',
     likes: 268,
@@ -255,7 +255,7 @@ export const communityStories: CommunityStory[] = [
     title: 'Cardamom forest trail notes from a two-day eco camp',
     excerpt:
       'Leeches, rain, and one unforgettable night chorus. It was rough in the best way and still felt accessible with a guide.',
-    image: categoryCoverMap.Forest,
+    images: [categoryCoverMap.Forest],
     category: 'Forest',
     location: 'Pursat',
     likes: 321,

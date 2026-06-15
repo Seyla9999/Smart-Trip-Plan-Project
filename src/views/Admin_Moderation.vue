@@ -240,51 +240,74 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-[160px,1fr]">
-            <div class="h-40 w-full overflow-hidden rounded-lg bg-slate-100">
-              <img v-if="selectedStory.image" :src="selectedStory.image" :alt="selectedStory.title" class="h-full w-full object-cover" />
-              <div v-else class="flex h-full w-full items-center justify-center bg-slate-200 text-xs font-semibold text-slate-500">
-                No image
+          <div class="mb-6">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Attached Images ({{ selectedStory.images.length }})</p>
+            <div v-if="selectedStory.images && selectedStory.images.length > 0" class="flex flex-wrap gap-3">
+              <div 
+                v-for="(img, idx) in selectedStory.images" 
+                :key="idx" 
+                class="relative h-32 w-32 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 shadow-sm"
+              >
+                <img :src="img" :alt="'Image ' + (idx + 1)" class="h-full w-full object-cover" />
+                <a 
+                  :href="img" 
+                  target="_blank" 
+                  class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
+                >
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <div v-else class="flex h-32 w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-sm font-medium text-slate-400">
+              No images attached to this story.
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2 text-sm border-t border-slate-100 pt-5">
+            <div class="space-y-3">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Status</p>
-                <span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium" :class="statusBadge(selectedStory.status)">
+                <span class="mt-1 inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium" :class="statusBadge(selectedStory.status)">
                   {{ selectedStory.status }}
                 </span>
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Submitted</p>
-                <p class="text-slate-700">{{ selectedStory.submitted }}</p>
+                <p class="mt-1 font-medium text-slate-900">{{ selectedStory.submitted }}</p>
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Author</p>
-                <p class="text-slate-700">{{ selectedStory.authorName }}</p>
+                <p class="mt-1 font-medium text-slate-900">{{ selectedStory.authorName }}</p>
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Handle</p>
-                <p class="text-slate-700">{{ selectedStory.authorHandle || 'Not set' }}</p>
+                <p class="mt-1 font-medium text-slate-900">{{ selectedStory.authorHandle || 'Not set' }}</p>
               </div>
+            </div>
+            <div class="space-y-3">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Category</p>
-                <p class="text-slate-700">{{ selectedStory.category }}</p>
+                <p class="mt-1 font-medium text-slate-900">{{ selectedStory.category }}</p>
               </div>
               <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Location</p>
-                <p class="text-slate-700">{{ selectedStory.location }}</p>
+                <p class="mt-1 font-medium text-slate-900">{{ selectedStory.location }}</p>
+              </div>
+              <div class="flex gap-10">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Likes</p>
+                  <p class="mt-1 font-medium text-slate-900">{{ selectedStory.likesCount }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Comments</p>
+                  <p class="mt-1 font-medium text-slate-900">{{ selectedStory.commentsCount }}</p>
+                </div>
               </div>
               <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Likes</p>
-                <p class="text-slate-700">{{ selectedStory.likesCount }}</p>
-              </div>
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Comments</p>
-                <p class="text-slate-700">{{ selectedStory.commentsCount }}</p>
-              </div>
-              <div class="col-span-2">
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Story ID</p>
-                <p class="font-mono text-xs text-slate-500">{{ selectedStory.id }}</p>
+                <p class="mt-1 font-mono text-[10px] text-slate-400 select-all">{{ selectedStory.id }}</p>
               </div>
             </div>
           </div>
@@ -482,6 +505,21 @@ const mapStory = (story) => {
   const comments = Number.isFinite(story.commentsCount) ? story.commentsCount : 0
   const category = story.category || 'Natural'
   const location = story.location || 'Cambodia'
+  
+  let images = []
+  if (Array.isArray(story.imageUrls) && story.imageUrls.length > 0) {
+    images = story.imageUrls
+  } else if (Array.isArray(story.imageUrl) && story.imageUrl.length > 0) {
+    images = story.imageUrl
+  } else {
+    const single = story.imageUrl || story.image_url || story.image || story.imageUrls || null
+    if (single && typeof single === 'string') {
+      images = [single]
+    } else if (single && Array.isArray(single)) {
+      images = single
+    }
+  }
+  images = images.filter(img => typeof img === 'string' && img.trim() !== '')
 
   const baseItem = {
     id: story.id,
@@ -491,7 +529,8 @@ const mapStory = (story) => {
     submitted: formatRelativeTime(story.createdAt || story.publishedAt),
     excerpt: toExcerpt(story.content),
     content: story.content || '',
-    image: story.imageUrl || '',
+    images,
+    image: images[0] || '',
     category,
     location,
     likesCount: likes,
