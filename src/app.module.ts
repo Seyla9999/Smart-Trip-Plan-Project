@@ -40,12 +40,14 @@ import { ConversationRead } from './modules/chat/entities/conversation-read.enti
 import { ConversationMember } from './modules/chat/entities/conversation-member.entity';
 
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ChatbotModule,
 
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -68,11 +70,10 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
         Sponsor,
       ],
 
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      ssl:false,
+      
       extra: {
-        options: `-c search_path=${process.env.DB_SCHEMA || 'public'}`,
+        // options: `-c search_path=${process.env.DB_SCHEMA || 'public'}`,
       },
     }),
 
