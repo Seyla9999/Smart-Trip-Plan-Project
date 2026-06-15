@@ -45,7 +45,7 @@ export class CommunityStoriesController {
       category: string;
       location?: string;
       rating?: number;
-      imageUrl?: string;
+      imageUrls?: string[];
       videoUrl?: string;
       authorName: string;
       authorHandle: string;

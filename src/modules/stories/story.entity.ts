@@ -36,8 +36,8 @@ export class Story {
   @Column({ type: 'integer', nullable: true })
   rating: number;
 
-  @Column({ name: 'image_url', type: 'varchar', length: 500, nullable: true })
-  imageUrl: string;
+  @Column({ name: 'image_url', type: 'text', array: true, nullable: true })
+  imageUrls: string[];
 
   @Column({ name: 'video_url', type: 'varchar', length: 500, nullable: true })
   videoUrl: string;
