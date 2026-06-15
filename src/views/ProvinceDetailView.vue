@@ -64,7 +64,7 @@ function formatQueryDate(dateString: string) {
 
 const displayDateRange = computed(() => {
   if (fromDate.value && toDate.value) {
-    return `${formatQueryDate(fromDate.value)} â€“ ${formatQueryDate(toDate.value)}`;
+    return `${formatQueryDate(fromDate.value)} – ${formatQueryDate(toDate.value)}`;
   }
 
   if (fromDate.value) {
@@ -75,16 +75,27 @@ const displayDateRange = computed(() => {
 });
 
 const selectedTravelType = ref<TravelType>("Friends");
-const showMapView = ref(false);
 const viewMode = ref<ViewMode>("grid");
 const sortOption = ref<SortOption>("recommended");
 
+const showMapView = computed(() => route.query.view === "map");
+
 function openProvinceMapView() {
-  showMapView.value = true;
+  router.replace({
+    query: {
+      ...route.query,
+      view: "map",
+    },
+  });
 }
 
 function closeProvinceMapView() {
-  showMapView.value = false;
+  const nextQuery = { ...route.query };
+  delete nextQuery.view;
+
+  router.replace({
+    query: nextQuery,
+  });
 }
 
 watch(
@@ -182,7 +193,6 @@ const totalResults = computed(() => {
 });
 
 watch(slug, async () => {
-  showMapView.value = false;
   await loadProvinceDetail(slug.value);
   updateFilterCounts();
   resetPage();
@@ -227,7 +237,10 @@ function toSlug(value: string) {
 }
 
 function openPlaceDetail(place: Place) {
-  router.push(`/province/${slug.value}/${toSlug(place.name)}`);
+  const query: any = {}
+  if (fromDate.value) query.from = fromDate.value
+  if (toDate.value)   query.to   = toDate.value
+  router.push({ path: `/province/${slug.value}/${toSlug(place.name)}`, query })
 }
 </script>
 
@@ -242,6 +255,7 @@ function openPlaceDetail(place: Place) {
     />
 
     <ProvinceInfoBar
+      v-if="!showMapView"
       :province-name="backendProvince?.nameEn || provinceName"
       :total-places="places.length"
       @open-map="openProvinceMapView"

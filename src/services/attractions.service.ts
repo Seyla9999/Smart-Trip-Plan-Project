@@ -12,6 +12,7 @@ export interface AttractionsFilterParams {
   amenities?: string[]
   maxEntryFee?: number
   isOpen?: boolean
+  is_hidden_gem?: string | boolean
   limit?: number
   offset?: number
   sortBy?: string

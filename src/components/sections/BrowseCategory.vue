@@ -43,7 +43,7 @@
         v-for="item in displayItems"
         :key="item.id || item.name"
         class="rc"
-        @click="$router.push('/discover')"
+        @click="item.id ? $router.push(`/attraction/${item.id}`) : $router.push(`/discover?category=${activeCat}`)"
       >
         <div
           class="rc-img"

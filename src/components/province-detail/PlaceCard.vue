@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import axios from "axios";
 
 type Place = {
@@ -53,6 +53,23 @@ function shortDescription(text: string, max = 120) {
   if (!text) return "";
   return text.length > max ? text.slice(0, max) + "..." : text;
 }
+
+function roundToHalf(value: number) {
+  return Math.round(value * 2) / 2;
+}
+
+const starDisplay = computed(() => {
+  const rounded = roundToHalf(props.place.rating);
+  const full = Math.floor(rounded);
+  const half = rounded % 1 !== 0 ? 1 : 0;
+  const empty = 5 - full - half;
+
+  return {
+    full: "★".repeat(full),
+    half: half ? "⯨" : "",
+    empty: "☆".repeat(empty),
+  };
+});
 
 async function loadBookmarkState() {
   try {
@@ -172,7 +189,12 @@ watch(
     <div class="card-body">
       <div class="card-title-row">
         <h3>{{ place.name }}</h3>
-        <span class="rating">★ {{ place.rating }}</span>
+        <div class="rating-wrap">
+          <span class="rating-stars">
+            {{ starDisplay.full }}{{ starDisplay.half }}{{ starDisplay.empty }}
+          </span>
+          <span class="rating-number">{{ place.rating.toFixed(1) }}</span>
+        </div>
       </div>
 
       <p class="card-description">
@@ -180,7 +202,7 @@ watch(
       </p>
 
       <div class="card-footer">
-        <span>{{ place.reviews }} REVIEWS</span>
+        <span class="review-text">{{ place.reviews }} REVIEWS</span>
 
         <button
           class="heart-btn"
@@ -256,9 +278,24 @@ watch(
   font-family: Georgia, "Times New Roman", serif;
 }
 
-.rating {
-  color: #8f6a0f;
-  font-size: 15px;
+.rating-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.rating-stars {
+  color: #c69214;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rating-number {
+  color: #c69214;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -274,8 +311,12 @@ watch(
   justify-content: space-between;
   align-items: center;
   margin-top: 18px;
-  color: #a0a6b5;
+}
+
+.review-text {
+  color: #7d8492;
   font-size: 13px;
+  font-weight: 600;
 }
 
 .heart-btn {

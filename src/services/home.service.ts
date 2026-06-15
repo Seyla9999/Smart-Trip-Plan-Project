@@ -81,15 +81,72 @@ export async function getHiddenGems(limit = 5): Promise<Attraction[]> {
 }
 
 export async function getStories(limit = 5): Promise<Story[]> {
-  const res = await API.get('/stories', {
-    params: { limit, status: 'published,approved' },
-  })
-  return res.data.data
+  try {
+    const res = await API.get('/stories', {
+      params: { limit, status: 'published,approved' },
+    })
+    
+    let stories: any[] = []
+    if (Array.isArray(res.data)) {
+      stories = res.data
+    } else if (res.data?.data && Array.isArray(res.data.data)) {
+      stories = res.data.data
+    }
+    
+    console.log('✓ Stories loaded from Supabase DB:', stories.length, 'stories')
+    
+    // Map database stories to Story interface
+    // Generate images based on title keywords for better visuals
+    const mappedStories = stories.map((s: any, idx: number) => {
+      const imageMap: Record<string, string> = {
+        'mondulkiri': 'https://images.unsplash.com/photo-1548364837-35d37261e1c2?w=400&q=70',
+        'koh': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=70',
+        'angkor': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=70',
+        'phnom penh': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=70',
+        'kampot': 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=400&q=70',
+      }
+      
+      let imageUrl = ''
+      const titleLower = s.title?.toLowerCase() || ''
+      for (const [key, url] of Object.entries(imageMap)) {
+        if (titleLower.includes(key)) {
+          imageUrl = url
+          break
+        }
+      }
+      
+      const authorName = s.user_name || s.user?.name || s.user?.full_name || s.user?.username || s.author_name || 'Traveler'
+      const authorHandle = s.user_username || s.user?.username || (authorName ? `@${String(authorName).split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@traveler')
+      const authorAvatar = s.user_avatar || s.user?.avatar_url || s.user?.avatar || s.avatar_url || '#4A7C59'
+
+      return {
+        id: s.id,
+        title: s.title || 'Untitled Story',
+        content: s.content || '',
+        created_at: s.created_at,
+        user_id: s.user_id || 'unknown',
+        user_name: authorName,
+        user_avatar: authorAvatar,
+        user_username: authorHandle,
+        attachments: imageUrl ? [{ url: imageUrl, file_type: 'image' }] : [],
+      }
+    })
+    
+    return mappedStories
+  } catch (err: any) {
+    console.error('✗ Failed to fetch stories from database:', {
+      message: err.message,
+      status: err.response?.status,
+    })
+    throw err
+  }
 }
 
 export async function getSponsors(): Promise<Sponsor[]> {
   const res = await API.get('/sponsors')
-  return res.data.data
+  if (Array.isArray(res.data)) return res.data
+  if (Array.isArray(res.data?.data)) return res.data.data
+  return []
 }
 
 export async function createSponsor(data: any): Promise<any> {

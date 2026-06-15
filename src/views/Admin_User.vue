@@ -368,7 +368,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { createUser, getAdminUsers, updateUserStatus } from '@/services/users.service'
+import { createUser, getAdminUsers, getUsersCount, updateUserStatus } from '@/services/users.service'
 import { useAdminToast } from '@/composables/useAdminToast'
 import API from '@/api/axios'
 
@@ -392,6 +392,7 @@ const newAdmin = ref({
 
 const tabOptions = ['All Users', 'Admins', 'Travelers']
 const users = ref([])
+const fallbackTotalUsers = ref(0)
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const monthMap = {
@@ -494,11 +495,23 @@ const loadUsers = async () => {
   fetchError.value = ''
   try {
     const response = await getAdminUsers()
-    const list = Array.isArray(response?.data?.data) ? response.data.data : []
-    users.value = list.map(mapApiUser)
+    const list = Array.isArray(response?.data)
+      ? response.data
+      : Array.isArray(response?.data?.data)
+        ? response.data.data
+        : []
+
+    if (list.length) {
+      users.value = list.map(mapApiUser)
+      fallbackTotalUsers.value = 0
+    } else {
+      fallbackTotalUsers.value = await getUsersCount()
+      users.value = []
+    }
   } catch (error) {
     fetchError.value = 'Unable to fetch users from database.'
     console.error('Failed to fetch users:', error)
+    fallbackTotalUsers.value = await getUsersCount()
   } finally {
     isLoading.value = false
   }
@@ -646,7 +659,7 @@ const filteredUsers = computed(() => {
   return list
 })
 
-const totalUsers = computed(() => users.value.length)
+const totalUsers = computed(() => users.value.length || fallbackTotalUsers.value)
 const userCount = computed(() => users.value.filter((user) => user.role !== 'ADMIN').length)
 const adminCount = computed(() => users.value.filter((user) => user.role === 'ADMIN').length)
 

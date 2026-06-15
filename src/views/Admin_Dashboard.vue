@@ -164,7 +164,7 @@
 
 <script setup>
 import { onMounted, ref, reactive } from 'vue'
-import { getAdminUsers } from '@/services/users.service'
+import { getAdminUsers, getUsersCount } from '@/services/users.service'
 import { getAttractions } from '@/services/attractions.service'
 import { getProvinces, getStories } from '@/services/home.service'
 import { getReviews } from '@/services/reviews.service'
@@ -208,8 +208,9 @@ const normalizeAttraction = (item) => {
 const loadDashboardData = async () => {
   isLoading.value = true
   try {
-    const [usersRes, attractionsRes, provincesRes, storiesRes, reviewsRes] = await Promise.all([
+    const [usersRes, userCount, attractionsRes, provincesRes, storiesRes, reviewsRes] = await Promise.all([
       getAdminUsers(),
+      getUsersCount(),
       getAttractions({ limit: 1000 }),
       getProvinces(),
       getStories(100),
@@ -217,12 +218,16 @@ const loadDashboardData = async () => {
     ])
 
     // Users
-    const users = usersRes?.data?.data || []
-    metrics.totalUsers = users.length
+    const users = Array.isArray(usersRes?.data)
+      ? usersRes.data
+      : usersRes?.data?.data || []
+    metrics.totalUsers = users.length || userCount
     metrics.adminCount = users.filter(u => u.role?.toLowerCase() === 'admin').length
 
     // Attractions
-    const attractionsRaw = attractionsRes?.data?.data || []
+    const attractionsRaw = Array.isArray(attractionsRes?.data)
+      ? attractionsRes.data
+      : attractionsRes?.data?.data || []
     metrics.totalAttractions = attractionsRaw.length
     metrics.hiddenGemsCount = attractionsRaw.filter(a => a.is_hidden_gem).length
     

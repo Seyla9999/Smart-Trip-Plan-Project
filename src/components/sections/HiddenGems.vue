@@ -5,7 +5,7 @@
         <h2 class="section-title">Hidden Gems</h2>
         <p class="section-sub">Off the beaten path secrets of Cambodia</p>
       </div>
-      <a href="/discover?filter=hidden-gems" class="see-all">See All →</a>
+      <a href="/discover?hidden=true" class="see-all">See All →</a>
     </div>
 
     <div v-if="loading" class="gems-grid">
@@ -15,7 +15,7 @@
 
     <div v-else-if="gems.length > 0" class="gems-grid">
 
-      <div class="gem tall" @click="$router.push('/discover')">
+      <div class="gem tall" @click="$router.push(`/attraction/${gems[0].id}`)">
         <div
           class="gem-img"
           :style="{
@@ -36,7 +36,7 @@
         v-for="gem in gems.slice(1, 5)"
         :key="gem.id"
         class="gem"
-        @click="$router.push('/discover')"
+        @click="$router.push(`/attraction/${gem.id}`)"
       >
         <div
           class="gem-img"

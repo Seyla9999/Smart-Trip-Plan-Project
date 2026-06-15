@@ -1,4 +1,5 @@
 import API from '@/api/axios'
+import { clearAuthSession, markAuthActivity } from './auth-session.service'
 
 // REGISTER
 export const register = (data: {
@@ -19,6 +20,7 @@ export const login = async (data: {
   // Store token in localStorage
   if (response.data.token) {
     localStorage.setItem('auth_token', response.data.token)
+    markAuthActivity()
   }
   
   return response
@@ -37,6 +39,6 @@ export const resendCode = (data: { email: string }) =>
 
 // LOGOUT
 export const logout = () => {
-  localStorage.removeItem('auth_token')
+  clearAuthSession()
   window.location.href = '/login'
 }

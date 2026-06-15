@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 const props = defineProps<{
   place: {
     id: string | number;
@@ -27,6 +29,23 @@ function shortDescription(text: string, max = 180) {
   if (!text) return "";
   return text.length > max ? text.slice(0, max) + "..." : text;
 }
+
+function roundToHalf(value: number) {
+  return Math.round(value * 2) / 2;
+}
+
+const starDisplay = computed(() => {
+  const rounded = roundToHalf(props.place.rating);
+  const full = Math.floor(rounded);
+  const half = rounded % 1 !== 0 ? 1 : 0;
+  const empty = 5 - full - half;
+
+  return {
+    full: "★".repeat(full),
+    half: half ? "⯨" : "",
+    empty: "☆".repeat(empty),
+  };
+});
 </script>
 
 <template>
@@ -47,7 +66,11 @@ function shortDescription(text: string, max = 180) {
 
     <div class="featured-content">
       <div class="featured-meta">
-        <span class="rating">★★★★★ {{ place.reviews }} REVIEWS</span>
+        <span class="rating-stars">
+          {{ starDisplay.full }}{{ starDisplay.half }}{{ starDisplay.empty }}
+        </span>
+        <span class="rating-number">{{ place.rating.toFixed(1) }}</span>
+        <span class="review-text">· {{ place.reviews }} REVIEWS</span>
       </div>
 
       <h2 class="featured-title" @click="handleSelect">
@@ -63,8 +86,6 @@ function shortDescription(text: string, max = 180) {
           {{ tag }}
         </span>
       </div>
-
-      <button class="trip-btn" type="button">+ Add to my trip</button>
     </div>
   </article>
 </template>
@@ -127,10 +148,28 @@ function shortDescription(text: string, max = 180) {
 
 .featured-meta {
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.rating {
-  color: #7f87a0;
+.rating-stars {
+  color: #c69214;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.rating-number {
+  color: #c69214;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.review-text {
+  color: #7d8492;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -156,7 +195,6 @@ function shortDescription(text: string, max = 180) {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 26px;
 }
 
 .tag-pill {
@@ -168,19 +206,6 @@ function shortDescription(text: string, max = 180) {
   color: #5d7966;
   font-size: 14px;
   font-weight: 600;
-}
-
-.trip-btn {
-  align-self: flex-start;
-  min-width: 220px;
-  border: none;
-  border-radius: 999px;
-  padding: 18px 26px;
-  background: #15543f;
-  color: white;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 @media (max-width: 1024px) {

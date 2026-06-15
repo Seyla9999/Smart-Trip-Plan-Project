@@ -1,4 +1,4 @@
-import api from '@/api/axios'
+import API from '@/api/axios'
 import type { CommunityStory, StoryCategory, ComposerSubmission } from '@/data/community'
 function mapStory(raw: any): CommunityStory {
   let images: string[] = []
@@ -53,7 +53,7 @@ export async function fetchStories(params?: {
   page?: number
   limit?: number
 }): Promise<StoriesResponse> {
-  const { data } = await api.get('/stories', {
+  const { data } = await API.get('/stories', {
     params: { ...params, status: 'published,approved' },
   })
   return {
@@ -82,15 +82,15 @@ export async function createStory(
     authorAvatarUrl: author?.avatar ?? null,
     authorHomeBase: 'Community member',
   }
-  const { data } = await api.post('/stories', body)
+  const { data } = await API.post('/stories', body)
   return mapStory(data)
 }
 
 export async function likeStory(id: string, liked: boolean): Promise<void> {
   if (liked) {
-    await api.post(`/stories/${id}/like`)
+    await API.post(`/stories/${id}/like`)
   } else {
-    await api.delete(`/stories/${id}/like`)
+    await API.delete(`/stories/${id}/like`)
   }
 }
 
@@ -103,16 +103,16 @@ export interface Comment {
 }
 
 export async function getComments(storyId: string): Promise<Comment[]> {
-  const { data } = await api.get(`/stories/${storyId}/comments`)
+  const { data } = await API.get(`/stories/${storyId}/comments`)
   return data as Comment[]
 }
 
 export async function addComment(storyId: string, body: string, authorName: string): Promise<Comment> {
-  const { data } = await api.post(`/stories/${storyId}/comments`, { body, authorName })
+  const { data } = await API.post(`/stories/${storyId}/comments`, { body, authorName })
   return data as Comment
 }
 
 export async function fetchStats(): Promise<{ totalStories: number; totalLikes: number }> {
-  const { data } = await api.get('/stories/stats')
+  const { data } = await API.get('/stories/stats')
   return data
 }

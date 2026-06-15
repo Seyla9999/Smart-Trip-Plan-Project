@@ -6,6 +6,10 @@
           <img :src="currentUser.avatar" :alt="currentUser.name" class="avatar-img" />
         </div>
         <div v-else class="avatar av-you">{{ currentUser.initials }}</div>
+        <div class="composer-user-info">
+          <div class="composer-user-name">{{ currentUser.name }}</div>
+          <div v-if="currentUser.name" class="composer-user-handle">@{{ currentUser.name.split(' ')[0].toLowerCase() }}</div>
+        </div>
         
         <div class="composer-search-bar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -285,14 +289,49 @@
         {{ loading ? 'Loading...' : 'Load more stories' }}
       </button>
     </div>
+    <!-- Sidebar -->
+    <aside class="community-sidebar">
+      <!-- User Profile Card -->
+      <div class="profile-card">
+        <div class="profile-header">
+          <div v-if="currentUser.avatar" class="profile-avatar-wrap">
+            <img :src="currentUser.avatar" :alt="currentUser.name" class="profile-avatar" />
+          </div>
+          <div v-else class="profile-avatar av-profile">{{ currentUser.initials }}</div>
+        </div>
+        <div class="profile-body">
+          <h3 class="profile-name">{{ currentUser.name }}</h3>
+          <p v-if="currentUser.name" class="profile-handle">@{{ currentUser.name.split(' ')[0].toLowerCase() }}</p>
+          <div class="profile-stats">
+            <div class="stat">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Stories</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Followers</div>
+            </div>
+          </div>
+          <a href="/profile" class="profile-link">View Profile</a>
+        </div>
+      </div>
+
+      <Sidebar 
+        :trending-places="trendingPlaces"
+        :travelers="topTravelers"
+        :provinces="popularProvinces"
+        @toggle-follow="toggleFollowTraveler"
+      />
+    </aside>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   communityCategories,
 } from '@/data/community'
+import Sidebar from '@/components/community/sidebar/Sidebar.vue'
 import { fetchStories, createStory, likeStory, getComments, addComment } from '@/services/community.service'
 import { uploadImage } from '@/lib/supabase'
 import type { Comment } from '@/services/community.service'
@@ -301,6 +340,9 @@ import type {
   CommunitySortOption,
   CommunityStory,
   StoryCategory,
+  TopTraveler,
+  TrendingPlace,
+  PopularProvince,
 } from '@/data/community'
 
 const props = defineProps<{
@@ -314,6 +356,27 @@ const loading = ref(false)
 const page = ref(1)
 const total = ref(0)
 const hasMore = computed(() => stories.value.length < total.value)
+
+// Sidebar data
+const trendingPlaces = ref<TrendingPlace[]>([
+  { id: 1, name: 'Angkor Wat', visits: 5234, category: 'Cultural' },
+  { id: 2, name: 'Tonle Sap Lake', visits: 3421, category: 'Natural' },
+  { id: 3, name: 'Koh Rong Island', visits: 2890, category: 'Beach' },
+  { id: 4, name: 'Kbal Spean', visits: 1567, category: 'Waterfall' },
+  { id: 5, name: 'Phnom Penh Markets', visits: 2103, category: 'Cultural' },
+])
+
+const topTravelers = ref<TopTraveler[]>([
+  { id: 1, name: 'Sarah Chen', avatar: 'https://i.pravatar.cc/150?img=1', following: false, stories: 24 },
+  { id: 2, name: 'Marco Rodriguez', avatar: 'https://i.pravatar.cc/150?img=2', following: false, stories: 18 },
+  { id: 3, name: 'Emma Thompson', avatar: 'https://i.pravatar.cc/150?img=3', following: false, stories: 15 },
+])
+
+const popularProvinces = ref<PopularProvince[]>([
+  { id: 1, name: 'Siem Reap', slug: 'siem-reap', image: '/provinces/siem-reap.jpg', stories: 523 },
+  { id: 2, name: 'Phnom Penh', slug: 'phnom-penh', image: '/provinces/phnom-penh.jpg', stories: 412 },
+  { id: 3, name: 'Sihanoukville', slug: 'sihanoukville', image: '/provinces/sihanoukville.jpg', stories: 287 },
+])
 
 // Search state
 const localSearchQuery = ref(props.searchQuery || '')
@@ -334,8 +397,8 @@ function updateCurrentUser() {
     if (raw) {
       const parsed = JSON.parse(raw)
       currentUser.value.id = parsed.id || parsed.uuid || parsed.user_id || null
-      currentUser.value.name = parsed.name || parsed.username || parsed.full_name || parsed.email || 'You'
-      currentUser.value.avatar = parsed.avatar || parsed.profile_image || parsed.imageUrl || null
+      currentUser.value.name = parsed.name || parsed.username || parsed.full_name || parsed.user_name || parsed.user?.name || parsed.email || 'You'
+      currentUser.value.avatar = parsed.avatar || parsed.avatar_url || parsed.profile_image || parsed.imageUrl || parsed.user_avatar || null
       currentUser.value.initials = currentUser.value.name
         .split(' ')
         .map((n: string) => n[0])
@@ -495,6 +558,13 @@ function loadMore() {
 onMounted(() => {
   loadStories()
   updateCurrentUser()
+  window.addEventListener('user-updated', updateCurrentUser)
+  window.addEventListener('storage', updateCurrentUser)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('user-updated', updateCurrentUser)
+  window.removeEventListener('storage', updateCurrentUser)
 })
 
 const showComposer = ref(false)
@@ -611,6 +681,13 @@ const filteredStories = computed(() => {
   })
 })
 
+function toggleFollowTraveler(travelerId: number) {
+  const traveler = topTravelers.value.find(t => t.id === travelerId)
+  if (traveler) {
+    traveler.following = !traveler.following
+  }
+}
+
 function formatDate(iso: string) {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return 'Recently'
@@ -656,12 +733,19 @@ function catClass(c: string) { return CAT[c] ?? 'cb-slate' }
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 700px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 32px 16px 64px;
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   min-height: 100vh;
+}
+
+@media (max-width: 1100px) {
+  .community-view {
+    grid-template-columns: 1fr;
+    max-width: 700px;
+  }
 }
 
 .composer-card {

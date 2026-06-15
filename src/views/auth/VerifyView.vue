@@ -10,7 +10,11 @@
           v-for="(digit, index) in otp"
           :key="index"
           ref="inputs"
+          type="number"
+          inputmode="numeric"
           maxlength="1"
+          min="0"
+          max="9"
           v-model="otp[index]"
           @input="moveNext(index)"
           @keydown.backspace="moveBack(index)"
@@ -36,13 +40,16 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { verify, resendCode } from '@/services/auth.service'
 
 const router = useRouter()
+const route = useRoute()
+const REDIRECT_KEY = 'post_auth_redirect'
 
 const email = localStorage.getItem('verify_email')
+const redirectPath = ref(typeof route.query.redirect === 'string' ? route.query.redirect : localStorage.getItem(REDIRECT_KEY) || '')
 
 const otp = ref(['', '', '', '', '', ''])
 const inputs = ref([])
@@ -55,6 +62,11 @@ const countdown = ref(0)
 onMounted(() => {
   if (!email) {
     router.push('/register') // fallback
+  }
+
+  if (typeof route.query.redirect === 'string' && route.query.redirect) {
+    localStorage.setItem(REDIRECT_KEY, route.query.redirect)
+    redirectPath.value = route.query.redirect
   }
 })
 
@@ -98,7 +110,8 @@ const handleVerify = async () => {
     localStorage.removeItem('verify_email')
 
     setTimeout(() => {
-      router.push('/login')
+      const nextRedirect = redirectPath.value || localStorage.getItem(REDIRECT_KEY) || ''
+      router.push(nextRedirect ? { path: '/login', query: { redirect: nextRedirect } } : '/login')
     }, 1500)
 
   } catch (err) {
@@ -128,50 +141,262 @@ const handleResend = async () => {
 }
 </script>
 <style scoped>
+* {
+  box-sizing: border-box;
+}
+
 .form {
-  width: 420px;
-  padding: 45px;
+  width: 100%;
+  max-width: 380px;
+  padding: 32px 20px;
   border-radius: 20px;
   background: white;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  margin: 20px; /* Ensures it doesn't touch screen edges on mobile */
+  gap: 22px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 15px;
+  text-align: center;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .otp-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 0;
 }
 
 .otp-container input {
-  width: 50px;
-  height: 60px;
+  width: 48px;
+  height: 56px;
   text-align: center;
-  font-size: 24px;
-  font-weight: bold;
-  border: 2px solid #ddd;
+  font-size: 22px;
+  font-weight: 700;
+  border: 1.5px solid #e0e0e0;
   border-radius: 12px;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  background: #fafafa;
+  font-family: 'Courier New', 'Courier', monospace;
+  color: #333;
 }
 
 .otp-container input:focus {
   border-color: #2e7d32;
-  box-shadow: 0 0 10px rgba(46,125,50,0.2);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
   outline: none;
 }
 
-/* Responsive Media Query */
+.otp-container input::-webkit-outer-spin-button,
+.otp-container input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.otp-container input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.error {
+  color: #d32f2f;
+  font-size: 13px;
+  text-align: center;
+  padding: 12px 14px;
+  background: #fff8f7;
+  border-radius: 10px;
+  border-left: 3px solid #d32f2f;
+  font-weight: 500;
+  margin: -4px 0 0 0;
+}
+
+.success {
+  color: #2e7d32;
+  font-size: 13px;
+  text-align: center;
+  padding: 12px 14px;
+  background: #f1f8f4;
+  border-radius: 10px;
+  border-left: 3px solid #2e7d32;
+  font-weight: 600;
+  margin: -4px 0 0 0;
+}
+
+button {
+  width: 100%;
+  padding: 18px 16px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 56px;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  background: linear-gradient(135deg, #ccc 0%, #aaa 100%);
+  cursor: not-allowed;
+}
+
+.resend {
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  margin: 4px 0 0 0;
+}
+
+.resend span {
+  color: #2e7d32;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  display: inline;
+  margin-left: 2px;
+}
+
+.resend span:not(.disabled):active {
+  color: #1b5e20;
+}
+
+.resend span.disabled {
+  color: #bbb;
+  cursor: not-allowed;
+  font-weight: 500;
+}
+
+/* Mobile: 375px to 480px */
 @media (max-width: 480px) {
   .form {
-    width: 90%;
-    padding: 30px 20px;
+    padding: 28px 18px;
+    border-radius: 16px;
+    gap: 20px;
   }
+
+  h1 {
+    font-size: 26px;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .otp-container {
+    gap: 8px;
+    padding: 4px 0;
+  }
+
   .otp-container input {
-    width: 40px;
-    height: 50px;
+    width: 44px;
+    height: 52px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  .error,
+  .success {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+
+  button {
+    padding: 16px;
+    font-size: 15px;
+    min-height: 52px;
+    border-radius: 10px;
+  }
+
+  .resend {
+    font-size: 12px;
+  }
+}
+
+/* Tablet: 640px and up */
+@media (min-width: 640px) {
+  .form {
+    padding: 40px 32px;
+    max-width: 420px;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+
+  .otp-container {
+    gap: 12px;
+  }
+
+  .otp-container input {
+    width: 52px;
+    height: 60px;
+    font-size: 24px;
+    border-radius: 12px;
+  }
+
+  button {
+    padding: 18px;
+    min-height: 56px;
+  }
+
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(46, 125, 50, 0.2);
+  }
+
+  .resend span:not(.disabled):hover {
+    text-decoration: underline;
+  }
+}
+
+/* Desktop: 1024px and up */
+@media (min-width: 1024px) {
+  .form {
+    padding: 48px 40px;
+    max-width: 460px;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+
+  .error,
+  .success {
+    font-size: 14px;
+  }
+
+  .resend {
+    font-size: 14px;
   }
 }
 </style>
