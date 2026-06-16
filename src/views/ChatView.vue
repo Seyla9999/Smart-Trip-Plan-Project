@@ -406,7 +406,7 @@ export default defineComponent({
           loggedInUser.value = JSON.parse(raw)
           await loadConversations()
           if (targetConvId.value) {
-            const conv = conversations.value.find((c: any) => c.id === targetConvId.value)
+            const conv = conversations.value.find((c: any) => String(c.id) === targetConvId.value)
             if (conv) {
               await selectConversation(conv)
             }
@@ -419,9 +419,9 @@ export default defineComponent({
     })
 
     watch([conversations, targetConvId], async ([newConvs, newTarget]) => {
-      if (!newTarget || activeConv.value) return
-      const conv = newConvs.find((c: any) => c.id === newTarget)
-      if (conv) {
+      if (!newTarget) return
+      const conv = newConvs.find((c: any) => String(c.id) === newTarget)
+      if (conv && (!activeConv.value || String(activeConv.value.id) !== newTarget)) {
         await selectConversation(conv)
       }
     })

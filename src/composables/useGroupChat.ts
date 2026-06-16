@@ -12,7 +12,9 @@ export function useGroupChat() {
   const isTyping = ref(false)
 
   const currentUserId = computed(() => {
-    const user = localStorage.getItem('user_data') || localStorage.getItem('currentUser')
+    const user = localStorage.getItem('user_data')
+      || localStorage.getItem('currentUser')
+      || localStorage.getItem('user')
     if (user) {
       try {
         const parsed = JSON.parse(user)
@@ -43,15 +45,15 @@ export function useGroupChat() {
   /**
    * Get or create a group chat for a specific trip
    */
-  const getOrCreateChatForTrip = async (tripId: string) => {
+  const getOrCreateChatForTrip = async (tripId: string, tripTitle?: string, members?: GroupChatMember[]) => {
     isLoading.value = true
     error.value = null
     try {
-      currentChat.value = await groupChatService.getOrCreateGroupChat(tripId)
+      currentChat.value = await groupChatService.getOrCreateGroupChat(tripId, tripTitle, members)
       if (
         currentChat.value
         && currentUserId.value
-        && !currentChat.value.members.some(m => String(m.id) === String(currentUserId.value))
+        && !currentChat.value.members?.some(m => String(m.id) === String(currentUserId.value))
       ) {
         currentChat.value = await groupChatService.joinGroupChat(currentChat.value.id)
       }
@@ -69,11 +71,11 @@ export function useGroupChat() {
   /**
    * Create a new group chat
    */
-  const createChat = async (tripId: string, members: GroupChatMember[]) => {
+  const createChat = async (tripId: string, members: GroupChatMember[], tripTitle?: string) => {
     isLoading.value = true
     error.value = null
     try {
-      currentChat.value = await groupChatService.createGroupChat(tripId, members)
+      currentChat.value = await groupChatService.createGroupChat(tripId, members, tripTitle)
       messages.value = []
       return currentChat.value
     } catch (err) {

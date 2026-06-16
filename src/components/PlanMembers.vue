@@ -27,24 +27,45 @@
 
     <!-- Join Group Chat Section -->
     <div class="group-chat-section">
-      <button 
-        v-if="!hasJoinedGroupChat && !isCurrentUserInTrip"
+      <button
+        v-if="currentUserIsCreator && !groupChatId"
+        @click="createGroupChat"
+        :disabled="isCreatingChat"
+        class="btn-create-chat"
+      >
+        <span v-if="isCreatingChat" class="spinner"></span>
+        <span v-else class="icon">💬</span>
+        <span class="btn-text">{{ isCreatingChat ? 'Creating Group...' : 'Create Message Group' }}</span>
+      </button>
+
+      <button
+        v-else-if="!hasJoinedGroupChat && isCurrentUserInTrip && groupChatId"
         @click="joinGroupChat"
         :disabled="isJoiningChat"
         class="btn-join-chat"
       >
-        <span v-if="isJoiningChat" class="spinner-small"></span>
-        <span v-else>💬</span>
-        {{ isJoiningChat ? 'Joining...' : 'Join Group Chat' }}
+        <span v-if="isJoiningChat" class="spinner"></span>
+        <span v-else class="icon">👥</span>
+        <span class="btn-text">{{ isJoiningChat ? 'Joining...' : 'Join Group Chat' }}</span>
       </button>
 
-      <button 
-        v-else
+      <button
+        v-else-if="groupChatId && hasJoinedGroupChat"
         @click="openGroupChat"
         class="btn-open-chat"
       >
-        💬 Open Group Chat
+        <span class="icon">💬</span>
+        <span class="btn-text">Open Group Chat</span>
       </button>
+
+      <div v-else class="chat-hint">
+        <span v-if="currentUserIsCreator">
+          💡 The trip owner can create the message group once the trip is saved.
+        </span>
+        <span v-else>
+          ⏳ Waiting for the trip owner to create the message group.
+        </span>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -82,17 +103,27 @@ export default defineComponent({
       type: String,
       required: true,
     },
+    groupChatId: {
+      type: String,
+      default: '',
+    },
+    hasJoinedGroupChat: {
+      type: Boolean,
+      default: false,
+    },
   },
-  emits: ['joined-chat', 'open-chat'],
+  emits: ['create-chat', 'join-chat', 'open-chat'],
   data() {
     return {
-      hasJoinedGroupChat: false,
+      isCreatingChat: false,
       isJoiningChat: false,
     }
   },
   computed: {
     currentUserId(): string {
-      const user = localStorage.getItem('user_data') || localStorage.getItem('currentUser')
+      const user = localStorage.getItem('user_data')
+        || localStorage.getItem('currentUser')
+        || localStorage.getItem('user')
       if (user) {
         try {
           const parsed = JSON.parse(user)
@@ -102,6 +133,9 @@ export default defineComponent({
         }
       }
       return ''
+    },
+    currentUserIsCreator(): boolean {
+      return !!this.currentUserId && String(this.currentUserId) === String(this.creatorId)
     },
     isCurrentUserInTrip(): boolean {
       const currentId = this.currentUserId
@@ -129,15 +163,26 @@ export default defineComponent({
     isCreator(memberId: string): boolean {
       return memberId === this.creatorId
     },
-    async joinGroupChat() {
-      this.isJoiningChat = true
+    async createGroupChat() {
+      this.isCreatingChat = true
       try {
-        // Emit event to parent to handle joining the group chat
-        this.$emit('joined-chat', {
+        this.$emit('create-chat', {
           tripId: this.tripId,
           members: this.members,
         })
-        this.hasJoinedGroupChat = true
+      } catch (error) {
+        console.error('Error creating group chat:', error)
+      } finally {
+        this.isCreatingChat = false
+      }
+    },
+    async joinGroupChat() {
+      this.isJoiningChat = true
+      try {
+        this.$emit('join-chat', {
+          tripId: this.tripId,
+          members: this.members,
+        })
       } catch (error) {
         console.error('Error joining group chat:', error)
       } finally {
@@ -317,53 +362,112 @@ export default defineComponent({
 
 .group-chat-section {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
   margin-top: 16px;
   padding-top: 16px;
   border-top: 2px solid #f0f0f0;
 }
 
+.btn-create-chat,
 .btn-join-chat,
 .btn-open-chat {
-  flex: 1;
+  width: 100%;
   padding: 12px 16px;
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 }
 
-.btn-join-chat {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.btn-create-chat {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   color: white;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+.btn-create-chat:hover:not(:disabled) {
+  background: linear-gradient(135deg, #18992f 0%, #127d38 100%);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-create-chat:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-join-chat {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 .btn-join-chat:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d54db 0%, #1642c6 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .btn-join-chat:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .btn-open-chat {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .btn-open-chat:hover {
+  background: linear-gradient(135deg, #0fa072 0%, #047857 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-create-chat .icon,
+.btn-join-chat .icon,
+.btn-open-chat .icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-create-chat .btn-text,
+.btn-join-chat .btn-text,
+.btn-open-chat .btn-text {
+  flex: 1;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.chat-hint {
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #166534;
+  text-align: center;
+  line-height: 1.4;
 }
 
 .spinner-small {

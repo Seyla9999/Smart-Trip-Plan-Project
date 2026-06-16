@@ -170,7 +170,7 @@ interface TripFormData {
   planMode:    'province' | 'attraction'
   startDate:   string
   endDate:     string
-  travelType:  'solo' | 'friends' | 'family' | 'couple'
+  travelType:  'solo' | 'friends' | 'family'
 }
 
 interface AttractionSearchItem {
@@ -211,9 +211,8 @@ const provinces = [
   { value: 'sihanoukvile',    label: 'Sihanoukville'    },
 ]
 
-const travelTypes: { value: 'solo' | 'couple' | 'friends' | 'family'; label: string; icon: string }[] = [
+const travelTypes: { value: 'solo' | 'friends' | 'family'; label: string; icon: string }[] = [
   { value: 'solo',    label: 'Solo',    icon: '🧳' },
-  { value: 'couple',  label: 'Couple',  icon: '💑' },
   { value: 'friends', label: 'Friends', icon: '👥' },
   { value: 'family',  label: 'Family',  icon: '👨‍👩‍👧‍👦' },
 ]

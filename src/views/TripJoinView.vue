@@ -175,6 +175,10 @@ const isAuthenticated = computed(() => !!localStorage.getItem('auth_token'))
 const currentUserId = computed(() => localStorage.getItem('user_id') ?? '')
 const currentRedirect = computed(() => `/trip/join/${encodeURIComponent(token.value)}`)
 
+const joinQueryMode = computed(() => String(route.query.mode ?? ''))
+const joinQueryAttractionId = computed(() => String(route.query.attractionId ?? ''))
+const joinQueryAttractionName = computed(() => String(route.query.attractionName ?? ''))
+
 const loading = ref(true)
 const joining = ref(false)
 const error = ref('')
@@ -189,6 +193,9 @@ const originLabel = computed(() => {
 })
 
 const destinationLabel = computed(() => {
+  if (joinQueryMode.value === 'attraction' && joinQueryAttractionName.value) {
+    return `${joinQueryAttractionName.value} (${trip.value?.destination ?? ''})`
+  }
   const raw = trip.value?.destination ?? ''
   return raw ? raw.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Destination'
 })

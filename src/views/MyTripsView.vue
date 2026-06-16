@@ -67,10 +67,6 @@
                     <span class="stat-num">{{ trip.members?.length ?? 1 }}</span>
                     <span class="stat-label">members</span>
                   </div>
-                  <div class="stat">
-                    <span class="stat-num">{{ trip.packing_list?.length ? `${trip.packing_list.filter(p => p.packed).length}/${trip.packing_list.length}` : '—' }}</span>
-                    <span class="stat-label">packed</span>
-                  </div>
                 </div>
                 <div class="card-actions">
                   <button class="btn-detail" @click.stop="viewPlanDetail(trip)">📋 Plan Detail</button>
@@ -159,10 +155,6 @@
                     <span class="stat-num">{{ trip.members?.length ?? 1 }}</span>
                     <span class="stat-label">members</span>
                   </div>
-                  <div class="stat">
-                    <span class="stat-num">{{ trip.packing_list?.length ? `${trip.packing_list.filter(p => p.packed).length}/${trip.packing_list.length}` : '—' }}</span>
-                    <span class="stat-label">packed</span>
-                  </div>
                 </div>
 
                 <!-- Actions -->
@@ -214,7 +206,6 @@
                 <div class="card-stats">
                   <div class="stat"><span class="stat-num">{{ trip.itinerary_items?.length ?? 0 }}</span><span class="stat-label">places</span></div>
                   <div class="stat"><span class="stat-num">{{ trip.members?.length ?? 1 }}</span><span class="stat-label">members</span></div>
-                  <div class="stat"><span class="stat-num">{{ trip.packing_list?.length ? `${trip.packing_list.filter(p => p.packed).length}/${trip.packing_list.length}` : '—' }}</span><span class="stat-label">packed</span></div>
                 </div>
                 <div class="card-actions">
                   <button class="btn-detail" @click.stop="viewPlanDetail(trip)">📋 Plan Detail</button>
@@ -435,8 +426,7 @@ import { useRouter } from 'vue-router'
 import API from '@/api/axios'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
-interface TripMember     { id: string; user_id: string; role: string }
+  interface TripMember     { id: string; user_id: string; role: string }
 interface ItineraryAttraction { id: string; name_en: string; name_kh?: string; category?: string }
 interface ItineraryItem {
   id: string
@@ -460,7 +450,7 @@ interface Trip {
   created_at:      string
   members?:        TripMember[]
   itinerary_items?: ItineraryItem[]
-  packing_list?:   PackingItem[]
+  // packing_list removed
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -1071,7 +1061,7 @@ onUnmounted(() => { if (clockInterval) clearInterval(clockInterval) })
 
 /* ── Card stats ───────────────────────────────────────────────────────────── */
 .card-stats {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  display: grid; grid-template-columns: 1fr 1fr;
   gap: 8px; margin-bottom: 16px;
 }
 .stat {

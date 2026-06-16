@@ -34,7 +34,8 @@
             <span v-if="isSaving" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             {{ saveLabel }}
           </button>
-          <button @click="openShareModal"
+          <button v-if="canInvite"
+            @click="openShareModal"
             class="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition shadow-sm">
             🔗 Invite Friends
           </button>
@@ -115,7 +116,10 @@
                 :members="formattedMembers"
                 :tripId="tripId"
                 :creatorId="tripData?.owner_id || ''"
-                @joined-chat="handleJoinedGroupChat"
+                :groupChatId="groupChat?.id || ''"
+                :hasJoinedGroupChat="hasJoinedGroupChat"
+                @create-chat="handleCreateGroupChat"
+                @join-chat="handleJoinedGroupChat"
                 @open-chat="handleOpenGroupChat"
               />
             </div>
@@ -272,22 +276,7 @@
             </div>
           </div>
 
-          <!-- Packing list -->
-          <div v-if="tripData?.packing_list?.length" class="bg-white rounded-xl p-5 shadow-sm">
-            <h3 class="text-xs font-bold text-green-800 uppercase tracking-wide mb-4">Packing List</h3>
-            <div class="flex flex-col gap-2">
-              <div v-for="item in tripData.packing_list" :key="item.id" class="flex items-center gap-3 text-sm">
-                <div @click="togglePacking(item.id)"
-                  :class="item.packed ? 'bg-green-600 border-green-600' : 'border-gray-300'"
-                  class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition">
-                  <span v-if="item.packed" class="text-white text-[10px] font-bold">✓</span>
-                </div>
-                <span :class="item.packed ? 'line-through text-gray-400' : 'text-gray-700'">
-                  {{ item.name }}<span v-if="item.quantity > 1" class="text-gray-400 text-xs"> ×{{ item.quantity }}</span>
-                </span>
-              </div>
-            </div>
-          </div>
+          <!-- Packing list removed -->
 
         </aside>
 
@@ -305,15 +294,7 @@
               </div>
             </div>
 
-            <!-- Filter chips -->
-            <div class="flex flex-wrap gap-2.5 mb-4">
-              <label v-for="f in filters" :key="f.id"
-                :class="f.active ? 'bg-green-700 text-white border-green-800' : 'bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200'"
-                class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border cursor-pointer text-sm font-medium transition select-none">
-                <input type="checkbox" :checked="f.active" @change="toggleFilter(f.id)" class="hidden" />
-                {{ f.icon }} {{ f.label }}
-              </label>
-            </div>
+            <!-- Filters removed -->
 
             <div class="flex flex-col md:flex-row gap-5">
               <div class="relative flex-1 rounded-xl overflow-hidden border border-gray-200 min-h-[460px]">
@@ -325,13 +306,7 @@
                 </div>
               </div>
               <div class="w-full md:w-44 flex-shrink-0">
-                <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Services</p>
-                <div class="flex flex-col gap-1.5 mb-4">
-                  <div v-for="f in filters" :key="f.id" class="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-2.5 py-2">
-                    <span class="text-base">{{ f.icon }}</span><span class="text-gray-600">{{ f.label }}</span>
-                    <span class="ml-auto text-gray-400">({{ getCountByType(f.id) }})</span>
-                  </div>
-                </div>
+                <!-- Services summary removed -->
                 <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Map Key</p>
                 <div class="flex flex-col gap-2 text-xs text-gray-600">
                   <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-700 ring-2 ring-green-700 ring-offset-1 flex-shrink-0"></span>Start</div>
@@ -498,41 +473,7 @@
             </div>
           </div>
 
-          <!-- Nearby POIs (Services) -->
-          <div class="bg-white rounded-xl p-6 shadow-sm">
-            <div class="flex items-center justify-between mb-5">
-              <h2 class="text-2xl font-bold text-green-800">Nearby Services</h2>
-              <span v-if="poisLoading" class="w-5 h-5 border-2 border-gray-200 border-t-green-600 rounded-full animate-spin"></span>
-            </div>
-
-            <!-- Skeleton while loading -->
-            <div v-if="poisLoading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              <div v-for="n in 6" :key="n" class="animate-pulse bg-gray-100 rounded-xl h-32"></div>
-            </div>
-
-            <div v-else-if="filteredPOIs.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              <div v-for="poi in filteredPOIs" :key="poi.id"
-                class="bg-gray-50 border border-gray-200 rounded-xl p-4 hover:border-green-600 hover:shadow-md transition">
-                <div class="flex items-center gap-2 mb-3">
-                  <span class="text-2xl">
-                    {{ filters.find(f => (poi.type ?? '').toLowerCase().includes(f.id))?.icon ?? '📍' }}
-                  </span>
-                  <span class="text-xs bg-green-50 text-green-700 font-semibold px-2 py-0.5 rounded capitalize">
-                    {{ poi.type }}
-                  </span>
-                </div>
-                <h3 class="text-sm font-bold text-green-800 mb-1">{{ poi.name }}</h3>
-                <p v-if="poi.description" class="text-xs text-gray-500 mb-3">{{ poi.description }}</p>
-                <span v-if="poi.distance" class="text-xs text-gray-400">📍 {{ poi.distance }}</span>
-              </div>
-            </div>
-
-            <div v-else-if="!poisLoading" class="py-12 text-center text-gray-400 text-sm">
-              <div class="text-3xl mb-3">🔍</div>
-              <p v-if="allPOIs.length === 0">No services data available for this destination yet.</p>
-              <p v-else>Toggle the filters above to show nearby services</p>
-            </div>
-          </div>
+          <!-- Nearby services removed -->
 
         </main>
       </div>
@@ -546,6 +487,8 @@ import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import API from '@/api/axios'
+import { findTripGroupChat } from '@/services/group-chat.service'
+import type { GroupChat } from '@/services/group-chat.service'
 import PlanMembers from '@/components/PlanMembers.vue'
 import { useGroupChat } from '@/composables/useGroupChat'
 
@@ -571,7 +514,6 @@ interface ItineraryItem  {
   day_number?: number
   day_index: number
 }
-interface PackingItem    { id: string; name: string; quantity: number; packed: boolean }
 interface TripMember     {
   id: string
   user_id: string
@@ -586,7 +528,7 @@ interface TripMember     {
     avatar_url?: string
   }
 }
-interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[]; packing_list: PackingItem[] }
+interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
 interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
 // Google Places shape (returned by /api/places proxy)
@@ -684,7 +626,7 @@ const copiedText        = ref('📋 Copy')
 const selectedDay       = ref(1)
 const mapContainer      = ref<HTMLElement | null>(null)
 const toastMsg          = ref('')
-const toastType         = ref<'success' | 'error'>('success')
+const toastType         = ref<'success' | 'error' | 'info'>('success')
 const savedTripViewMeta = ref<PersistedTripViewMeta | null>(null)
 
 // Weather
@@ -693,7 +635,7 @@ const weatherLoading    = ref(false)
 const selectedWeatherDay = ref(0)
 
 // Group chat
-const { getOrCreateChatForTrip, joinChat, currentUserId } = useGroupChat()
+const { getOrCreateChatForTrip, createChat, joinChat, currentUserId } = useGroupChat()
 
 // Attractions — fetched from your backend /api/attractions
 const allAttractions             = ref<Attraction[]>([])
@@ -707,15 +649,12 @@ const ROUTE_PROXIMITY_KM         = 20
 // Exact coords for the selected attraction (attraction mode only)
 const selectedAttractionCoords = ref<{ lat: number; lng: number } | null>(null)
 
-// POIs — fetched from your backend /api/points-of-interest
-const allPOIs     = ref<POI[]>([])
-const poisLoading = ref(false)
+// Nearby POIs removed
 
 // Schedule: day → list of ScheduleItems
 const schedule = ref<Record<number, ScheduleItem[]>>({})
 
 let leafletMap:    L.Map        | null = null
-let poiLayerGroup: L.LayerGroup | null = null
 let attractionLayerGroup: L.LayerGroup | null = null
 let attractionMarkers: Map<string, L.Marker> = new Map()
 let destinationMarker: L.Marker | null = null
@@ -1591,14 +1530,29 @@ const savePlan = async () => {
        window.history.replaceState({}, '', `/trip/results/${data.id}`)
     }
 
+    // Generate invite link automatically for Solo trips
+    if (travelType.value === 'solo' && persistedTripId) {
+      try {
+        await generateInviteTokenForTrip(persistedTripId)
+      } catch (err) {
+        console.error('Error generating invite token for Solo trip:', err)
+      }
+    }
+
     // Auto-create/get group chat for the trip
     try {
-      if (!tripId.value && persistedTripId) {
-        // New trip created, automatically create group chat
-        await getOrCreateChatForTrip(persistedTripId)
-      } else if (tripId.value && persistedTripId) {
-        // Existing trip updated, ensure group chat exists
-        await getOrCreateChatForTrip(persistedTripId)
+      if (persistedTripId) {
+        const chat = await getOrCreateChatForTrip(
+          persistedTripId,
+          tripData.value?.title,
+          formattedMembers.value,
+        )
+        if (chat) {
+          groupChat.value = chat
+          hasJoinedGroupChat.value = currentUserId.value
+            ? chat.members?.some(m => String(m.id) === String(currentUserId.value)) ?? false
+            : false
+        }
       }
     } catch (err) {
       console.error('Error creating group chat:', err)
@@ -1616,7 +1570,7 @@ const savePlan = async () => {
 }
 
 // ─── Toast helper ──────────────────────────────────────────────────────────────
-const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
   toastMsg.value  = msg
   toastType.value = type
   setTimeout(() => { toastMsg.value = '' }, 3000)
@@ -1645,6 +1599,7 @@ const fetchTrip = async () => {
     })
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`) }
     tripData.value = await res.json()
+    await refreshTripGroupChatStatus()
 
     const persistedMeta = readTripViewMeta(tripId.value)
     if (qPlanMode.value === 'attraction' && qAttractionId.value) {
@@ -1725,31 +1680,9 @@ const fetchTrip = async () => {
   }
 }
 
-const togglePacking = async (itemId: string) => {
-  if (!tripId.value) return
-  const token = localStorage.getItem('auth_token')
-  
-  await fetch(`${API_BASE}/api/trips/${tripId.value}/packing/${itemId}/toggle`, {
-    method: 'PATCH', 
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  const item = tripData.value?.packing_list.find(p => p.id === itemId)
-  if (item) item.packed = !item.packed
-}
+// Packing toggle removed
 
-// ─── Filters / POIs — fetched from YOUR backend ───────────────────────────────
-const filters = ref<Filter[]>([
-  { id: 'hospital',   label: 'Hospital',   icon: '🏥', active: false },
-  { id: 'police',     label: 'Police',     icon: '🚔', active: false },
-  { id: 'atm',        label: 'ATM',        icon: '💰', active: false },
-  { id: 'restaurant', label: 'Restaurant', icon: '🍽️', active: false },
-])
-
-const fetchPOIs = async () => {
-  // No POI endpoint available in the backend — section shows empty state
-  poisLoading.value = false
-  allPOIs.value = []
-}
+// Nearby services feature removed
 
 /** After allAttractions loads, resolve the exact lat/lng of the chosen attraction */
 const resolveSelectedAttractionCoords = () => {
@@ -1793,22 +1726,7 @@ watch(
   { immediate: false }
 )
 
-const filteredPOIs = computed(() => {
-  const activeTypes = filters.value.filter(f => f.active).map(f => f.id)
-  if (!activeTypes.length) return allPOIs.value
-
-  return allPOIs.value.filter(p =>
-    activeTypes.some(t => (p.type ?? '').toLowerCase().includes(t))
-  )
-})
-
-const getCountByType = (type: string) =>
-  allPOIs.value.filter(p => (p.type ?? '').toLowerCase().includes(type)).length
-
-const toggleFilter = (id: string) => {
-  const f = filters.value.find(f => f.id === id)
-  if (f) f.active = !f.active
-}
+// Nearby service filters and computed lists removed
 
 // ─── Map ──────────────────────────────────────────────────────────────────────
 const fetchRoadRoute = async (o: [number, number], d: [number, number]): Promise<[number, number][]> => {
@@ -1873,7 +1791,6 @@ const initMap = async () => {
     leafletMap.setView(oC, 8)
   }
 
-  poiLayerGroup = L.layerGroup().addTo(leafletMap)
   attractionLayerGroup = L.layerGroup().addTo(leafletMap)
 
   if (isAttractionMode && !hasResolvedAttractionDestination) {
@@ -1939,18 +1856,6 @@ watch(selectedAttractionCoords, async (coords) => {
   }).addTo(leafletMap)
 })
 
-const updatePoiMarkers = () => {
-  if (!leafletMap || !poiLayerGroup) return
-  poiLayerGroup.clearLayers()
-  const base: [number, number] = provinceCoords[destination.value] || [11.5564, 104.9282]
-  const off: [number, number][] = [[-0.04,0.05],[0.06,-0.03],[-0.02,0.08],[0.05,0.06],[-0.07,-0.04],[0.03,-0.08],[0.08,0.01],[-0.05,0.07]]
-  filteredPOIs.value.forEach((poi, i) => {
-    const o = off[i % off.length]
-    L.marker([base[0]+o[0], base[1]+o[1]], {
-      icon: L.divIcon({ html: `<div class="lf-poi">${poi.icon}</div>`, className: '', iconSize: [36,36], iconAnchor: [18,18] })
-    }).bindPopup(`<div class="lf-popup"><b>${poi.icon} ${poi.name}</b><br/><span style="color:#666;font-size:12px">${poi.description}</span><br/><span style="color:#999;font-size:11px">📍 ${poi.distance}</span></div>`, { maxWidth: 200 }).addTo(poiLayerGroup!)
-  })
-}
 
 // Pin route attractions on the map when loaded
 watch(routeAttractions, (places) => {
@@ -1984,42 +1889,106 @@ watch(routeAttractions, (places) => {
   })
 }, { deep: true, immediate: true })
 
-watch(filteredPOIs, updatePoiMarkers, { deep: true })
+// Nearby POI marker updates removed
+
+let groupChatRefreshTimer: ReturnType<typeof setInterval> | null = null
+
+// ─── Group Chat State Refresh ─────────────────────────────────────────────────
+const refreshTripGroupChatStatus = async () => {
+  if (!tripId.value) return
+  try {
+    const existing = await findTripGroupChat(tripId.value, tripData.value?.title)
+    if (existing) {
+      groupChat.value = existing
+      hasJoinedGroupChat.value = existing.members?.some(m => String(m.id) === String(currentUserId.value)) ?? false
+    } else {
+      groupChat.value = null
+      hasJoinedGroupChat.value = false
+    }
+  } catch (err) {
+    console.debug('Group chat refresh check:', err)
+  }
+}
+
+const refreshTripDataAndChatStatus = async () => {
+  if (!tripId.value) return
+  try {
+    await fetchTrip()
+  } catch (err) {
+    console.debug('Trip refresh failed:', err)
+  }
+  await refreshTripGroupChatStatus()
+}
+
+watch(showMembersPanel, async (isOpen) => {
+  if (isOpen) {
+    await refreshTripGroupChatStatus()
+    if (groupChatRefreshTimer) clearInterval(groupChatRefreshTimer)
+    groupChatRefreshTimer = setInterval(refreshTripGroupChatStatus, 5000)
+  } else if (groupChatRefreshTimer) {
+    clearInterval(groupChatRefreshTimer)
+    groupChatRefreshTimer = null
+  }
+})
+
+onUnmounted(() => {
+  if (groupChatRefreshTimer) {
+    clearInterval(groupChatRefreshTimer)
+    groupChatRefreshTimer = null
+  }
+})
 
 // ─── Share ────────────────────────────────────────────────────────────────────
 const inviteToken = ref(tripData.value?.invite_token ?? '')
 watch(tripData, (t) => { if (t?.invite_token) inviteToken.value = t.invite_token })
 
 const shareLink = computed(() => {
-  if (inviteToken.value)
-    return `${window.location.origin}/trip/join/${inviteToken.value}`
+  if (inviteToken.value) {
+    const base = `${window.location.origin}/trip/join/${inviteToken.value}`
+    if (effectivePlanMode.value === 'attraction' && effectiveAttractionId.value && effectiveAttractionName.value) {
+      return `${base}?mode=attraction&attractionId=${encodeURIComponent(effectiveAttractionId.value)}&attractionName=${encodeURIComponent(effectiveAttractionName.value)}`
+    }
+    return base
+  }
   if (tripId.value)
     return `${window.location.origin}/trip/results/${tripId.value}`
   return `${window.location.origin}/trip/results?origin=${origin.value}&dest=...` // ← fixed ?dest=
 })
 
+const canInvite = computed(() => !!tripId.value || !!inviteToken.value)
 const isGeneratingToken = ref(false)
+const generateInviteTokenForTrip = async (targetTripId: string) => {
+  if (!targetTripId || inviteToken.value) return
+  const endpoints = [
+    `/api/trips/${targetTripId}/invite-token`,
+    `/api/trips/${targetTripId}/invite`,
+    `/api/trips/${targetTripId}/share`,
+  ]
+  for (const ep of endpoints) {
+    try {
+      const res = await API.post(ep)
+      const data = res.data
+      const generated = data?.invite_token ?? data?.token
+                      ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
+      if (generated) {
+        inviteToken.value = String(generated)
+        return
+      }
+    } catch {
+      continue
+    }
+  }
+}
+
 const openShareModal = async () => {
+  if (!canInvite.value) return
   showShareModal.value = true
-  if (inviteToken.value || !tripId.value) return  // already have one
+  if (inviteToken.value || !tripId.value) return  // already have one or no saved plan
   const authToken = localStorage.getItem('auth_token')
   if (!authToken) return
   isGeneratingToken.value = true
   try {
-    const endpoints = [
-      `/api/trips/${tripId.value}/invite-token`,
-      `/api/trips/${tripId.value}/invite`,
-      `/api/trips/${tripId.value}/share`,
-    ]
-    for (const ep of endpoints) {
-      try {
-        const res = await API.post(ep)
-        const data = res.data
-        const generated = data?.invite_token ?? data?.token
-                        ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
-        if (generated) { inviteToken.value = String(generated); break }
-      } catch { /* try next */ }
-    }
+    await generateInviteTokenForTrip(tripId.value)
   } catch { /* ignore */ } finally {
     isGeneratingToken.value = false
   }
@@ -2046,6 +2015,9 @@ const shareToFacebook = () => window.open(`https://www.facebook.com/sharer/share
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 // ─── Group Chat Handlers ────────────────────────────────────────────────────
+const groupChat = ref<GroupChat | null>(null)
+const hasJoinedGroupChat = ref(false)
+
 const formattedMembers = computed(() => {
   if (!tripData.value?.members) return []
   return tripData.value.members.map(member => {
@@ -2060,23 +2032,72 @@ const formattedMembers = computed(() => {
   })
 })
 
-const handleJoinedGroupChat = async () => {
+const handleCreateGroupChat = async () => {
+  try {
+    if (!tripId.value) {
+      showToast('Please save the trip first before creating the message group', 'error')
+      return
+    }
+
+    const existing = await findTripGroupChat(tripId.value, tripData.value?.title)
+    if (existing) {
+      groupChat.value = existing
+      hasJoinedGroupChat.value = existing.members?.some(m => String(m.id) === String(currentUserId.value)) ?? false
+      showToast('A message group already exists for this trip.', 'info')
+      return
+    }
+
+    const chat = await createChat(tripId.value, formattedMembers.value, tripData.value?.title)
+    if (chat) {
+      groupChat.value = chat
+      hasJoinedGroupChat.value = chat.members?.some(m => String(m.id) === String(currentUserId.value)) ?? false
+      showToast('Message group created successfully!', 'success')
+    }
+  } catch (error) {
+    console.error('Error creating group chat:', error)
+    
+    // Try to recover: check if the group was actually created despite the error
+    try {
+      const recovered = await findTripGroupChat(tripId.value, tripData.value?.title)
+      if (recovered) {
+        groupChat.value = recovered
+        hasJoinedGroupChat.value = recovered.members?.some(m => String(m.id) === String(currentUserId.value)) ?? false
+        showToast('Message group created!', 'success')
+        return
+      }
+    } catch (recoveryError) {
+      console.error('Error during recovery:', recoveryError)
+    }
+    
+    showToast('Failed to create message group. Please try again.', 'error')
+  }
+}
+
+const handleJoinedGroupChat = async (payload?: { tripId?: string; members?: any[] }) => {
   try {
     if (!tripId.value) {
       showToast('Please save the trip first before joining chat', 'error')
       return
     }
 
-    const chat = await getOrCreateChatForTrip(tripId.value)
+    // If the PlanMembers component passed members in the event payload,
+    // forward them so the service can create the group with the full member list.
+    const membersToUse = payload?.members ?? formattedMembers.value
+    const chat = await getOrCreateChatForTrip(tripId.value, tripData.value?.title, membersToUse)
     if (chat) {
-      if (currentUserId.value && !chat.members.some(m => String(m.id) === String(currentUserId.value))) {
-        await joinChat(chat.id)
+      groupChat.value = chat
+      if (currentUserId.value && !chat.members?.some(m => String(m.id) === String(currentUserId.value))) {
+        const joined = await joinChat(chat.id)
+        if (joined) {
+          groupChat.value = joined
+        }
       }
-      showToast('Successfully joined group chat!', 'success')
-      setTimeout(() => {
-        showMembersPanel.value = false
-        router.push({ name: 'chat', query: { convId: String(chat.id) } })
-      }, 1000)
+      hasJoinedGroupChat.value = true
+      showToast('Redirecting to group chat...', 'success')
+      // Close modal and navigate immediately
+      showMembersPanel.value = false
+      await nextTick()
+      router.push({ name: 'chat', query: { convId: String(chat.id) } })
     }
   } catch (error) {
     console.error('Error joining group chat:', error)
@@ -2091,16 +2112,17 @@ const handleOpenGroupChat = async () => {
       return
     }
 
-    const chat = await getOrCreateChatForTrip(tripId.value)
+    const chat = await getOrCreateChatForTrip(tripId.value, tripData.value?.title)
     if (chat) {
-      if (currentUserId.value && !chat.members.some(m => String(m.id) === String(currentUserId.value))) {
-        await joinChat(chat.id)
+      if (currentUserId.value && !chat.members?.some(m => String(m.id) === String(currentUserId.value))) {
+        const joined = await joinChat(chat.id)
+        if (joined) {
+          groupChat.value = joined
+        }
       }
       showMembersPanel.value = false
-      showToast('Opening group chat...', 'success')
-      setTimeout(() => {
-        router.push({ name: 'chat', query: { convId: String(chat.id) } })
-      }, 300)
+      await nextTick()
+      router.push({ name: 'chat', query: { convId: String(chat.id) } })
     }
   } catch (error) {
     console.error('Error opening group chat:', error)
@@ -2113,7 +2135,7 @@ onMounted(async () => {
     await fetchTrip()
     await nextTick()
     await initMap()
-    await Promise.all([fetchWeather(), fetchAttractions(), fetchPOIs()])
+    await Promise.all([fetchWeather(), fetchAttractions()])
   } catch (err: any) {
     console.error('[TripResultsView] onMounted error:', err)
     apiError.value = err?.message || 'Something went wrong loading the trip results.'
@@ -2124,7 +2146,6 @@ onUnmounted(() => {
   leafletMap = null
   destinationMarker = null
   attractionLayerGroup = null
-  poiLayerGroup = null
 })
 </script>
 
