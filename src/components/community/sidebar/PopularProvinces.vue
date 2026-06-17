@@ -1,23 +1,37 @@
 <template>
-  <section class="sidebar-card">
-    <div class="sidebar-card__head">
-      <h3>Popular provinces</h3>
-      <p>Places with the heaviest story activity this month.</p>
+  <div class="sidebar-card">
+    <div class="sidebar-card__header">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <h4 class="sidebar-card__title">Popular Provinces</h4>
     </div>
 
-    <div class="province-list">
-      <article v-for="province in provinces" :key="province.id" class="province-item">
-        <div class="province-item__image" :style="{ backgroundImage: `url(${province.image})` }" />
-        <div class="province-item__body">
-          <div class="province-item__row">
-            <strong>{{ province.name }}</strong>
-            <span>{{ province.storyCount }} posts</span>
+    <div class="provinces-grid">
+      <a
+        v-for="province in provinces"
+        :key="province.id"
+        :href="`/provinces/${province.slug}`"
+        class="province-card"
+      >
+        <div class="province-card__img-wrap">
+          <img
+            v-if="province.image"
+            :src="province.image"
+            :alt="province.name"
+            class="province-card__img"
+            loading="lazy"
+            @error="onImgError"
+          />
+          <div v-else class="province-card__placeholder">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           </div>
-          <p>{{ province.descriptor }}</p>
+          <div class="province-card__overlay">
+            <span class="province-card__name">{{ province.name }}</span>
+            <span class="province-card__count">{{ province.stories }} stories</span>
+          </div>
         </div>
-      </article>
+      </a>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -26,75 +40,113 @@ import type { PopularProvince } from '@/data/community'
 defineProps<{
   provinces: PopularProvince[]
 }>()
+
+function onImgError(e: Event) {
+  const img = e.target as HTMLImageElement
+  img.style.display = 'none'
+  const placeholder = img.parentElement?.querySelector('.province-card__placeholder') as HTMLElement
+  if (placeholder) placeholder.style.display = 'flex'
+}
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Cinzel:wght@500;600&display=swap');
+
 .sidebar-card {
-  padding: 22px;
-  border: 1px solid rgba(13, 19, 33, 0.08);
-  border-radius: 24px;
   background: #fff;
-  box-shadow: 0 18px 44px rgba(18, 26, 47, 0.08);
+  border: 1px solid #E8E2D6;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(26,26,46,0.07);
+  overflow: hidden;
 }
 
-.sidebar-card__head {
-  margin-bottom: 16px;
-}
-
-.sidebar-card__head h3 {
-  margin: 0 0 4px;
-  color: #111827;
-  font-family: 'Cinzel', serif;
-  font-size: 22px;
-}
-
-.sidebar-card__head p {
-  margin: 0;
-  color: #6b7280;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.province-list {
-  display: grid;
-  gap: 14px;
-}
-
-.province-item {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
-}
-
-.province-item__image {
-  height: 78px;
-  border-radius: 18px;
-  background-size: cover;
-  background-position: center;
-}
-
-.province-item__row {
+.sidebar-card__header {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 4px;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #E8E2D6;
+  color: #2A9D8F;
 }
 
-.province-item__row strong {
-  color: #111827;
-  font-size: 14px;
-}
-
-.province-item__row span {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.province-item__body p {
-  margin: 0;
-  color: #4b5563;
+.sidebar-card__title {
+  font-family: 'Cinzel', serif;
   font-size: 13px;
-  line-height: 1.6;
+  font-weight: 600;
+  color: #1A1A2E;
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+.provinces-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 14px;
+}
+
+.province-card {
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  position: relative;
+  aspect-ratio: 4/3;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.province-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(26,26,46,0.14);
+}
+
+.province-card__img-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #E8E2D6;
+}
+
+.province-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s;
+}
+.province-card:hover .province-card__img {
+  transform: scale(1.06);
+}
+
+.province-card__placeholder {
+  display: none;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #E8E2D6, #F8F6F1);
+  color: #9896A8;
+}
+
+.province-card__overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 10px 10px;
+  background: linear-gradient(to top, rgba(10,10,26,0.75) 0%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.province-card__name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+.province-card__count {
+  font-size: 10px;
+  color: rgba(255,255,255,0.72);
 }
 </style>

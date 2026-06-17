@@ -1,241 +1,165 @@
 <template>
-  <section class="filter-bar">
-    <div class="filter-bar__inner">
-      <div class="filter-bar__tabs" aria-label="Community categories">
-        <button
-          v-for="category in categories"
-          :key="category"
-          class="filter-bar__tab"
-          :class="{ active: activeCategory === category }"
-          type="button"
-          @click="emit('changeCategory', category)"
+  <div class="filter-bar">
+    <div class="filter-bar__categories">
+      <button
+        v-for="cat in categories"
+        :key="cat"
+        class="cat-btn"
+        :class="{ active: modelCategory === cat }"
+        @click="$emit('update:modelCategory', cat)"
+      >
+        <span class="cat-dot" :class="'dot-' + catKey(cat)" />
+        {{ cat }}
+      </button>
+    </div>
+
+    <div class="filter-bar__right">
+      <div class="sort-wrap">
+        <svg class="sort-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="15" y2="18"/></svg>
+        <select
+          :value="modelSort"
+          @change="$emit('update:modelSort', ($event.target as HTMLSelectElement).value)"
+          class="sort-select"
         >
-          {{ category }}
-        </button>
-      </div>
-
-      <div class="filter-bar__controls">
-        <label class="filter-bar__search">
-          <span class="filter-bar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="7" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </span>
-          <input
-            :value="searchQuery"
-            type="search"
-            placeholder="Search stories, places, or travelers"
-            @input="emitSearch"
-          />
-        </label>
-
-        <label class="filter-bar__sort">
-          <span>Sort</span>
-          <select :value="sortOption" @change="emitSort">
-            <option v-for="option in sortOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </label>
+          <option value="latest">Latest</option>
+          <option value="popular">Most Liked</option>
+          <option value="discussed">Most Discussed</option>
+          <option value="top-rated">Top Rated</option>
+        </select>
+        <svg class="sort-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import type {
-  CommunityCategory,
-  CommunitySortOption,
-} from '@/data/community'
+import { communityCategories } from '@/data/community'
+import type { CommunityCategory, CommunitySortOption } from '@/data/community'
 
 defineProps<{
-  categories: CommunityCategory[]
-  activeCategory: CommunityCategory
-  searchQuery: string
-  sortOption: CommunitySortOption
-  sortOptions: Array<{
-    label: string
-    value: CommunitySortOption
-  }>
+  modelCategory: CommunityCategory
+  modelSort: CommunitySortOption
 }>()
 
-const emit = defineEmits<{
-  changeCategory: [category: CommunityCategory]
-  'update:searchQuery': [value: string]
-  'update:sortOption': [value: CommunitySortOption]
+defineEmits<{
+  (e: 'update:modelCategory', v: CommunityCategory): void
+  (e: 'update:modelSort', v: CommunitySortOption): void
 }>()
 
-function emitSearch(event: Event) {
-  emit('update:searchQuery', (event.target as HTMLInputElement).value)
-}
+const categories = communityCategories
 
-function emitSort(event: Event) {
-  emit('update:sortOption', (event.target as HTMLSelectElement).value as CommunitySortOption)
+const CAT_MAP: Record<string, string> = {
+  All: 'all', Natural: 'natural', Food: 'food', Sea: 'sea',
+  Cultural: 'cultural', Waterfall: 'waterfall', Mountain: 'mountain', Forest: 'forest'
 }
+function catKey(c: string) { return CAT_MAP[c] ?? 'all' }
 </script>
 
 <style scoped>
-.filter-bar {
-  position: sticky;
-  top: 64px;
-  z-index: 40;
-  padding: 0 40px 24px;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(18, 26, 47, 0.98) 0%,
-      rgba(18, 26, 47, 0.88) 70%,
-      rgba(18, 26, 47, 0) 100%
-    );
-}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
-.filter-bar__inner {
-  max-width: 1400px;
-  margin: 0 auto;
+.filter-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 18px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 18px 50px rgba(5, 8, 15, 0.22);
-}
-
-.filter-bar__tabs {
-  display: flex;
-  gap: 10px;
-  flex: 1 1 560px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.filter-bar__tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.filter-bar__tab {
-  flex-shrink: 0;
-  min-height: 40px;
-  padding: 0 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.filter-bar__tab:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.28);
-}
-
-.filter-bar__tab.active {
-  background: #c8922a;
-  border-color: #c8922a;
-  color: #fff;
-}
-
-.filter-bar__controls {
-  display: flex;
-  flex: 1 1 380px;
-  justify-content: flex-end;
   gap: 12px;
-}
-
-.filter-bar__search,
-.filter-bar__sort {
-  min-height: 46px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid #E8E2D6;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 12px rgba(26,26,46,0.07);
+  flex-wrap: wrap;
 }
 
-.filter-bar__search {
+.filter-bar__categories {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1 1 250px;
-  padding: 0 14px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.filter-bar__icon {
-  width: 18px;
-  height: 18px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.filter-bar__icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.filter-bar__search input,
-.filter-bar__sort select {
-  width: 100%;
+.cat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1.5px solid #E8E2D6;
+  border-radius: 999px;
   background: transparent;
-  border: none;
-  outline: none;
-  color: #fff;
+  color: #5A5A72;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.cat-btn:hover {
+  border-color: #2A9D8F;
+  color: #2A9D8F;
+  background: #E6F5F4;
+}
+.cat-btn.active {
+  border-color: #2A9D8F;
+  background: #2A9D8F;
+  color: #fff;
+}
+.cat-btn.active .cat-dot {
+  background: rgba(255,255,255,0.7);
 }
 
-.filter-bar__search input::placeholder {
-  color: rgba(255, 255, 255, 0.36);
+/* Category color dots */
+.cat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-all       { background: #9896A8; }
+.dot-natural   { background: #2A9D8F; }
+.dot-food      { background: #C8922A; }
+.dot-sea       { background: #1D6FA4; }
+.dot-cultural  { background: #7B5EA7; }
+.dot-waterfall { background: #4361ee; }
+.dot-mountain  { background: #5C4B8A; }
+.dot-forest    { background: #2D6A4F; }
+
+/* Sort */
+.filter-bar__right {
+  flex-shrink: 0;
 }
 
-.filter-bar__sort {
+.sort-wrap {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 180px;
-  padding: 0 14px;
+  gap: 6px;
+  background: #F8F6F1;
+  border: 1px solid #E8E2D6;
+  border-radius: 999px;
+  padding: 0 14px 0 10px;
+  height: 36px;
+  transition: border-color 0.15s;
+}
+.sort-wrap:focus-within {
+  border-color: #2A9D8F;
+  box-shadow: 0 0 0 3px #E6F5F4;
 }
 
-.filter-bar__sort span {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+.sort-icon { color: #9896A8; flex-shrink: 0; }
 
-.filter-bar__sort select {
+.sort-select {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A2E;
   cursor: pointer;
+  appearance: none;
+  padding-right: 4px;
 }
 
-.filter-bar__sort option {
-  color: #101827;
-}
-
-@media (max-width: 900px) {
-  .filter-bar__controls {
-    justify-content: stretch;
-  }
-}
-
-@media (max-width: 640px) {
-  .filter-bar {
-    padding: 0 20px 20px;
-  }
-
-  .filter-bar__inner {
-    padding: 16px;
-  }
-
-  .filter-bar__controls {
-    flex-direction: column;
-  }
-
-  .filter-bar__sort {
-    min-width: 0;
-  }
-}
+.sort-chevron { color: #9896A8; flex-shrink: 0; pointer-events: none; }
 </style>

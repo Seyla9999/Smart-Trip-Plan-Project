@@ -1,107 +1,140 @@
 <template>
-  <section class="sidebar-card">
-    <div class="sidebar-card__head">
-      <h3>Trending places</h3>
-      <p>Top spots travelers are talking about right now.</p>
+  <div class="sidebar-card">
+    <div class="sidebar-card__header">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <h4 class="sidebar-card__title">Trending Places</h4>
     </div>
 
-    <div class="trend-list">
-      <article v-for="place in places" :key="place.id" class="trend-item">
-        <div class="trend-item__rank">{{ place.id }}</div>
-        <div class="trend-item__body">
-          <div class="trend-item__row">
-            <strong>{{ place.name }}</strong>
-            <span>{{ place.mentions }} mentions</span>
-          </div>
-          <div class="trend-item__meta">{{ place.province }} · {{ place.category }}</div>
-          <p>{{ place.summary }}</p>
+    <ul class="trend-list">
+      <li v-for="(place, idx) in places" :key="place.id" class="trend-item">
+        <span class="trend-num">{{ String(idx + 1).padStart(2, '0') }}</span>
+        <div class="trend-info">
+          <span class="trend-name">{{ place.name }}</span>
+          <span class="trend-cat">{{ place.category }}</span>
         </div>
-      </article>
-    </div>
-  </section>
+        <div class="trend-bar-wrap">
+          <div
+            class="trend-bar"
+            :style="{ width: barWidth(place.visits, maxVisits) + '%' }"
+          />
+        </div>
+        <span class="trend-count">{{ formatCount(place.visits) }}</span>
+      </li>
+    </ul>
+  </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { TrendingPlace } from '@/data/community'
 
-defineProps<{
+const props = defineProps<{
   places: TrendingPlace[]
 }>()
+
+const maxVisits = computed(() => Math.max(...props.places.map(p => p.visits), 1))
+
+function barWidth(visits: number, max: number) {
+  return Math.round((visits / max) * 100)
+}
+function formatCount(n: number) {
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+  return n.toString()
+}
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Cinzel:wght@500;600&display=swap');
+
 .sidebar-card {
-  padding: 22px;
-  border: 1px solid rgba(13, 19, 33, 0.08);
-  border-radius: 24px;
   background: #fff;
-  box-shadow: 0 18px 44px rgba(18, 26, 47, 0.08);
+  border: 1px solid #E8E2D6;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(26,26,46,0.07);
+  overflow: hidden;
 }
 
-.sidebar-card__head {
-  margin-bottom: 16px;
+.sidebar-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #E8E2D6;
+  color: #2A9D8F;
 }
 
-.sidebar-card__head h3 {
-  margin: 0 0 4px;
-  color: #111827;
+.sidebar-card__title {
   font-family: 'Cinzel', serif;
-  font-size: 22px;
-}
-
-.sidebar-card__head p {
-  margin: 0;
-  color: #6b7280;
   font-size: 13px;
-  line-height: 1.6;
+  font-weight: 600;
+  color: #1A1A2E;
+  margin: 0;
+  letter-spacing: 0.03em;
 }
 
 .trend-list {
-  display: grid;
-  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 12px 0 6px;
 }
 
 .trend-item {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 12px;
-}
-
-.trend-item__rank {
-  display: inline-flex;
+  grid-template-columns: 24px 1fr auto auto;
   align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  background: #1a2340;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.trend-item__row {
-  display: flex;
-  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 3px;
+  padding: 8px 18px;
+  transition: background 0.15s;
+}
+.trend-item:hover { background: #F8F6F1; }
+
+.trend-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9896A8;
+  font-variant-numeric: tabular-nums;
 }
 
-.trend-item__row strong {
-  color: #111827;
-  font-size: 14px;
+.trend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
-
-.trend-item__row span,
-.trend-item__meta {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.trend-item p {
-  margin: 8px 0 0;
-  color: #4b5563;
+.trend-name {
   font-size: 13px;
-  line-height: 1.6;
+  font-weight: 600;
+  color: #1A1A2E;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trend-cat {
+  font-size: 11px;
+  color: #9896A8;
+}
+
+.trend-bar-wrap {
+  width: 40px;
+  height: 4px;
+  background: #F0EDE8;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.trend-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #2A9D8F, #C8922A);
+  border-radius: 99px;
+  transition: width 0.6s ease;
+  min-width: 8%;
+}
+
+.trend-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5A5A72;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+  text-align: right;
 }
 </style>

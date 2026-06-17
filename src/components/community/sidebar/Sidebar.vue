@@ -1,9 +1,9 @@
 <template>
-  <aside class="community-sidebar">
+  <div class="sidebar-stack">
     <TrendingList :places="trendingPlaces" />
-    <TopTravelers :travelers="travelers" @toggle-follow="emit('toggleFollow', $event)" />
+    <TopTravelers :travelers="travelers" />
     <PopularProvinces :provinces="provinces" />
-  </aside>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -21,23 +21,12 @@ defineProps<{
   travelers: TopTraveler[]
   provinces: PopularProvince[]
 }>()
-
-const emit = defineEmits<{
-  toggleFollow: [id: number]
-}>()
 </script>
 
 <style scoped>
-.community-sidebar {
-  position: sticky;
-  top: 128px;
-  display: grid;
-  gap: 18px;
-}
-
-@media (max-width: 1100px) {
-  .community-sidebar {
-    position: static;
-  }
+.sidebar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 </style>

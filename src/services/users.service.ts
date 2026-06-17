@@ -31,4 +31,10 @@ export const getUsersCount = async (): Promise<number> => {
 
 export const updateUserStatus = (id: string, status: 'active' | 'banned') =>
   API.patch(`/users/${id}/status`, { status })
+
+export const getUserById = async (id: string) => {
+  const response = await API.get(`/users/${id}`)
+  return response.data?.data ?? response.data
+}
+
 export const createUser = (userData: any) => API.post('/users', userData)
