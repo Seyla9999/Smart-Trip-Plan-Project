@@ -4,7 +4,7 @@
     <!-- ── Composer Bar ──────────────────────────────────────── -->
     <div class="composer-bar">
       <div class="composer-bar__avatar">
-        <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.name" class="av-img" />
+        <img v-if="currentUser.avatar" :src="getAvatarSrc(currentUser.avatar)" :alt="currentUser.name" class="av-img" />
         <span v-else class="av-fallback">{{ currentUser.initials }}</span>
       </div>
 
@@ -32,9 +32,9 @@
         <div v-if="showComposer" class="modal-overlay" @click.self="cancelComposer">
           <div class="modal-container">
             <div class="modal-header">
-              <div class="modal-header__left">
+                <div class="modal-header__left">
                 <div class="modal-av">
-                  <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.name" class="av-img" />
+                  <img v-if="currentUser.avatar" :src="getAvatarSrc(currentUser.avatar)" :alt="currentUser.name" class="av-img" />
                   <span v-else class="av-fallback av-sm">{{ currentUser.initials }}</span>
                 </div>
                 <div>
@@ -148,7 +148,7 @@
               <!-- avatar_url from users JOIN or author_avatar_url column; falls back to initials on error -->
               <img
                 v-if="story.author.avatar && !brokenAvatars[story.id]"
-                :src="story.author.avatar"
+                :src="getAvatarSrc(story.author.avatar)"
                 :alt="story.author.name"
                 class="av-img"
                 @error="brokenAvatars[story.id] = true"
@@ -181,20 +181,38 @@
 
           <!-- Single image -->
           <div v-if="story.images && story.images.length === 1" class="post-img-wrap">
-            <img :src="story.images[0]" :alt="story.title" class="post-img" loading="lazy" />
+            <img
+              :src="story.images[0]"
+              :alt="story.title"
+              class="post-img post-img--clickable"
+              loading="lazy"
+              @click="openImageViewer(story.images[0])"
+            />
           </div>
 
           <!-- Multi image grid -->
           <div v-else-if="story.images && story.images.length > 1" class="post-img-grid" :class="'count-' + Math.min(story.images.length, 4)">
             <div v-for="(img, idx) in story.images.slice(0, 4)" :key="idx" class="post-img-item">
-              <img :src="img" :alt="story.title" class="post-img" loading="lazy" />
+              <img
+                :src="img"
+                :alt="story.title"
+                class="post-img post-img--clickable"
+                loading="lazy"
+                @click="openImageViewer(img)"
+              />
               <div v-if="idx === 3 && story.images.length > 4" class="more-imgs-overlay">+{{ story.images.length - 3 }}</div>
             </div>
           </div>
 
           <!-- Legacy fallback -->
           <div v-else-if="story.image" class="post-img-wrap">
-            <img :src="story.image" :alt="story.title" class="post-img" loading="lazy" />
+            <img
+              :src="story.image"
+              :alt="story.title"
+              class="post-img post-img--clickable"
+              loading="lazy"
+              @click="openImageViewer(story.image)"
+            />
           </div>
 
           <div class="post-footer">
@@ -281,7 +299,7 @@
           <div class="profile-card__bg" />
           <div class="profile-card__body">
             <div class="profile-card__av-wrap">
-              <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.name" class="profile-av-img" />
+              <img v-if="currentUser.avatar" :src="getAvatarSrc(currentUser.avatar)" :alt="currentUser.name" class="profile-av-img" />
               <span v-else class="profile-av-fallback">{{ currentUser.initials }}</span>
             </div>
             <h3 class="profile-name">{{ currentUser.name }}</h3>
@@ -308,6 +326,13 @@
           @toggle-follow="toggleFollowTraveler"
         />
       </aside>
+    </div>
+
+    <div v-if="imageViewerUrl" class="image-viewer-overlay" @click.self="closeImageViewer">
+      <button type="button" class="image-viewer-close" @click="closeImageViewer" aria-label="Close image viewer">
+        ×
+      </button>
+      <img :src="imageViewerUrl" alt="Preview image" class="image-viewer-img" />
     </div>
   </div>
 </template>
@@ -400,7 +425,9 @@ function updateCurrentUser() {
       const parsed = JSON.parse(raw)
       currentUser.value.id     = parsed.id || parsed.uuid || parsed.user_id || null
       currentUser.value.name   = parsed.name || parsed.username || parsed.full_name || parsed.email || 'Traveler'
-      currentUser.value.avatar = parsed.avatar || parsed.avatar_url || parsed.profile_image || null
+      // Support multiple possible avatar field names from different backends
+      currentUser.value.avatar =
+        parsed.avatar || parsed.avatar_url || parsed.profile_image || parsed.imageUrl || parsed.image || parsed.user_avatar || parsed.avatarUrl || parsed.photoURL || null
       currentUser.value.initials = currentUser.value.name
         .split(' ')
         .map((n: string) => n[0])
@@ -463,7 +490,7 @@ async function submitComment(storyId: string) {
   if (!text) return
   commentsSubmitting.value[storyId] = true
   try {
-    const comment = await addComment(storyId, text, getCurrentUserName())
+    const comment = await addComment(storyId, text, getCurrentUserName(), currentUser.value.id ?? undefined)
     if (!commentsMap.value[storyId]) commentsMap.value[storyId] = []
     commentsMap.value[storyId].push(comment)
     newCommentText.value[storyId] = ''
@@ -487,6 +514,26 @@ async function loadStories(append = false) {
   finally { loading.value = false }
 }
 function loadMore() { loadStories(true) }
+
+const imageViewerUrl = ref<string | null>(null)
+function openImageViewer(url: string | null) {
+  if (!url) return
+  imageViewerUrl.value = url
+}
+function closeImageViewer() {
+  imageViewerUrl.value = null
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
+function getAvatarSrc(url: string | null | undefined): string {
+  if (!url) return ''
+  if (typeof url !== 'string') return ''
+  if (url.startsWith('data:')) return url
+  if (url.startsWith('http')) return url
+  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) return `${API_URL}${url}`
+  return url
+}
 
 onMounted(() => {
   loadStories()
@@ -1106,6 +1153,50 @@ function catKey(c: string) { return CAT_MAP[c] ?? 'natural' }
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.post-img--clickable {
+  cursor: pointer;
+}
+
+.image-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.84);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.image-viewer-img {
+  max-width: min(100%, 1100px);
+  max-height: min(100%, calc(100vh - 80px));
+  border-radius: 18px;
+  object-fit: contain;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+}
+
+.image-viewer-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.image-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
 
 /* ── Empty state ─────────────────────────────────────────────── */
 .empty-state {

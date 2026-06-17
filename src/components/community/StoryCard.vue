@@ -33,7 +33,7 @@
       <!-- Author row -->
       <div class="story-card__author">
         <div class="story-card__av">
-          <img v-if="author.avatar" :src="author.avatar" :alt="author.name" class="story-card__av-img" />
+          <img v-if="author.avatar" :src="getAvatarSrc(author.avatar)" :alt="author.name" class="story-card__av-img" />
           <span v-else class="story-card__av-fallback" :style="{ background: author.avatarColor || '#2A9D8F' }">
             {{ author.initials }}
           </span>
@@ -135,6 +135,16 @@ const formattedDate = computed(() => {
   if (days < 7) return `${days}d ago`
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 })
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+function getAvatarSrc(url: string | null | undefined): string {
+  if (!url) return ''
+  if (typeof url !== 'string') return ''
+  if (url.startsWith('data:')) return url
+  if (url.startsWith('http')) return url
+  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) return `${API_URL}${url}`
+  return url
+}
 
 const CAT_MAP: Record<string, string> = {
   Natural: 'natural', Food: 'food', Sea: 'sea',

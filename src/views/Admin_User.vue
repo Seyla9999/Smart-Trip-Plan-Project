@@ -497,9 +497,7 @@ const loadUsers = async () => {
     const response = await getAdminUsers()
     const list = Array.isArray(response?.data)
       ? response.data
-      : Array.isArray(response?.data?.data)
-        ? response.data.data
-        : []
+      : []
 
     if (list.length) {
       users.value = list.map(mapApiUser)

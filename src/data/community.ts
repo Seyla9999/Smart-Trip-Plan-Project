@@ -17,6 +17,7 @@ export type CommunitySortOption =
   | 'top-rated'
 
 export interface CommunityAuthor {
+  id?: string
   name: string
   handle: string
   initials: string
@@ -29,13 +30,17 @@ export interface CommunityStory {
   id: string
   title: string
   excerpt: string
+  body?: string
+  image?: string
   images: string[]
+  video?: string
   category: StoryCategory
   location: string
   likes: number
   comments: number
   rating: number
   publishedAt: string
+  status?: string
   author: CommunityAuthor
   liked: boolean
 }
@@ -49,6 +54,7 @@ export interface ComposerSubmission {
   photoName?: string
   photoUrl?: string
   videoName?: string
+  videoUrl?: string
 }
 
 export interface TrendingPlace {

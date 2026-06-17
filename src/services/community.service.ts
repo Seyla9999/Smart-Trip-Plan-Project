@@ -20,65 +20,119 @@ import type { CommunityStory, StoryCategory, ComposerSubmission } from '@/data/c
 //   likes_count       int4              default 0
 //   comments_count    int4              default 0
 //   published_at      timestamptz       default now()
-//   author_avatar_url varchar           snapshot of author photo at post time
 //
-// Your backend may return these in camelCase or snake_case depending on your
-// API layer. mapStory() handles both forms.
+// Author identity should come from the joined users table via user_id.
+// Your backend may return user data as raw.user, raw.users, raw.user_name, etc.
+// mapStory() handles both nested and aliased forms.
 // ---------------------------------------------------------------------------
+
+function normalizeImageList(value: any): string[] {
+  if (!value && value !== '') return []
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => normalizeImageList(item))
+      .filter((img): img is string => typeof img === 'string' && img.trim() !== '')
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      const contents = trimmed.slice(1, -1)
+      return contents
+        .split(',')
+        .map((img) => img.trim().replace(/^"|"$/g, ''))
+        .filter((img) => img !== '')
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed
+          .flatMap((item) => normalizeImageList(item))
+          .filter((img): img is string => typeof img === 'string' && img.trim() !== '')
+      }
+      if (typeof parsed === 'string' && parsed.trim()) {
+        return [parsed.trim()]
+      }
+    } catch {
+      // not JSON, fall back to string parsing
+    }
+
+    if (trimmed.includes(',')) {
+      return trimmed
+        .split(',')
+        .map((img) => img.trim().replace(/^"|"$/g, ''))
+        .filter((img) => img !== '')
+    }
+    return [trimmed]
+  }
+  if (typeof value === 'object' && value !== null) {
+    if (typeof value.url === 'string' && value.url.trim()) return [value.url.trim()]
+    if (typeof value.image_url === 'string' && value.image_url.trim()) return [value.image_url.trim()]
+  }
+  return []
+}
 
 function mapStory(raw: any): CommunityStory {
   // ── Images ────────────────────────────────────────────────────────────────
-  // DB has a single `image_url` column. Backend may wrap it as imageUrl,
-  // image_url, imageUrls (array), etc.
-  let images: string[] = []
-
-  if (Array.isArray(raw.imageUrls) && raw.imageUrls.length > 0) {
-    images = raw.imageUrls
-  } else if (Array.isArray(raw.image_url) && raw.image_url.length > 0) {
-    images = raw.image_url
-  } else {
-    // single-value forms — snake_case and camelCase
-    const single =
-      raw.imageUrl     ??   // camelCase from API transform
-      raw.image_url    ??   // raw snake_case passthrough
-      raw.image        ??   // legacy alias
-      null
-    if (typeof single === 'string' && single.trim()) {
-      images = [single]
-    } else if (Array.isArray(single)) {
-      images = single.filter((s: any) => typeof s === 'string' && s.trim())
-    }
-  }
-  images = images.filter(img => typeof img === 'string' && img.trim() !== '')
+  // DB has a single `image_url` column, but the API may expose several aliases.
+  // It may also return comma-separated strings or nested image objects.
+  const images = [
+    ...normalizeImageList(raw.imageUrls),
+    ...normalizeImageList(raw.images),
+    ...normalizeImageList(raw.image_url),
+    ...normalizeImageList(raw.imageUrl),
+    ...normalizeImageList(raw.image),
+  ]
+  const uniqueImages = [...new Set(images.filter((img) => typeof img === 'string' && img.trim() !== ''))]
 
   // ── Author name ───────────────────────────────────────────────────────────
-  // Backend JOIN with users table may expose name under different keys.
-  // Priority: joined user name > stored author_name snapshot > fallback
+  // Priority: joined user record via user_id relationship first,
+  // then fallback to the story table snapshot fields.
   const authorName =
     raw.users?.name          ??   // Supabase-style nested join
     raw.users?.full_name     ??
     raw.users?.username      ??
+    raw.user?.name           ??   // alternate nested join payload
+    raw.user?.full_name      ??
+    raw.user?.username       ??
+    raw.authorName           ??   // flat camelCase snapshot
+    raw.author_name          ??   // flat snake_case snapshot
     raw.author?.name         ??   // REST API nested object
-    raw.authorName           ??   // flat camelCase
-    raw.author_name          ??   // flat snake_case
     'Traveler'
 
   // ── Author avatar ─────────────────────────────────────────────────────────
-  // Priority: live users.avatar_url from JOIN > stored author_avatar_url snapshot
+  // Priority: joined user avatar from the user table > story snapshot.
   const authorAvatar =
     raw.users?.avatar_url    ??   // joined from users table (most up-to-date)
+    raw.users?.profile_image ??
+    raw.users?.avatar        ??
+    raw.user?.avatar_url     ??   // alternate nested join payload
+    raw.user?.profile_image  ??
+    raw.user?.avatar         ??
+    raw.authorAvatarUrl      ??   // flat camelCase snapshot
+    raw.author_avatar_url    ??   // flat snake_case snapshot
     raw.author?.avatar       ??   // REST API nested
-    raw.authorAvatarUrl      ??   // flat camelCase
-    raw.author_avatar_url    ??   // flat snake_case (stored snapshot)
     null
 
   // ── Author ID (user_id) ───────────────────────────────────────────────────
   const authorId =
     raw.users?.id            ??
-    raw.author?.id           ??
-    raw.userId               ??
-    raw.user_id              ??
+    raw.user?.id            ??
+    raw.userId              ??
+    raw.user_id             ??
+    raw.author?.id          ??
     undefined
+
+  const authorHandle =
+    raw.users?.username     ??
+    raw.user?.username      ??
+    raw.authorHandle        ??
+    raw.author_handle       ??
+    (authorName
+      ? ('@' + String(authorName).split(' ')[0].toLowerCase())
+      : '@traveler')
 
   // ── Other fields ──────────────────────────────────────────────────────────
   // DB column is `content`, not `body`. Backend may camelCase it or pass raw.
@@ -129,8 +183,8 @@ function mapStory(raw: any): CommunityStory {
     title:       raw.title ?? '',
     excerpt:     bodyText.slice(0, 200),
     body:        bodyText,
-    images,
-    image:       images[0],
+    images:      uniqueImages,
+    image:       uniqueImages[0],
     video:       raw.video_url ?? raw.videoUrl ?? undefined,
     category:    (raw.category ?? 'Natural') as StoryCategory,
     location:    raw.location ?? 'Cambodia',
@@ -143,14 +197,12 @@ function mapStory(raw: any): CommunityStory {
     author: {
       id:          authorId,
       name:        authorName,
-      handle:      raw.authorHandle ?? ('@' + authorName.split(' ')[0].toLowerCase()),
+      handle:      authorHandle,
       initials:    raw.authorInitials ?? nameInitials,
       avatarColor: raw.authorAvatarColor ?? nameAvatarColor,
-      // ← this is the key fix: real avatar from DB, not a hardcoded placeholder
       avatar:      authorAvatar ?? undefined,
       homeBase:    raw.authorHomeBase ?? raw.location ?? 'Cambodia',
     },
-    liked: false,
   }
 }
 
@@ -169,9 +221,21 @@ export async function fetchStories(params?: {
   const { data } = await API.get('/stories', {
     params: { ...params, status: 'published,approved' },
   })
+
+  const storiesPayload = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.data)
+      ? data.data
+      : []
+
+  const total =
+    typeof data?.total === 'number' ? data.total :
+    typeof data?.meta?.total === 'number' ? data.meta.total :
+    storiesPayload.length
+
   return {
-    data:  (data.data ?? []).map(mapStory),
-    total: data.total ?? 0,
+    data: storiesPayload.map(mapStory),
+    total,
   }
 }
 
@@ -181,22 +245,22 @@ export async function createStory(
   author?: { id?: string; name: string; initials: string; avatar?: string },
 ): Promise<CommunityStory> {
   const body = {
-    title:             payload.title,
-    // DB column is `content` — send as both so any API transform works
-    content:           payload.body,
-    body:              payload.body,
-    category:          payload.category,
-    location:          payload.location || 'Cambodia',
-    rating:            payload.rating,
-    imageUrls:         imageUrls ?? [],
-    // DB column is `user_id`
-    userId:            author?.id ?? null,
-    user_id:           author?.id ?? null,
-    authorName:        author?.name ?? 'Traveler',
-    authorInitials:    author?.initials ?? 'TR',
-    // DB column is `author_avatar_url` — send as both forms
-    authorAvatarUrl:   author?.avatar ?? null,
-    author_avatar_url: author?.avatar ?? null,
+    title:        payload.title,
+    // DB column is `content`; alias `body` is included for backward compatibility.
+    content:      payload.body,
+    body:         payload.body,
+    category:     payload.category,
+    location:     payload.location || 'Cambodia',
+    rating:       payload.rating,
+    // DB column is `image_url` for stories.
+    image_url:    imageUrls?.[0] ?? null,
+    imageUrl:     imageUrls?.[0] ?? null,
+    imageUrls:    imageUrls ?? [],
+    video_url:    payload.videoUrl ?? undefined,
+    videoUrl:     payload.videoUrl ?? undefined,
+    // DB column is `user_id`.
+    user_id:      author?.id ?? null,
+    userId:       author?.id ?? null,
   }
   const { data } = await API.post('/stories', body)
   return mapStory(data)
@@ -213,6 +277,7 @@ export async function likeStory(id: string, liked: boolean): Promise<void> {
 export interface Comment {
   id: string
   storyId: string
+  userId?: string
   authorName: string
   body: string
   createdAt: string
@@ -227,8 +292,14 @@ export async function addComment(
   storyId: string,
   body: string,
   authorName: string,
+  userId?: string,
 ): Promise<Comment> {
-  const { data } = await API.post(`/stories/${storyId}/comments`, { body, authorName })
+  const payload: Record<string, unknown> = { body, authorName }
+  if (userId) {
+    payload.userId = userId
+    payload.user_id = userId
+  }
+  const { data } = await API.post(`/stories/${storyId}/comments`, payload)
   return data as Comment
 }
 

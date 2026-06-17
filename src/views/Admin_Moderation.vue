@@ -142,7 +142,7 @@
                     >
                       <div class="flex gap-4 p-4">
                         <div class="h-32 w-36 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                          <img v-if="item.image" :src="item.image" :alt="item.title" class="h-full w-full object-cover" />
+                          <img v-if="item.images" :src="item.images[1]" :alt="item.title" class="h-full w-full object-cover" />
                           <div v-else class="flex h-full w-full items-center justify-center bg-slate-200 text-xs font-semibold text-slate-500">
                             No image
                           </div>
@@ -496,6 +496,71 @@ const applyStatus = (item, status) => {
   }
 }
 
+const isValidImageUrl = (url) => {
+  if (typeof url !== 'string') return false
+  const trimmed = url.trim()
+  return /^https?:\/\//i.test(trimmed)
+}
+
+const normalizeImageList = (value) => {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .filter((img) => isValidImageUrl(img))
+      .map((img) => img.trim())
+  }
+
+  if (typeof value === 'string') {
+    const text = value.trim()
+    if (!text) return []
+
+    if (text.startsWith('{') && text.endsWith('}')) {
+      const contents = text.slice(1, -1)
+      return contents
+        .split(',')
+        .map((img) => img.trim().replace(/^"|"$/g, ''))
+        .filter((img) => isValidImageUrl(img))
+    }
+
+    try {
+      const parsed = JSON.parse(text)
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((img) => isValidImageUrl(img))
+          .map((img) => img.trim())
+      }
+      if (typeof parsed === 'string' && isValidImageUrl(parsed)) {
+        return [parsed.trim()]
+      }
+    } catch (error) {
+      // not JSON, continue
+    }
+
+    if (text.includes(',')) {
+      return text
+        .split(',')
+        .map((img) => img.trim().replace(/^"|"$/g, ''))
+        .filter((img) => isValidImageUrl(img))
+    }
+
+    return isValidImageUrl(text) ? [text] : []
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    if (typeof value.url === 'string' && isValidImageUrl(value.url)) return [value.url.trim()]
+    if (typeof value.image_url === 'string' && isValidImageUrl(value.image_url)) return [value.image_url.trim()]
+  }
+
+  return []
+}
+
+const normalizeStoryImages = (story) => {
+  if (!story) return []
+  const sources = ['imageUrls', 'imageUrl', 'image_url', 'image', 'images']
+  const images = sources.flatMap((key) => normalizeImageList(story[key]))
+  return [...new Set(images)]
+}
+
 const mapStory = (story) => {
   if (!story || story.deletedAt) return null
   const normalizedStatus = normalizeStatus(story.status)
@@ -505,21 +570,7 @@ const mapStory = (story) => {
   const comments = Number.isFinite(story.commentsCount) ? story.commentsCount : 0
   const category = story.category || 'Natural'
   const location = story.location || 'Cambodia'
-  
-  let images = []
-  if (Array.isArray(story.imageUrls) && story.imageUrls.length > 0) {
-    images = story.imageUrls
-  } else if (Array.isArray(story.imageUrl) && story.imageUrl.length > 0) {
-    images = story.imageUrl
-  } else {
-    const single = story.imageUrl || story.image_url || story.image || story.imageUrls || null
-    if (single && typeof single === 'string') {
-      images = [single]
-    } else if (single && Array.isArray(single)) {
-      images = single
-    }
-  }
-  images = images.filter(img => typeof img === 'string' && img.trim() !== '')
+  const images = normalizeStoryImages(story)
 
   const baseItem = {
     id: story.id,
@@ -544,7 +595,10 @@ const loadStories = async () => {
   isLoading.value = true
   fetchError.value = ''
   try {
-    const response = await api.get('/stories')
+    // Fetch ALL stories including pending, approved, and flagged
+    const response = await api.get('/stories', {
+      params: { status: 'pending,approved,flagged' }
+    })
     const payload = response?.data?.data ?? response?.data ?? []
     const list = Array.isArray(payload) ? payload : []
     queue.value = list.map(mapStory).filter(Boolean)
