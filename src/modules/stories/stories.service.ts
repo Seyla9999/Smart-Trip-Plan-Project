@@ -21,13 +21,8 @@ export class StoriesService {
       .split(',')
       .map((value) => value.trim().toLowerCase())
       .filter(Boolean);
-    if (
-      !normalized.length ||
-      normalized.includes('all') ||
-      normalized.includes('*')
-    ) {
-      return null;
-    }
+    if (!normalized.length) return null;
+    if (normalized.includes('all') || normalized.includes('*')) return [];
     return normalized;
   }
 
@@ -44,6 +39,7 @@ export class StoriesService {
     const page = Number(q.page) || 1;
     const skip = (page - 1) * limit;
     const statusFilter = this.parseStatusFilter(q.status);
+    const statuses = statusFilter === null ? ['published', 'approved'] : statusFilter;
     const userId = q.userId;
     const category = q.category;
     const sort = q.sort || 'latest';
@@ -51,11 +47,13 @@ export class StoriesService {
 
     const queryBuilder = this.storyRepo
       .createQueryBuilder('s')
-      .where('s.deletedAt IS NULL');
+      .where('s.deletedAt IS NULL')
+      .leftJoin('users', 'u', 'u.id = s.userId')
+      .addSelect(['u.id', 'u.full_name', 'u.avatar_url', 'u.email']);
 
-    if (statusFilter) {
+    if (statuses.length) {
       queryBuilder.andWhere('s.status IN (:...statuses)', {
-        statuses: statusFilter,
+        statuses,
       });
     }
 
@@ -84,10 +82,30 @@ export class StoriesService {
       queryBuilder.orderBy('s.createdAt', 'DESC');
     }
 
-    const [data, total] = await queryBuilder
-      .take(limit)
-      .skip(skip)
-      .getManyAndCount();
+    const rawAndEntities = await queryBuilder.take(limit).skip(skip).getRawAndEntities();
+    const stories = rawAndEntities.entities;
+    const rawRows = rawAndEntities.raw;
+    const total = await queryBuilder.clone().skip(undefined).take(undefined).getCount();
+
+    const data = stories.map((story, index) => {
+      const raw = rawRows[index] as Record<string, any>;
+      return {
+        ...story,
+        imageUrls: story.imageUrls || [],
+        image_url: story.imageUrls || [],
+        imageUrl: Array.isArray(story.imageUrls)
+          ? story.imageUrls[0] ?? null
+          : story.imageUrls,
+        user: raw?.u_id
+          ? {
+              id: raw.u_id,
+              name: raw.u_full_name,
+              avatar_url: raw.u_avatar_url,
+              email: raw.u_email,
+            }
+          : null,
+      };
+    });
 
     return { success: true, data, total, meta: { total, page, limit } };
   }
