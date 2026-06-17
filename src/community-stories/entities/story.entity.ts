@@ -36,8 +36,8 @@ export class Story {
   @Column({ type: 'integer', nullable: true })
   rating: number;
 
-  @Column({ name: 'image_url', type: 'text', array: true, nullable: true })
-  imageUrls: string[];
+  @Column({ name: 'image_url', type: 'varchar', length: 500, nullable: true })
+  imageUrl: string;
 
   @Column({ name: 'video_url', type: 'varchar', length: 500, nullable: true })
   videoUrl: string;
@@ -47,49 +47,6 @@ export class Story {
 
   @Column({ name: 'comments_count', type: 'integer', default: 0 })
   commentsCount: number;
-
-  @Column({
-    name: 'author_name',
-    type: 'varchar',
-    length: 100,
-    default: 'Traveler',
-  })
-  authorName: string;
-
-  @Column({
-    name: 'author_handle',
-    type: 'varchar',
-    length: 100,
-    default: '@traveler',
-  })
-  authorHandle: string;
-
-  @Column({ name: 'author_initials', type: 'varchar', length: 5, default: 'T' })
-  authorInitials: string;
-
-  @Column({
-    name: 'author_avatar_color',
-    type: 'varchar',
-    length: 20,
-    default: '#1a2340',
-  })
-  authorAvatarColor: string;
-
-  @Column({
-    name: 'author_avatar_url',
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-  })
-  authorAvatarUrl: string;
-
-  @Column({
-    name: 'author_home_base',
-    type: 'varchar',
-    length: 100,
-    nullable: true,
-  })
-  authorHomeBase: string;
 
   @Column({ name: 'published_at', type: 'timestamptz', default: () => 'NOW()' })
   publishedAt: Date;

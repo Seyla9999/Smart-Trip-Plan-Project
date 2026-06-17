@@ -35,7 +35,7 @@ export class CommunityStoriesService {
 
     if (search) {
       qb.andWhere(
-        '(story.title ILIKE :q OR story.content ILIKE :q OR story.location ILIKE :q OR story.authorName ILIKE :q)',
+        '(story.title ILIKE :q OR story.content ILIKE :q OR story.location ILIKE :q)',
         { q: `%${search}%` },
       );
     }
@@ -63,59 +63,21 @@ export class CommunityStoriesService {
     category: string;
     location?: string;
     rating?: number;
+    imageUrl?: string;
     imageUrls?: string[];
     videoUrl?: string;
-    authorName: string;
-    authorHandle: string;
-    authorInitials: string;
-    authorAvatarColor?: string;
-    authorAvatarUrl?: string;
-    authorHomeBase?: string;
     userId?: string;
   }): Promise<Story> {
-    let authorName = dto.authorName ?? 'Traveler';
-    let authorHandle = dto.authorHandle ?? '@traveler';
-    let authorInitials = dto.authorInitials ?? 'T';
-    let authorAvatarColor = dto.authorAvatarColor ?? '#1a2340';
-    let authorAvatarUrl = dto.authorAvatarUrl;
-    let authorHomeBase = dto.authorHomeBase ?? '';
-
-    // If userId is provided, fetch actual user data
-    if (dto.userId) {
-      const user = await this.usersService.findById(dto.userId);
-      if (user) {
-        authorName = user.full_name || authorName;
-        authorHandle = user.username ? `@${user.username}` : authorHandle;
-        authorAvatarUrl = user.avatar_url || authorAvatarUrl;
-        
-        // Generate initials from full name
-        const names = user.full_name?.trim().split(/\s+/) || [];
-        if (names.length > 0) {
-          authorInitials = names
-            .slice(0, 2)
-            .map((n) => n[0]?.toUpperCase())
-            .join('')
-            .substring(0, 5);
-        }
-      }
-    }
-
     const data: DeepPartial<Story> = {
       title: dto.title,
       content: dto.content,
       category: dto.category,
       location: dto.location ?? 'Cambodia',
       rating: dto.rating,
-      imageUrls: dto.imageUrls,
+      imageUrl: dto.imageUrl ?? dto.imageUrls?.[0],
       videoUrl: dto.videoUrl,
       likesCount: 0,
       commentsCount: 0,
-      authorName,
-      authorHandle,
-      authorInitials,
-      authorAvatarColor,
-      authorAvatarUrl,
-      authorHomeBase,
       userId: dto.userId,
       status: 'pending',
       publishedAt: new Date(),
@@ -146,24 +108,13 @@ export class CommunityStoriesService {
 
   async addComment(
     storyId: string,
-    dto: { authorName: string; body: string; userId?: string },
+    dto: { body: string; userId?: string },
   ): Promise<StoryComment> {
     const story = await this.storyRepo.findOne({ where: { id: storyId } });
     if (!story) throw new NotFoundException('Story not found');
 
-    let authorName = dto.authorName ?? 'Traveler';
-
-    // If userId is provided, fetch actual user data
-    if (dto.userId) {
-      const user = await this.usersService.findById(dto.userId);
-      if (user) {
-        authorName = user.full_name || authorName;
-      }
-    }
-
     const data: DeepPartial<StoryComment> = {
       storyId,
-      authorName,
       body: dto.body,
       userId: dto.userId,
     };

@@ -67,7 +67,7 @@ export class StoriesService {
 
     if (search) {
       queryBuilder.andWhere(
-        '(s.title ILIKE :q OR s.content ILIKE :q OR s.location ILIKE :q OR s.authorName ILIKE :q)',
+        '(s.title ILIKE :q OR s.content ILIKE :q OR s.location ILIKE :q)',
         { q: `%${search}%` },
       );
     }
@@ -82,21 +82,29 @@ export class StoriesService {
       queryBuilder.orderBy('s.createdAt', 'DESC');
     }
 
-    const rawAndEntities = await queryBuilder.take(limit).skip(skip).getRawAndEntities();
-    const stories = rawAndEntities.entities;
-    const rawRows = rawAndEntities.raw;
-    const total = await queryBuilder.clone().skip(undefined).take(undefined).getCount();
+    // get total before applying pagination
+    const total = await queryBuilder.getCount();
+
+    const result = await queryBuilder.take(limit).skip(skip).getRawAndEntities();
+    const stories = result.entities as Story[];
+    const rawRows = result.raw as any[];
 
     const data = stories.map((story, index) => {
-      const raw = rawRows[index] as Record<string, any>;
+      const raw = rawRows[index] as Record<string, any> | undefined;
+      // prefer raw image_url (single varchar from Supabase) when present,
+      // otherwise fall back to entity `imageUrl` (single string)
+      const imageArray = raw && raw.s_image_url
+        ? [raw.s_image_url]
+        : story.imageUrl
+        ? [story.imageUrl]
+        : [];
+
       return {
         ...story,
-        imageUrls: story.imageUrls || [],
-        image_url: story.imageUrls || [],
-        imageUrl: Array.isArray(story.imageUrls)
-          ? story.imageUrls[0] ?? null
-          : story.imageUrls,
-        user: raw?.u_id
+        imageUrls: imageArray,
+        image_url: imageArray,
+        imageUrl: Array.isArray(imageArray) ? imageArray[0] ?? null : imageArray,
+        user: raw && raw.u_id
           ? {
               id: raw.u_id,
               name: raw.u_full_name,

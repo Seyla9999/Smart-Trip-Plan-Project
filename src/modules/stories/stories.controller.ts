@@ -56,13 +56,10 @@ export class StoriesController {
       category: string;
       location?: string;
       rating?: number;
+      imageUrl?: string;
       imageUrls?: string[];
       videoUrl?: string;
-      authorName: string;
-      authorHandle: string;
-      authorInitials: string;
-      authorAvatarColor?: string;
-      authorHomeBase?: string;
+      userId?: string;
     },
   ) {
     return this.communityStoriesService.create(body);
@@ -78,7 +75,7 @@ export class StoriesController {
   @Post(':id/comments')
   addComment(
     @Param('id') id: string,
-    @Body() body: { authorName: string; body: string },
+    @Body() body: { body: string; userId?: string },
   ) {
     return this.communityStoriesService.addComment(id, body);
   }
