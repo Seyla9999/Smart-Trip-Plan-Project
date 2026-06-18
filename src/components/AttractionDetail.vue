@@ -787,7 +787,7 @@ async function openTripModal() {
   showTripModal.value  = true
   // Pre-load existing trips for the "existing" tab
   try {
-    const { data } = await API.get('/api/trips')
+    const { data } = await API.get('/trips')
     const today = new Date(); today.setHours(0, 0, 0, 0)
     userTrips.value = Array.isArray(data) ? data.filter((t: any) => {
       if (t.status === 'completed') return false
@@ -815,7 +815,7 @@ async function createNewTrip() {
     if (newTripStart.value) payload.start_date = newTripStart.value
     if (newTripEnd.value)   payload.end_date   = newTripEnd.value
 
-    const res = await API.post('/api/trips', payload)
+    const res = await API.post('/trips', payload)
     const tripId = String(res.data?.id ?? res.data?.trip?.id ?? res.data?.data?.id ?? '')
     if (tripId) {
       try {
@@ -840,7 +840,7 @@ async function addToExistingTrip() {
   addingToTrip.value   = true
   tripModalError.value = null
   try {
-    await API.post(`/api/trips/${selectedTripId.value}/itinerary-items`, {
+    await API.post(`/trips/${selectedTripId.value}/itinerary-items`, {
       attraction_id: attraction.value.id,
       day_number:    selectedDay.value,
     })
@@ -876,7 +876,7 @@ async function checkBookmark(attractionId: string) {
 
 async function checkCanReview(attractionId: string) {
   try {
-    const { data } = await API.get(`/api/trips/can-review/${attractionId}`)
+    const { data } = await API.get(`/trips/can-review/${attractionId}`)
     canReview.value = data?.allowed === true
   } catch {
     canReview.value = false
