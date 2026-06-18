@@ -389,7 +389,7 @@ const userProvinceCount = computed(() => {
 const trendingPlaces = ref<TrendingPlace[]>([
   { id: 1, name: 'Angkor Wat', visits: 5234, category: 'Cultural' },
   { id: 2, name: 'Tonle Sap Lake', visits: 3421, category: 'Natural' },
-  { id: 3, name: 'Koh Rong Island', visits: 2890, category: 'Beach' },
+  { id: 3, name: 'Koh Rong Island', visits: 2890, category: 'Sea' },
   { id: 4, name: 'Kbal Spean', visits: 1567, category: 'Waterfall' },
   { id: 5, name: 'Phnom Penh Markets', visits: 2103, category: 'Cultural' },
 ])

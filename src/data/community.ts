@@ -64,6 +64,7 @@ export interface TrendingPlace {
   category: StoryCategory
   mentions: number
   summary: string
+  visits: number
 }
 
 export interface TopTraveler {
@@ -75,6 +76,8 @@ export interface TopTraveler {
   specialty: string
   trips: number
   followed: boolean
+  avatar: string
+  stories: number
 }
 
 export interface PopularProvince {
@@ -83,6 +86,8 @@ export interface PopularProvince {
   storyCount: number
   image: string
   descriptor: string
+  slug: string
+  stories: number
 }
 
 export interface HeroStat {

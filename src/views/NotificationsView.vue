@@ -52,21 +52,21 @@
           <!-- Trip invite: show join button -->
           <div v-if="selected.type === 'trip_invite'">
             <p class="detail-hint">Someone joined your trip. View your trips to see the latest members.</p>
-            <button class="detail-go-btn" @click="router.push('/trip')">
+            <button class="detail-go-btn" @click="$router.push('/trip')">
               View My Trips →
             </button>
           </div>
 
           <!-- Chat notification -->
           <div v-else-if="selected.type === 'new_message'">
-            <button class="detail-go-btn" @click="router.push('/chat')">
+            <button class="detail-go-btn" @click="$router.push('/chat')">
               Go to Messages →
             </button>
           </div>
 
           <!-- Story notification -->
           <div v-else-if="selected.type === 'story_like' || selected.type === 'story_comment' || selected.type === 'story_status'">
-            <button class="detail-go-btn" @click="router.push('/community')">
+            <button class="detail-go-btn" @click="$router.push('/community')">
               View Stories →
             </button>
           </div>
