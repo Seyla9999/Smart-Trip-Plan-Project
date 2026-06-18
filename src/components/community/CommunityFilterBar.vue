@@ -18,7 +18,7 @@
         <svg class="sort-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="15" y2="18"/></svg>
         <select
           :value="modelSort"
-          @change="$emit('update:modelSort', ($event.target as HTMLSelectElement).value)"
+          @change="handleSortChange"
           class="sort-select"
         >
           <option value="latest">Latest</option>
@@ -41,10 +41,15 @@ defineProps<{
   modelSort: CommunitySortOption
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'update:modelCategory', v: CommunityCategory): void
   (e: 'update:modelSort', v: CommunitySortOption): void
 }>()
+
+function handleSortChange(e: Event) {
+  const value = (e.target as HTMLSelectElement).value as CommunitySortOption
+  emit('update:modelSort', value)
+}
 
 const categories = communityCategories
 

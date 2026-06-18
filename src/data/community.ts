@@ -65,6 +65,7 @@ export interface TrendingPlace {
   mentions: number
   summary: string
   visits: number
+  following?: boolean
 }
 
 export interface TopTraveler {
@@ -75,7 +76,7 @@ export interface TopTraveler {
   avatarColor: string
   specialty: string
   trips: number
-  followed: boolean
+  following: boolean
   avatar: string
   stories: number
 }
@@ -286,6 +287,7 @@ export const trendingPlaces: TrendingPlace[] = [
     category: 'Natural',
     mentions: 148,
     summary: 'Floating village sunsets and calm boat routes are driving a wave of new posts.',
+    visits: 4230,
   },
   {
     id: 2,
@@ -294,6 +296,7 @@ export const trendingPlaces: TrendingPlace[] = [
     category: 'Sea',
     mentions: 121,
     summary: 'Travelers are sharing quieter beach stays and off-peak ferry timing tips.',
+    visits: 3875,
   },
   {
     id: 3,
@@ -302,6 +305,7 @@ export const trendingPlaces: TrendingPlace[] = [
     category: 'Waterfall',
     mentions: 96,
     summary: 'Recent stories highlight improved access roads and short picnic stops nearby.',
+    visits: 3120,
   },
   {
     id: 4,
@@ -310,6 +314,7 @@ export const trendingPlaces: TrendingPlace[] = [
     category: 'Mountain',
     mentions: 87,
     summary: 'Foggy drives, waterfalls, and hilltop cafes are trending this week.',
+    visits: 2840,
   },
   {
     id: 5,
@@ -318,6 +323,7 @@ export const trendingPlaces: TrendingPlace[] = [
     category: 'Food',
     mentions: 78,
     summary: 'Food posts are focusing on seafood stalls with smaller queues and better views.',
+    visits: 2580,
   },
 ]
 
@@ -330,7 +336,9 @@ export const topTravelers: TopTraveler[] = [
     avatarColor: '#2d6a4f',
     specialty: 'Coastal routes',
     trips: 24,
-    followed: true,
+    following: true,
+    avatar: 'https://i.pravatar.cc/150?img=12',
+    stories: 41,
   },
   {
     id: 2,
@@ -340,7 +348,9 @@ export const topTravelers: TopTraveler[] = [
     avatarColor: '#1a2340',
     specialty: 'Culture and city walks',
     trips: 18,
-    followed: false,
+    following: false,
+    avatar: 'https://i.pravatar.cc/150?img=45',
+    stories: 32,
   },
   {
     id: 3,
@@ -350,7 +360,9 @@ export const topTravelers: TopTraveler[] = [
     avatarColor: '#3d5a80',
     specialty: 'Eco trips',
     trips: 21,
-    followed: false,
+    following: false,
+    avatar: 'https://i.pravatar.cc/150?img=17',
+    stories: 29,
   },
   {
     id: 4,
@@ -360,7 +372,9 @@ export const topTravelers: TopTraveler[] = [
     avatarColor: '#8a5a24',
     specialty: 'Food weekends',
     trips: 15,
-    followed: true,
+    following: true,
+    avatar: 'https://i.pravatar.cc/150?img=34',
+    stories: 21,
   },
 ]
 
@@ -372,6 +386,8 @@ export const popularProvinces: PopularProvince[] = [
     image:
       'https://images.unsplash.com/photo-1538964173425-93884e739ccd?auto=format&fit=crop&w=800&q=80',
     descriptor: 'Culture, temples, and floating village stories',
+    slug: 'siem-reap',
+    stories: 324,
   },
   {
     id: 2,
@@ -380,6 +396,8 @@ export const popularProvinces: PopularProvince[] = [
     image:
       'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80',
     descriptor: 'Mountain drives, pepper farms, and riverside cafes',
+    slug: 'kampot',
+    stories: 241,
   },
   {
     id: 3,
@@ -388,5 +406,7 @@ export const popularProvinces: PopularProvince[] = [
     image:
       'https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=800&q=80',
     descriptor: 'Mangroves, islands, and forest lodges',
+    slug: 'koh-kong',
+    stories: 206,
   },
 ]
