@@ -531,7 +531,7 @@ interface TripMember     {
 interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
 interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
-// Google Places shape (returned by /api/places proxy)
+
 interface PlacePhoto { photo_reference: string; width: number; height: number }
 interface Attraction {
   // Google Places fields
@@ -558,7 +558,7 @@ interface Attraction {
   longitude?: number
   __source?: 'db' | 'google'
 }
-// Matches your NestJS /api/points-of-interest response
+
 interface POI          { id: string | number; name: string; type: string; icon?: string; description?: string; distance?: string; latitude?: number; longitude?: number }
 interface ScheduleItem {
   placeId: string
@@ -637,7 +637,7 @@ const selectedWeatherDay = ref(0)
 // Group chat
 const { getOrCreateChatForTrip, createChat, joinChat, currentUserId } = useGroupChat()
 
-// Attractions — fetched from your backend /api/attractions
+
 const allAttractions             = ref<Attraction[]>([])
 const attractionsLoading         = ref(false)
 const selectedAttractionCategory = ref('all')
@@ -957,7 +957,7 @@ function googleTypeToCategoryIcon(types: string[] = []): string {
 
 /** Build a proxied photo URL from a Google photo_reference */
 function googlePhotoUrl(ref: string, maxwidth = 400): string {
-  return `${API_BASE}/api/places/photo?ref=${encodeURIComponent(ref)}&maxwidth=${maxwidth}`
+  return `${API_BASE}/places/photo?ref=${encodeURIComponent(ref)}&maxwidth=${maxwidth}`
 }
 
 /** Normalize a Google Places result into our Attraction shape */
@@ -992,11 +992,11 @@ const provinceAttractions    = ref<Attraction[]>([])
 const routeAttractionsGoogle = ref<{ place: Attraction; distanceKm: number }[]>([])
 const routeAttractionsLoading = ref(false)
 
-/** Call /api/places once and return normalized results */
+
 async function fetchGooglePlaces(lat: number, lng: number, type = 'tourist_attraction', radius = 20000): Promise<Attraction[]> {
   const token = localStorage.getItem('auth_token')
   const res = await fetch(
-    `${API_BASE}/api/places?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`,
+    `${API_BASE}/places?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`,
     { headers: { Authorization: `Bearer ${token ?? ''}` } }
   )
   if (!res.ok) throw new Error(`Places API ${res.status}`)
@@ -1438,7 +1438,7 @@ const isAddedToAnyDay = (id: string) =>
   Object.values(schedule.value).some(items => items.some(i => i.placeId === id))
 
 // ─── Save plan to backend ─────────────────────────────────────────────────────
-// Backend endpoint: POST /api/trips/:id/itinerary   (or POST /api/trips if new)
+
 // Payload: { origin, destination, startDate, endDate, travelType, schedule }
 const savePlan = async () => {
   isSaving.value = true
@@ -1499,8 +1499,8 @@ const savePlan = async () => {
 
 // If we have a tripId, update; otherwise create new
     const endpoint = tripId.value
-      ? `${API_BASE}/api/trips/${tripId.value}/itinerary`
-      : `${API_BASE}/api/trips`
+      ? `${API_BASE}/trips/${tripId.value}/itinerary`
+      : `${API_BASE}/trips`
     const method = tripId.value ? 'PUT' : 'POST'
 
     const res = await fetch(endpoint, {
@@ -1594,7 +1594,7 @@ const fetchTrip = async () => {
   }
   try {
     const token = localStorage.getItem('auth_token')
-    const res = await fetch(`${API_BASE}/api/trips/${tripId.value}`, {
+    const res = await fetch(`${API_BASE}/trips/${tripId.value}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`) }
@@ -1960,9 +1960,9 @@ const isGeneratingToken = ref(false)
 const generateInviteTokenForTrip = async (targetTripId: string) => {
   if (!targetTripId || inviteToken.value) return
   const endpoints = [
-    `/api/trips/${targetTripId}/invite-token`,
-    `/api/trips/${targetTripId}/invite`,
-    `/api/trips/${targetTripId}/share`,
+    `/trips/${targetTripId}/invite-token`,
+    `/trips/${targetTripId}/invite`,
+    `/trips/${targetTripId}/share`,
   ]
   for (const ep of endpoints) {
     try {
@@ -2001,7 +2001,7 @@ const confirmDeleteOnPage = async () => {
   const ok = window.confirm(`Delete trip "${tripData.value.title}"? This cannot be undone.`)
   if (!ok) return
   try {
-    await API.delete(`/api/trips/${tripId.value}`)
+    await API.delete(`/trips/${tripId.value}`)
     showToast('Trip deleted', 'success')
     router.push({ name: 'my-trips' })
   } catch (err: any) {
