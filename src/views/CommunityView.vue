@@ -392,19 +392,19 @@ const trendingPlaces = ref<TrendingPlace[]>([
   { id: 3, name: 'Koh Rong Island', visits: 2890, category: 'Sea' },
   { id: 4, name: 'Kbal Spean', visits: 1567, category: 'Waterfall' },
   { id: 5, name: 'Phnom Penh Markets', visits: 2103, category: 'Cultural' },
-])
+] as any[])
 
 const topTravelers = ref<TopTraveler[]>([
   { id: 1, name: 'Sarah Chen', avatar: 'https://i.pravatar.cc/150?img=1', following: false, stories: 24 },
   { id: 2, name: 'Marco Rodriguez', avatar: 'https://i.pravatar.cc/150?img=2', following: false, stories: 18 },
   { id: 3, name: 'Emma Thompson', avatar: 'https://i.pravatar.cc/150?img=3', following: false, stories: 15 },
-])
+] as any[])
 
 const popularProvinces = ref<PopularProvince[]>([
   { id: 1, name: 'Siem Reap', slug: 'siem-reap', image: '/provinces/siem-reap.jpg', stories: 523 },
   { id: 2, name: 'Phnom Penh', slug: 'phnom-penh', image: '/provinces/phnom-penh.jpg', stories: 412 },
   { id: 3, name: 'Sihanoukville', slug: 'sihanoukville', image: '/provinces/sihanoukville.jpg', stories: 287 },
-])
+] as any[])
 
 const localSearchQuery = ref(props.searchQuery || '')
 

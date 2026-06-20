@@ -2080,7 +2080,7 @@ const formattedMembers = computed(() => {
       id: memberId,
       name: member.user?.full_name || member.user?.name || member.name || 'Member',
       email: member.user?.email || member.email || '',
-      avatar_url: normalizeMediaUrl(member.avatar_url || member.user?.avatar_url || undefined),
+      avatar_url: (normalizeMediaUrl(member.avatar_url || member.user?.avatar_url) ?? undefined) as string | undefined,
       role: (memberId === tripData.value?.owner_id ? 'owner' : 'member') as 'owner' | 'member',
     }
   })
