@@ -12,7 +12,6 @@ import {
 import { User } from '../users/user.entity';
 import { TripMember } from './trip-member.entity';
 import { ItineraryItem } from './itinerary-item.entity';
-import { PackingListItem } from './packing-list-item.entity';
 import { Province } from '../provinces/province.entity';
 
 @Entity('trips')
@@ -73,7 +72,4 @@ export class Trip {
 
   @OneToMany(() => ItineraryItem, (i) => i.trip)
   itinerary_items!: ItineraryItem[];
-
-  @OneToMany(() => PackingListItem, (p) => p.trip)
-  packing_list!: PackingListItem[];
 }

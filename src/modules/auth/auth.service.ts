@@ -375,6 +375,7 @@ export class AuthService {
 
     return {
       message: 'Login success',
+      access_token: token,
       token,
       user: {
         id: user.id,

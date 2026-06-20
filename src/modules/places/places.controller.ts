@@ -14,7 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PlacesService } from './places.service';
 import { firstValueFrom } from 'rxjs';
 
-@Controller('api/places')
+@Controller('places')
 @UseGuards(JwtAuthGuard)
 export class PlacesController {
   constructor(private readonly placesService: PlacesService) {}

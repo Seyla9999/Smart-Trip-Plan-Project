@@ -33,6 +33,7 @@ describe('TripsController (e2e) POST /trips', () => {
     const moduleRef: TestingModule = await moduleBuilder.compile();
 
     app = moduleRef.createNestApplication();
+    app.setGlobalPrefix('api');
     await app.init();
   });
 
@@ -44,7 +45,7 @@ describe('TripsController (e2e) POST /trips', () => {
     const payload = { title: 'My Trip', description: 'desc' };
 
     const res = await request(app.getHttpServer())
-      .post('/trips')
+      .post('/api/trips')
       .send(payload)
       .expect(201);
 

@@ -19,7 +19,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { CreateTripDto, ItineraryItemDto } from './dto/create-trip.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
 
-@Controller('api/trips')
+@Controller('trips')
 @UseGuards(JwtAuthGuard)          // all routes require a valid JWT
 export class TripsController {
   constructor(private readonly tripsService: TripsService) {}
@@ -84,16 +84,6 @@ export class TripsController {
     @Body() dto: ItineraryItemDto,
   ) {
     return this.tripsService.addItineraryItem(id, req.user.id, dto);
-  }
-
-  // PATCH /api/trips/:id/packing/:itemId/toggle — toggle a packing list item
-  @Patch(':id/packing/:itemId/toggle')
-  togglePacking(
-    @Request() req,
-    @Param('id') id: string,
-    @Param('itemId') itemId: string,
-  ) {
-    return this.tripsService.togglePacking(id, itemId, req.user.id);
   }
 
   // PATCH /api/trips/:id/complete — mark trip as completed

@@ -10,12 +10,10 @@ import { randomUUID } from 'crypto';
 import { Trip } from './trip.entity';
 import { TripMember } from './trip-member.entity';
 import { ItineraryItem } from './itinerary-item.entity';
-import { PackingListItem } from './packing-list-item.entity';
 import { Province } from '../provinces/province.entity';
 
 import { CreateTripDto, ItineraryItemDto } from './dto/create-trip.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
-import { TogglePackingDto } from './dto/toggle-packing.dto';
 
 @Injectable()
 export class TripsService {
@@ -28,9 +26,6 @@ export class TripsService {
 
     @InjectRepository(ItineraryItem)
     private itineraryRepo: Repository<ItineraryItem>,
-
-    @InjectRepository(PackingListItem)
-    private packingRepo: Repository<PackingListItem>,
 
     // DataSource is used for transactions
     private dataSource: DataSource,
@@ -94,7 +89,6 @@ export class TripsService {
             province: true,
           },
         },
-        packing_list: true,
       },
     });
     if (!trip) throw new NotFoundException('Trip not found');
@@ -193,7 +187,6 @@ export class TripsService {
             province: true,
           },
         },
-        packing_list: true,
       },
     }).then((trip) => this.attachDerivedProvince(trip));
   }
@@ -208,7 +201,6 @@ export class TripsService {
       .leftJoinAndSelect('trip.itinerary_items', 'items')
       .leftJoinAndSelect('items.attraction', 'attraction')
       .leftJoinAndSelect('attraction.province', 'attractionProvince')
-      .leftJoinAndSelect('trip.packing_list', 'packing')
       .orderBy('trip.created_at', 'DESC')
       .addOrderBy('items.day_index', 'ASC')
       .getMany()
@@ -260,7 +252,6 @@ export class TripsService {
             province: true,
           },
         },
-        packing_list: true,
       },
       order: { itinerary_items: { day_index: 'ASC' } },
     }).then((trip) => this.attachDerivedProvince(trip));
@@ -305,27 +296,9 @@ export class TripsService {
             province: true,
           },
         },
-        packing_list: true,
       },
     }).then((trip) => this.attachDerivedProvince(trip));
   }
-
-  async togglePacking(
-    tripId: string,
-    itemId: string,
-    userId: string,
-  ): Promise<PackingListItem> {
-    await this.assertMember(tripId, userId);
-
-    const item = await this.packingRepo.findOne({ where: { id: itemId } });
-    if (!item) throw new NotFoundException('Packing item not found');
-
-    item.packed = !item.packed;
-    return this.packingRepo.save(item);
-  }
-
-  // ─── Append a single item to an existing trip ────────────────────────────
-
   async addItineraryItem(
     tripId: string,
     userId: string,
@@ -358,7 +331,6 @@ export class TripsService {
       relations: {
         members: true,
         itinerary_items: { attraction: { province: true } },
-        packing_list: true,
       },
     }).then((trip) => this.attachDerivedProvince(trip));
   }
@@ -379,7 +351,6 @@ export class TripsService {
   async remove(tripId: string, userId: string): Promise<{ message: string }> {
     await this.assertOwner(tripId, userId);
     await this.dataSource.transaction(async (manager) => {
-      await manager.delete(PackingListItem, { trip_id: tripId });
       await manager.delete(ItineraryItem,   { trip_id: tripId });
       await manager.delete(TripMember,      { trip_id: tripId });
       await manager.delete(Trip,            tripId);
@@ -393,7 +364,6 @@ export class TripsService {
       relations: {
         members: true,
         itinerary_items: { attraction: { province: true } },
-        packing_list: true,
       },
       order: { itinerary_items: { day_index: 'ASC', sort_order: 'ASC' } },
     });
