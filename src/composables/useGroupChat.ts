@@ -52,12 +52,16 @@ export function useGroupChat() {
       currentChat.value = await groupChatService.getOrCreateGroupChat(tripId, tripTitle, members)
       if (
         currentChat.value
+        && currentChat.value.id
         && currentUserId.value
         && !currentChat.value.members?.some(m => String(m.id) === String(currentUserId.value))
       ) {
-        currentChat.value = await groupChatService.joinGroupChat(currentChat.value.id)
+        await groupChatService.joinGroupChat(currentChat.value.id)
       }
-      await fetchMessages()
+
+      if (currentChat.value?.id) {
+        await fetchMessages()
+      }
       return currentChat.value
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to get or create group chat'
@@ -99,7 +103,10 @@ export function useGroupChat() {
    * Fetch messages for the current chat
    */
   const fetchMessages = async (limit = 50, offset = 0) => {
-    if (!currentChat.value) return
+    if (!currentChat.value || !currentChat.value.id){
+      console.debug("Skipping fetchMessages: No valid Chat ID.");
+      return
+    }
 
     isLoadingMessages.value = true
     error.value = null
@@ -140,13 +147,17 @@ export function useGroupChat() {
    * Join a group chat
    */
   const joinChat = async (chatId: string) => {
+
+    if (!chatId) {
+      console.debug("Cannot join chat: Chat ID is missing.");
+      return null
+    }
     isLoading.value = true
     error.value = null
     try {
-      const chat = await groupChatService.joinGroupChat(chatId)
-      currentChat.value = chat
+      await groupChatService.joinGroupChat(chatId)
       await fetchMessages()
-      return chat
+      return currentChat.value;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to join group chat'
       console.error('Error joining group chat:', err)

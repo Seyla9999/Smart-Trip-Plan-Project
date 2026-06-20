@@ -26,23 +26,17 @@ function normalizeResponse<T>(response: any): T {
   return response?.data ?? response
 }
 
-function matchesTripChat(chat: any, tripId: string, normalizedName: string, tripTitle?: string) {
+function matchesTripChat(chat: any, tripId: string) {
   return String(chat.trip_id || chat.tripId || '') === tripId
     || String(chat.trip?.id || '') === tripId
-    || String(chat.name || '') === normalizedName
-    || (tripTitle && String(chat.name || '').includes(tripTitle))
 }
 
 export async function findTripGroupChat(tripId: string, tripTitle?: string): Promise<GroupChat | null> {
   const normalizedName = getTripGroupChatName(tripId, tripTitle)
   const userId = getCurrentUserId()
 
-  // First try a server-side lookup by tripId (backend may return the chat even
-  // to users who are not yet members). If that fails, fall back to fetching
-  // the current user's chats and searching locally.
   try {
-    // Try common variations of a "by-trip" lookup so different backend
-    // implementations are supported.
+
     const attempts = [
       () => API.get(`${CHAT_BASE}/trip/${tripId}`),
       () => API.get(`${CHAT_BASE}/by-trip/${tripId}`),
@@ -58,7 +52,7 @@ export async function findTripGroupChat(tripId: string, tripTitle?: string): Pro
         const { data } = await attempt()
         const remote = normalizeResponse<any>(data)
         const remoteChats: GroupChat[] = Array.isArray(remote) ? remote : (remote ? [remote] : [])
-        const found = remoteChats.find(chat => matchesTripChat(chat, tripId, normalizedName, tripTitle))
+        const found = remoteChats.find(chat => matchesTripChat(chat, tripId))
         if (found) {
           console.debug(`findTripGroupChat: matched on attempt #${idx}`)
           return found

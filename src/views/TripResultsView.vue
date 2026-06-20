@@ -121,6 +121,7 @@
                 @create-chat="handleCreateGroupChat"
                 @join-chat="handleJoinedGroupChat"
                 @open-chat="handleOpenGroupChat"
+                @kick-member="handleKickMember"
               />
             </div>
           </div>
@@ -637,7 +638,7 @@ const weatherLoading    = ref(false)
 const selectedWeatherDay = ref(0)
 
 // Group chat
-const { getOrCreateChatForTrip, createChat, joinChat, currentUserId } = useGroupChat()
+const { getOrCreateChatForTrip, createChat, joinChat, removeMember,currentUserId } = useGroupChat()
 
 // Attractions — fetched from your backend /api/attractions
 const allAttractions             = ref<Attraction[]>([])
@@ -1588,8 +1589,7 @@ const savePlan = async () => {
       }
     }
 
-    // Generate invite link automatically for Solo trips
-    if (travelType.value === 'solo' && persistedTripId) {
+    if (persistedTripId) {
       try {
         await generateInviteTokenForTrip(persistedTripId)
       } catch (err) {
@@ -1597,7 +1597,6 @@ const savePlan = async () => {
       }
     }
 
-    // Auto-create/get group chat for the trip
     try {
       if (persistedTripId) {
         const chat = await getOrCreateChatForTrip(
@@ -2078,9 +2077,9 @@ const formattedMembers = computed(() => {
     const memberId = member.user?.id || member.user_id || member.id
     return {
       id: memberId,
-      name: member.name || member.user?.name || 'Member',
-      email: member.email || member.user?.email || '',
-      avatar_url: member.avatar_url || member.user?.avatar_url,
+      name: member.user?.full_name || member.user?.name || member.name || 'Member',
+      email: member.user?.email || member.email || '',
+      avatar_url: normalizeMediaUrl(member.avatar_url || member.user?.avatar_url),
       role: (memberId === tripData.value?.owner_id ? 'owner' : 'member') as 'owner' | 'member',
     }
   })
@@ -2141,17 +2140,22 @@ const handleJoinedGroupChat = async (payload?: { tripId?: string; members?: any[
     if (chat) {
       groupChat.value = chat
       if (currentUserId.value && !chat.members?.some(m => String(m.id) === String(currentUserId.value))) {
-        const joined = await joinChat(chat.id)
-        if (joined) {
-          groupChat.value = joined
-        }
+        await joinChat(chat.id);
       }
       hasJoinedGroupChat.value = true
       showToast('Redirecting to group chat...', 'success')
       // Close modal and navigate immediately
       showMembersPanel.value = false
       await nextTick()
-      router.push({ name: 'chat', query: { convId: String(chat.id) } })
+
+      const finalChatId = chat.id || chat.data?.id || chat.chat?.id || chat.groupChat?.id;
+      
+      if (finalChatId) {
+        router.push({ name: 'chat', query: { convId: String(finalChatId) } })
+      } else {
+        console.error("Chat was created, but frontend couldn't find the ID! Backend returned:", chat);
+        showToast("Error reading Chat ID from server.", "error");
+      }
     }
   } catch (error) {
     console.error('Error joining group chat:', error)
@@ -2181,6 +2185,35 @@ const handleOpenGroupChat = async () => {
   } catch (error) {
     console.error('Error opening group chat:', error)
     showToast('Failed to open group chat. Please try again.', 'error')
+  }
+}
+
+const handleKickMember = async (targetUserId: string) => {
+  const confirm = window.confirm("Are you sure you want to remove this member from the trip?");
+  if (!confirm) return;
+
+  try {
+    // 1. Remove from the Trip Database
+    await API.delete(`/trips/${tripId.value}/members/${targetUserId}?userId=${currentUserId.value}`);
+
+    // 2. Remove from the Group Chat (if one exists)
+    if (groupChat.value?.id) {
+      // removeMember handles the API call to your chat service
+      await removeMember(targetUserId); 
+    }
+
+    // 3. Update the UI instantly by filtering them out of the local state
+    if (tripData.value && tripData.value.members) {
+      tripData.value.members = tripData.value.members.filter(m => {
+        const id = m.user?.id || m.user_id || m.id;
+        return String(id) !== String(targetUserId);
+      });
+    }
+
+    showToast("Member removed successfully", "success");
+  } catch (error) {
+    console.error("Failed to remove member:", error);
+    showToast("Failed to remove member. Please try again.", "error");
   }
 }
 

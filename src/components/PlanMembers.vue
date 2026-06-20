@@ -9,8 +9,15 @@
     <!-- Members List -->
     <div class="members-list">
       <div v-for="member in members" :key="member.id" class="member-item">
+
         <div class="member-avatar" :style="{ background: getMemberColor(member.id) }">
-          <img v-if="member.avatar_url" :src="member.avatar_url" :alt="member.name" class="member-avatar-img" />
+          <img 
+            v-if="member.avatar_url && !failedAvatars[member.id]" 
+            :src="member.avatar_url" 
+            :alt="member.name" 
+            class="member-avatar-img"
+            @error="failedAvatars[member.id] = true"
+          />
           <span v-else class="member-initials">{{ getInitials(member.name) }}</span>
         </div>
         <div class="member-info">
@@ -22,6 +29,14 @@
           <div class="member-email">{{ member.email }}</div>
         </div>
         <div v-if="isCreator(member.id)" class="member-icon">👑</div>
+        <button 
+          v-if="currentUserIsCreator && !isCreator(member.id)" 
+          @click="$emit('kick-member', member.id)"
+          class="px-2 py-1 bg-red-100 text-red-600 rounded-md text-xs font-bold hover:bg-red-200 transition"
+        >
+          Remove
+        </button>
+    
       </div>
     </div>
 
@@ -112,11 +127,12 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['create-chat', 'join-chat', 'open-chat'],
+  emits: ['create-chat', 'join-chat', 'open-chat', 'kick-member'],
   data() {
     return {
       isCreatingChat: false,
       isJoiningChat: false,
+      failedAvatars: {},
     }
   },
   computed: {

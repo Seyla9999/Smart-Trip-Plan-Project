@@ -130,7 +130,7 @@ const sendMessage = async () => {
     await scrollToBottom()
 
     const response = await axios.post(
-      'http://localhost:3000/chatbot/chat',
+      'http://localhost:3000/api/chatbot/chat',
       { message: userMessage }
     )
 

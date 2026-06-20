@@ -81,7 +81,7 @@ async function loadBookmarkState() {
       return;
     }
 
-    const response = await axios.get(`${API_BASE_URL}/bookmarks`, {
+    const response = await axios.get(`${API_BASE_URL}/api/bookmarks`, {
       headers: getAuthHeaders(),
     });
 
@@ -125,7 +125,7 @@ async function toggleFavorite(event: MouseEvent) {
 
   try {
     if (isFavorite.value && bookmarkId.value) {
-      await axios.delete(`${API_BASE_URL}/bookmarks/${bookmarkId.value}`, {
+      await axios.delete(`${API_BASE_URL}/api/bookmarks/${bookmarkId.value}`, {
         headers: getAuthHeaders(),
       });
 
@@ -133,7 +133,7 @@ async function toggleFavorite(event: MouseEvent) {
       bookmarkId.value = null;
     } else {
       const response = await axios.post(
-        `${API_BASE_URL}/bookmarks`,
+        `${API_BASE_URL}/api/bookmarks`,
         {
           entity_type: "attraction",
           entity_id: String(props.place.id),
