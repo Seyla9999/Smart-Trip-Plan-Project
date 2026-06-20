@@ -187,7 +187,7 @@ export function useProvinceDetail() {
       let usesMockData = false;
 
       try {
-        const provincesResponse = await fetch(`${API_BASE}/provinces`, {
+        const provincesResponse = await fetch(`${API_BASE}/api/provinces`, {
           signal: AbortSignal.timeout(5000),
         });
 
@@ -229,7 +229,7 @@ export function useProvinceDetail() {
 
       try {
         const attractionsResponse = await fetch(
-          `${API_BASE}/attractions/province/${fallbackProvince.id}`,
+          `${API_BASE}/api/attractions/province/${fallbackProvince.id}`,
           { signal: AbortSignal.timeout(5000) },
         );
 
@@ -280,7 +280,7 @@ export function useProvinceDetail() {
 
       try {
         const weatherResponse = await fetch(
-          `${API_BASE}/weather/${fallbackProvince.id}`,
+          `${API_BASE}/api/weather/${fallbackProvince.id}`,
           { signal: AbortSignal.timeout(5000) },
         );
 

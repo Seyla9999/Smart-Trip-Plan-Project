@@ -307,13 +307,13 @@ async function loadInvitePreview() {
   error.value = ''
 
   const endpoints = [
-    `/apizz/trips/join/${token.value}`,
-    `/api/trips/invite/${token.value}`,
-    `/api/trips/share/${token.value}`,
-    `/api/trips/token/${token.value}`,
+    `/trips/join/${token.value}`,
+    `/trips/invite/${token.value}`,
+    `/trips/share/${token.value}`,
+    `/trips/token/${token.value}`,
     // Some backends expose public preview under /public
-    `/api/trips/public/${token.value}`,
-    `/api/trips/preview/${token.value}`,
+    `/trips/public/${token.value}`,
+    `/trips/preview/${token.value}`,
   ]
 
   let resolved: TripPreview | null = null
@@ -356,10 +356,10 @@ async function joinTrip() {
   successMessage.value = ''
 
   const joinEndpoints = [
-    `/api/trips/join/${token.value}`,
-    `/api/trips/invite/${token.value}`,
-    `/api/trips/share/${token.value}`,
-    `/api/trips/token/${token.value}`,
+    `/trips/join/${token.value}`,
+    `/trips/invite/${token.value}`,
+    `/trips/share/${token.value}`,
+    `/trips/token/${token.value}`,
   ]
 
   try {
