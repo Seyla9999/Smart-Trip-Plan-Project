@@ -552,7 +552,7 @@ const normalizeImageList = (value) => {
   }
 
   return []
-}z
+}
 
 const normalizeStoryImages = (story) => {
   if (!story) return []
