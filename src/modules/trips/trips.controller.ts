@@ -62,15 +62,12 @@ export class TripsController {
     return this.tripsService.updateItinerary(id, req.user.id, dto);
   }
 
-  // POST /api/trips/join/:token — join a trip via invite link
-  // NOTE: this route MUST be before ':id' to avoid being caught by findOne
   @Post('join/:token')
   @HttpCode(200)
   join(@Request() req, @Param('token') token: string) {
     return this.tripsService.joinByToken(token, req.user.id);
   }
 
-  // POST /api/trips/:id/itinerary-items — append one item to existing trip
   @Post(':id/itinerary-items')
   addItineraryItem(
     @Request() req,
@@ -80,15 +77,22 @@ export class TripsController {
     return this.tripsService.addItineraryItem(id, req.user.id, dto);
   }
 
-  // PATCH /api/trips/:id/complete — mark trip as completed
   @Patch(':id/complete')
   complete(@Request() req, @Param('id') id: string) {
     return this.tripsService.complete(id, req.user.id);
   }
 
-  // DELETE /api/trips/:id — delete trip (owner only)
   @Delete(':id')
   remove(@Request() req, @Param('id') id: string) {
     return this.tripsService.remove(id, req.user.id);
+  }
+
+  @Delete(':id/members/:userId')
+  async removeMember(
+    @Param('id') tripId: string,
+    @Param('userId') targetUserId: string,
+    @Query('userId') ownerId: string
+  ) {
+    return this.tripsService.removeMemberFromTrip(tripId, ownerId, targetUserId);
   }
 }

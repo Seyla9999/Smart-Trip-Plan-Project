@@ -78,12 +78,11 @@ export class TripsService {
     return trip;
   }
 
-  /** Verify that the user is a member of the trip. Throws 404 or 403. */
   private async assertMember(tripId: string, userId: string): Promise<Trip> {
     const trip = await this.tripRepo.findOne({
       where: { id: tripId },
       relations: {
-        members: true,
+        members: { user: true },
         itinerary_items: {
           attraction: {
             province: true,
@@ -99,7 +98,6 @@ export class TripsService {
     return trip;
   }
 
-  /** Verify that the user is the owner. Throws 404 or 403. */
   private async assertOwner(tripId: string, userId: string): Promise<Trip> {
     const trip = await this.assertMember(tripId, userId);
     const isOwner = trip.members.some(
@@ -109,6 +107,17 @@ export class TripsService {
     return trip;
   }
 
+  async removeMemberFromTrip(tripId: string, ownerId: string, targetUserId: string): Promise<{ message: string }> {
+    await this.assertOwner(tripId, ownerId);
+
+    if (ownerId === targetUserId) {
+      throw new ForbiddenException('You cannot kick yourself from the trip.');
+    }
+    await this.memberRepo.delete({ trip_id: tripId, user_id: targetUserId });
+
+    return { message: 'Member removed successfully' };
+  } 
+  
   // ─── Create ───────────────────────────────────────────────────────────────
 
   private buildItineraryItemPayload(
@@ -181,7 +190,7 @@ export class TripsService {
     return this.tripRepo.findOne({
       where: { id: saved.id },
       relations: {
-        members: true,
+        members: { user: true },
         itinerary_items: {
           attraction: {
             province: true,
@@ -198,6 +207,7 @@ export class TripsService {
       .createQueryBuilder('trip')
       .innerJoin('trip.members', 'member', 'member.user_id = :userId', { userId })
       .leftJoinAndSelect('trip.members', 'allMembers')
+      .leftJoinAndSelect('allMembers.user', 'user')
       .leftJoinAndSelect('trip.itinerary_items', 'items')
       .leftJoinAndSelect('items.attraction', 'attraction')
       .leftJoinAndSelect('attraction.province', 'attractionProvince')
@@ -246,7 +256,7 @@ export class TripsService {
     return this.tripRepo.findOne({
       where: { id: tripId },
       relations: {
-        members: true,
+        members: { user: true },
         itinerary_items: {
           attraction: {
             province: true,
@@ -260,7 +270,7 @@ export class TripsService {
   async joinByToken(token: string, userId: string): Promise<Trip | null> {
     const trip = await this.tripRepo.findOne({
       where: { invite_token: token },
-      relations: ['members'],
+      relations: ['members', 'members.user'],
     });
     if (!trip) return null;
 
@@ -290,7 +300,7 @@ export class TripsService {
     return this.tripRepo.findOne({
       where: { id: trip.id },
       relations: {
-        members: true,
+        members: { user: true },
         itinerary_items: {
           attraction: {
             province: true,
@@ -329,7 +339,7 @@ export class TripsService {
     return this.tripRepo.findOne({
       where: { id: tripId },
       relations: {
-        members: true,
+        members: { user: true },
         itinerary_items: { attraction: { province: true } },
       },
     }).then((trip) => this.attachDerivedProvince(trip));
@@ -362,7 +372,7 @@ export class TripsService {
     const trip = await this.tripRepo.findOne({
       where: { invite_token: token },
       relations: {
-        members: true,
+        members: { user: true },
         itinerary_items: { attraction: { province: true } },
       },
       order: { itinerary_items: { day_index: 'ASC', sort_order: 'ASC' } },
