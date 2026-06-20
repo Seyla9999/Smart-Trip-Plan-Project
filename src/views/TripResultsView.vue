@@ -487,6 +487,7 @@ import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import API from '@/api/axios'
+import { getStoredAuthToken } from '@/services/auth-session.service'
 import { findTripGroupChat } from '@/services/group-chat.service'
 import type { GroupChat } from '@/services/group-chat.service'
 import PlanMembers from '@/components/PlanMembers.vue'
@@ -531,7 +532,7 @@ interface TripMember     {
 interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
 interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
-
+// Google Places shape (returned by /api/places proxy)
 interface PlacePhoto { photo_reference: string; width: number; height: number }
 interface Attraction {
   // Google Places fields
@@ -558,7 +559,7 @@ interface Attraction {
   longitude?: number
   __source?: 'db' | 'google'
 }
-
+// Matches your NestJS /api/points-of-interest response
 interface POI          { id: string | number; name: string; type: string; icon?: string; description?: string; distance?: string; latitude?: number; longitude?: number }
 interface ScheduleItem {
   placeId: string
@@ -594,6 +595,7 @@ const SCHEDULE_META_PREFIX = '[schedule-meta]'
 const TRIP_VIEW_META_STORAGE_PREFIX = 'trip_results_view_meta:'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const PLACES_API_BASE = `${API_BASE}/api/places`
 
 // ─── Province data ────────────────────────────────────────────────────────────
 const provinceCoords: Record<string, [number, number]> = {
@@ -637,7 +639,7 @@ const selectedWeatherDay = ref(0)
 // Group chat
 const { getOrCreateChatForTrip, createChat, joinChat, currentUserId } = useGroupChat()
 
-
+// Attractions — fetched from your backend /api/attractions
 const allAttractions             = ref<Attraction[]>([])
 const attractionsLoading         = ref(false)
 const selectedAttractionCategory = ref('all')
@@ -957,7 +959,7 @@ function googleTypeToCategoryIcon(types: string[] = []): string {
 
 /** Build a proxied photo URL from a Google photo_reference */
 function googlePhotoUrl(ref: string, maxwidth = 400): string {
-  return `${API_BASE}/places/photo?ref=${encodeURIComponent(ref)}&maxwidth=${maxwidth}`
+  return `${PLACES_API_BASE}/photo?ref=${encodeURIComponent(ref)}&maxwidth=${maxwidth}`
 }
 
 /** Normalize a Google Places result into our Attraction shape */
@@ -992,11 +994,11 @@ const provinceAttractions    = ref<Attraction[]>([])
 const routeAttractionsGoogle = ref<{ place: Attraction; distanceKm: number }[]>([])
 const routeAttractionsLoading = ref(false)
 
-
+/** Call /api/places once and return normalized results */
 async function fetchGooglePlaces(lat: number, lng: number, type = 'tourist_attraction', radius = 20000): Promise<Attraction[]> {
-  const token = localStorage.getItem('auth_token')
+  const token = getStoredAuthToken()
   const res = await fetch(
-    `${API_BASE}/places?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`,
+    `${PLACES_API_BASE}?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`,
     { headers: { Authorization: `Bearer ${token ?? ''}` } }
   )
   if (!res.ok) throw new Error(`Places API ${res.status}`)
@@ -1438,12 +1440,12 @@ const isAddedToAnyDay = (id: string) =>
   Object.values(schedule.value).some(items => items.some(i => i.placeId === id))
 
 // ─── Save plan to backend ─────────────────────────────────────────────────────
-
-// Payload: { origin, destination, startDate, endDate, travelType, schedule }
+// Backend endpoint: PUT /api/trips/:id/itinerary (or POST /api/trips if new)
+// Payload for update: { itinerary_items: [...] }
 const savePlan = async () => {
   isSaving.value = true
   try {
-    const token = localStorage.getItem('auth_token')
+    const token = getStoredAuthToken()
     if (!token) {
       showToast('Your session expired. Please log in again.', 'error')
       isSaving.value = false
@@ -1497,37 +1499,93 @@ const savePlan = async () => {
       itinerary_items: itineraryItems,
     }
 
-// If we have a tripId, update; otherwise create new
-    const endpoint = tripId.value
-      ? `${API_BASE}/trips/${tripId.value}/itinerary`
-      : `${API_BASE}/trips`
-    const method = tripId.value ? 'PUT' : 'POST'
-
-    const res = await fetch(endpoint, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    })
-
-    if (!res.ok) {
-      if (res.status === 401) {
-          throw new Error('Your session expired. Please log in again.')
-      }
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.message || `Error ${res.status}`)
+    const itineraryPayload = {
+      itinerary_items: itineraryItems,
     }
 
-    const data = await res.json()
-    const persistedTripId = tripId.value || String(data.id ?? '')
+    // If we have a tripId, update the itinerary; otherwise create a new trip.
+    // Use the shared API wrapper so interceptors and auth handling are consistent.
+    let data: any = null
+    try {
+      if (tripId.value) {
+        console.debug('Updating trip itinerary payload:', itineraryPayload)
+        try {
+          const resp = await API.put(`/trips/${tripId.value}/itinerary`, itineraryPayload)
+          data = resp.data
+        } catch (innerErr: any) {
+          console.warn('PUT /itinerary failed, attempting item-by-item upload', innerErr)
+          if (innerErr?.response?.status === 404 || innerErr?.response?.status === 500) {
+            data = { id: tripId.value }
+            for (const item of itineraryItems) {
+              const itemPayload: any = {
+                day_number: item.day_number,
+                sort_order: item.sort_order,
+              }
+              if (item.attraction_id) itemPayload.attraction_id = item.attraction_id
+              if (item.title)         itemPayload.title = item.title
+              if (item.description)   itemPayload.description = item.description
+              if (item.start_time)    itemPayload.start_time = item.start_time
+              if (item.end_time)      itemPayload.end_time = item.end_time
+
+              try {
+                await API.post(`/trips/${tripId.value}/itinerary-items`, itemPayload)
+              } catch (itemErr: any) {
+                console.warn('Failed to create itinerary item for existing trip', tripId.value, itemPayload, itemErr)
+              }
+            }
+          } else {
+            throw innerErr
+          }
+        }
+      } else {
+        // Create trip first without nested itinerary_items to avoid backend nested-create errors
+        const createPayload = { ...payload }
+        delete (createPayload as any).itinerary_items
+        console.debug('Creating trip payload:', createPayload)
+        const resp = await API.post('/trips', createPayload)
+        data = resp.data
+
+        // If the trip was created and we have itinerary items, add them individually
+        const newId = String(data?.id ?? data?.data?.id ?? data?.trip?.id ?? '')
+        if (newId && itineraryItems.length) {
+          for (const item of itineraryItems) {
+            const itemPayload: any = {
+              day_number: item.day_number,
+              sort_order: item.sort_order,
+            }
+            if (item.attraction_id) itemPayload.attraction_id = item.attraction_id
+            if (item.title)         itemPayload.title = item.title
+            if (item.description)   itemPayload.description = item.description
+            if (item.start_time)    itemPayload.start_time = item.start_time
+            if (item.end_time)      itemPayload.end_time = item.end_time
+
+            try {
+              await API.post(`/trips/${newId}/itinerary-items`, itemPayload)
+            } catch (itemErr: any) {
+              console.warn('Failed to create itinerary item for trip', newId, itemPayload, itemErr)
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      // Surface backend error details when available
+      console.error('Save trip failed:', err)
+      console.error('Server response body:', err?.response?.data)
+      const serverMsg = err?.response?.data?.message || err?.response?.data || err?.message || String(err)
+      if (err?.response?.status === 401) throw new Error('Your session expired. Please log in again.')
+      throw new Error(typeof serverMsg === 'string' ? serverMsg : JSON.stringify(serverMsg))
+    }
+
+    const persistedTripId = tripId.value || String(data?.id ?? data?.data?.id ?? data?.trip?.id ?? '')
     if (persistedTripId) {
       writeTripViewMeta(persistedTripId, buildCurrentTripViewMeta())
-    }
-
-    if (!tripId.value && data.id) {
-       window.history.replaceState({}, '', `/trip/results/${data.id}`)
+      if (!tripId.value) {
+        router.replace({
+          name: 'trip-results',
+          params: { id: persistedTripId },
+          query: { ...vueRoute.query },
+        })
+      }
     }
 
     // Generate invite link automatically for Solo trips
@@ -1593,12 +1651,8 @@ const fetchTrip = async () => {
     return
   }
   try {
-    const token = localStorage.getItem('auth_token')
-    const res = await fetch(`${API_BASE}/trips/${tripId.value}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`) }
-    tripData.value = await res.json()
+    const res = await API.get(`/trips/${tripId.value}`)
+    tripData.value = res.data
     await refreshTripGroupChatStatus()
 
     const persistedMeta = readTripViewMeta(tripId.value)
@@ -1960,9 +2014,9 @@ const isGeneratingToken = ref(false)
 const generateInviteTokenForTrip = async (targetTripId: string) => {
   if (!targetTripId || inviteToken.value) return
   const endpoints = [
-    `/trips/${targetTripId}/invite-token`,
-    `/trips/${targetTripId}/invite`,
-    `/trips/${targetTripId}/share`,
+    `/api/trips/${targetTripId}/invite-token`,
+    `/api/trips/${targetTripId}/invite`,
+    `/api/trips/${targetTripId}/share`,
   ]
   for (const ep of endpoints) {
     try {

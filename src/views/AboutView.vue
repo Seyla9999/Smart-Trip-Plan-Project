@@ -196,7 +196,7 @@ export default defineComponent({
         );
 
         const base = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const res = await fetch(`${base}/users/count`);
+        const res = await fetch(`${base}/api/users/count`);
         if (res.ok) {
           const d = await res.json();
           stats.value.travelers = d.count ?? 0;

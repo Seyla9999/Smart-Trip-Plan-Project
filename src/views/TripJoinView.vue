@@ -307,7 +307,7 @@ async function loadInvitePreview() {
   error.value = ''
 
   const endpoints = [
-    `/api/trips/join/${token.value}`,
+    `/apizz/trips/join/${token.value}`,
     `/api/trips/invite/${token.value}`,
     `/api/trips/share/${token.value}`,
     `/api/trips/token/${token.value}`,
@@ -330,7 +330,7 @@ async function loadInvitePreview() {
   // This handles cases where the token IS the trip UUID
   if (!resolved?.id) {
     try {
-      const res = await API.get(`/api/trips/${token.value}`)
+      const res = await API.get(`/trips/${token.value}`)
       const candidate = normalizeTripResponse(res.data)
       if (candidate?.id) resolved = candidate
     } catch { /* not an ID */ }

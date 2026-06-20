@@ -77,7 +77,7 @@ export async function findTripGroupChat(tripId: string, tripTitle?: string): Pro
       const remoteChats: GroupChat[] = Array.isArray(remote) ? remote : (remote ? [remote] : [])
       const found = remoteChats.find(chat => matchesTripChat(chat, tripId, normalizedName, tripTitle))
       if (found) {
-        console.debug('findTripGroupChat: matched via broad /chat/conversations fetch')
+        console.debug('findTripGroupChat: matched via broad /api/chat/conversations fetch')
         return found
       }
     } catch (e) {

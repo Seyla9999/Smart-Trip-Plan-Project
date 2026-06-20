@@ -241,7 +241,7 @@ export default defineComponent({
     async function fetchTravelerCount() {
       try {
         const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const res = await fetch(`${baseUrl}/users/count`);
+        const res = await fetch(`${baseUrl}/api/users/count`);
         if (res.ok) {
           const data = await res.json();
           travelerCount.value = data.count ?? data.data ?? null;

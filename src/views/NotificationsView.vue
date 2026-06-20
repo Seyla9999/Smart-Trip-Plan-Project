@@ -108,7 +108,7 @@ export default defineComponent({
       if (!user?.id) return
       loading.value = true
       try {
-        const res  = await fetch(`${API_URL}/users/${user.id}/notifications`)
+        const res  = await fetch(`${API_URL}/api/users/${user.id}/notifications`)
         const data = await res.json()
         if (data.success) {
           notifications.value = data.data  || []
@@ -130,7 +130,7 @@ export default defineComponent({
         const user = getUser()
         if (user?.id) {
           try {
-            await fetch(`${API_URL}/users/${user.id}/notifications/read`, { method: 'PUT' })
+            await fetch(`${API_URL}/api/users/${user.id}/notifications/read`, { method: 'PUT' })
           } catch {}
         }
       }
@@ -140,7 +140,7 @@ export default defineComponent({
       const user = getUser()
       if (!user?.id) return
       try {
-        await fetch(`${API_URL}/users/${user.id}/notifications/read`, { method: 'PUT' })
+        await fetch(`${API_URL}/api/users/${user.id}/notifications/read`, { method: 'PUT' })
         notifications.value = notifications.value.map(n => ({ ...n, is_read: true }))
         unread.value = 0
         // Dispatch event so NavBar badge updates too

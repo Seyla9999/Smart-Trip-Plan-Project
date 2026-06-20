@@ -391,7 +391,7 @@ export default defineComponent({
     async function pingLastSeen() {
       if (!loggedInUser.value?.id) return
       try {
-        await fetch(`${API_URL}/chat/ping`, {
+        await fetch(`${API_URL}/api/chat/ping`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: loggedInUser.value.id }),
@@ -435,7 +435,7 @@ export default defineComponent({
       if (!loggedInUser.value?.id) return
       convsLoading.value = true
       try {
-        const res  = await fetch(`${API_URL}/chat/conversations?userId=${loggedInUser.value.id}`)
+        const res  = await fetch(`${API_URL}/api/chat/conversations?userId=${loggedInUser.value.id}`)
         const data = await res.json()
         const newData    = Array.isArray(data.data) ? data.data : []
         const newDataStr = JSON.stringify(newData)
@@ -450,7 +450,7 @@ export default defineComponent({
     async function pollUpdates() {
       if (!loggedInUser.value?.id) return
       try {
-        const res  = await fetch(`${API_URL}/chat/conversations?userId=${loggedInUser.value.id}`)
+        const res  = await fetch(`${API_URL}/api/chat/conversations?userId=${loggedInUser.value.id}`)
         const data = await res.json()
         const newData    = Array.isArray(data.data) ? data.data : []
         const newDataStr = JSON.stringify(newData)
@@ -465,7 +465,7 @@ export default defineComponent({
         }
         if (activeConv.value) {
           const msgRes  = await fetch(
-            `${API_URL}/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
+            `${API_URL}/api/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
             { cache: 'no-store' }
           )
           const msgData = await msgRes.json()
@@ -492,7 +492,7 @@ export default defineComponent({
       msgsLoading.value = true; lastMsgCount = 0
       try {
         const res  = await fetch(
-          `${API_URL}/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
+          `${API_URL}/api/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
           { cache: 'no-store' }
         )
         const data = await res.json()
@@ -513,7 +513,7 @@ export default defineComponent({
         })
         lastMsgCount = messages.value.length
 
-        fetch(`${API_URL}/chat/conversations/${convId}/seen`, {
+        fetch(`${API_URL}/api/chat/conversations/${convId}/seen`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: loggedInUser.value.id }),
@@ -548,7 +548,7 @@ export default defineComponent({
       scrollToBottom()
 
       try {
-        const res = await fetch(`${API_URL}/chat/conversations/${activeConv.value.id}/messages`, {
+        const res = await fetch(`${API_URL}/api/chat/conversations/${activeConv.value.id}/messages`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ senderId: loggedInUser.value.id, text }),
         })
@@ -596,7 +596,7 @@ export default defineComponent({
         const fd = new FormData()
         fd.append('file', file)
         fd.append('senderId', loggedInUser.value.id)
-        const res = await fetch(`${API_URL}/chat/conversations/${activeConv.value.id}/upload`, {
+        const res = await fetch(`${API_URL}/api/chat/conversations/${activeConv.value.id}/upload`, {
           method: 'POST', body: fd,
         })
         if (res.ok) {
@@ -618,7 +618,7 @@ export default defineComponent({
       _deletedIds.add(msg.id)
       if (idx !== -1) messages.value[idx] = { ...messages.value[idx], deleted: true, status: 'deleted', text: null, image_url: null }
       try {
-        const res  = await fetch(`${API_URL}/chat/messages/${msg.id}?userId=${loggedInUser.value.id}`, { method: 'DELETE' })
+        const res  = await fetch(`${API_URL}/api/chat/messages/${msg.id}?userId=${loggedInUser.value.id}`, { method: 'DELETE' })
         const data = await res.json()
         console.log('Delete response:', data)
         if (!data.success) {
@@ -679,7 +679,7 @@ export default defineComponent({
     async function startDirectChat(userId: string) {
       if (!loggedInUser.value?.id) return
       try {
-        const res = await fetch(`${API_URL}/chat/conversations`, {
+        const res = await fetch(`${API_URL}/api/chat/conversations`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ createdBy: loggedInUser.value.id, type: 'direct', memberIds: [userId] }),
         })
@@ -700,7 +700,7 @@ export default defineComponent({
       searchTimeout = setTimeout(async () => {
         searchingUsers.value = true
         try {
-          const res  = await fetch(`${API_URL}/users/search?q=${encodeURIComponent(q)}`)
+          const res  = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(q)}`)
           const data = await res.json()
           searchResults.value = (Array.isArray(data.data) ? data.data : [])
             .filter((u: any) => u.id !== loggedInUser.value?.id)
@@ -724,7 +724,7 @@ export default defineComponent({
       if (newChatType.value === 'group' && !newGroupName.value.trim()) { newChatError.value = 'Please enter a group name'; return }
       creating.value = true
       try {
-        const res = await fetch(`${API_URL}/chat/conversations`, {
+        const res = await fetch(`${API_URL}/api/chat/conversations`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             createdBy: loggedInUser.value.id,

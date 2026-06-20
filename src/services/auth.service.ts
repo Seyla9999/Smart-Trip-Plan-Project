@@ -10,6 +10,12 @@ export const register = (data: {
   return API.post('/auth/register', data)
 }
 
+const storeAuthToken = (token: string) => {
+  localStorage.setItem('auth_token', token)
+  localStorage.setItem('access_token', token)
+  localStorage.setItem('token', token)
+}
+
 // LOGIN
 export const login = async (data: {
   email: string
@@ -17,9 +23,9 @@ export const login = async (data: {
 }) => {
   const response = await API.post('/auth/login', data)
   
-  // Store token in localStorage
-  if (response.data.token) {
-    localStorage.setItem('auth_token', response.data.token)
+  const token = response.data.token ?? response.data.access_token ?? response.data.accessToken
+  if (token) {
+    storeAuthToken(token)
     markAuthActivity()
   }
   

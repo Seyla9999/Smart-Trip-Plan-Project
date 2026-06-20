@@ -292,7 +292,7 @@ export default defineComponent({
     async function loadChatUnread() {
       if (!user.value?.id) return
       try {
-        const res = await fetch(`${API_URL}/chat/unread?userId=${user.value.id}`)
+        const res = await fetch(`${API_URL}/api/chat/unread?userId=${user.value.id}`)
         if (res.ok) {
           const data       = await res.json()
           chatUnread.value = data.unread || 0
@@ -304,7 +304,7 @@ export default defineComponent({
       if (!user.value?.id) return
       notifLoading.value = true
       try {
-        const res = await fetch(`${API_URL}/users/${user.value.id}/notifications`)
+        const res = await fetch(`${API_URL}/api/users/${user.value.id}/notifications`)
         if (res.ok) {
           const data = await res.json()
           if (data.success) {
@@ -323,7 +323,7 @@ export default defineComponent({
     async function markAllRead() {
       if (!user.value?.id) return
       try {
-        await fetch(`${API_URL}/users/${user.value.id}/notifications/read`, { method: 'PUT' })
+        await fetch(`${API_URL}/api/users/${user.value.id}/notifications/read`, { method: 'PUT' })
       } catch {}
       notifications.value = notifications.value.map((n: any) => ({ ...n, is_read: true }))
       unreadCount.value   = 0
@@ -336,7 +336,7 @@ export default defineComponent({
         unreadCount.value = Math.max(0, unreadCount.value - 1)
         if (user.value?.id) {
           try {
-            await fetch(`${API_URL}/users/${user.value.id}/notifications/read`, { method: 'PUT' })
+            await fetch(`${API_URL}/api/users/${user.value.id}/notifications/read`, { method: 'PUT' })
           } catch {}
         }
       }

@@ -363,6 +363,7 @@
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import API from '../api/axios'
+import { getStoredAuthToken } from '../services/auth-session.service'
 import * as groupChatService from '../services/group-chat.service'
 import { getProvinces } from '../services/home.service'
 
@@ -462,10 +463,10 @@ const tripModalError = ref<string | null>(null)
 const tripSuccess    = ref<string | null>(null)
 const provinceNameById = ref<Record<number, string>>({})
 
-const isLoggedIn = computed(() => !!localStorage.getItem('auth_token'))
+const isLoggedIn = computed(() => !!getStoredAuthToken())
 
 const currentUserName = computed(() => {
-  const token = localStorage.getItem('auth_token')
+  const token = getStoredAuthToken()
   if (!token) return ''
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
@@ -806,18 +807,28 @@ async function createNewTrip() {
   tripModalError.value = null
   try {
     const destName   = attraction.value.province.nameEn
-    const payload: any = {
+    const createPayload: any = {
       title:       `Trip to ${destName}`,
       origin:      newTripOrigin.value,
       destination: attraction.value.provinceSlug,
-      itinerary_items: [{ attraction_id: attraction.value.id, day_number: 1 }],
+      travel_type: 'friends',
     }
-    if (newTripStart.value) payload.start_date = newTripStart.value
-    if (newTripEnd.value)   payload.end_date   = newTripEnd.value
+    if (newTripStart.value) createPayload.start_date = newTripStart.value
+    if (newTripEnd.value)   createPayload.end_date   = newTripEnd.value
 
-    const res = await API.post('/trips', payload)
+    console.debug('Creating trip payload:', createPayload)
+    const res = await API.post('/trips', createPayload)
     const tripId = String(res.data?.id ?? res.data?.trip?.id ?? res.data?.data?.id ?? '')
     if (tripId) {
+      try {
+        await API.post(`/trips/${tripId}/itinerary-items`, {
+          attraction_id: attraction.value.id,
+          day_number: 1,
+        })
+      } catch (itemErr: any) {
+        console.warn('Failed to add first itinerary item for new trip:', itemErr)
+      }
+
       try {
         await groupChatService.getOrCreateGroupChat(tripId)
       } catch (chatError) {
@@ -829,7 +840,9 @@ async function createNewTrip() {
     newTripOrigin.value = ''
     router.push({ name: 'my-trips' })
   } catch (e: any) {
-    tripModalError.value = e?.response?.data?.message || 'Failed to create trip'
+    console.error('Create trip error:', e)
+    const serverData = e?.response?.data
+    tripModalError.value = serverData?.message || (typeof serverData === 'string' ? serverData : JSON.stringify(serverData) || e?.message) || 'Failed to create trip'
   } finally {
     addingToTrip.value = false
   }
@@ -854,7 +867,9 @@ async function addToExistingTrip() {
     tripSuccess.value = `Added to Day ${selectedDay.value}!`
     setTimeout(() => { showTripModal.value = false; tripSuccess.value = null }, 1500)
   } catch (e: any) {
-    tripModalError.value = e?.response?.data?.message || 'Failed to add to trip'
+    console.error('Add to existing trip error:', e)
+    const serverData = e?.response?.data
+    tripModalError.value = serverData?.message || (typeof serverData === 'string' ? serverData : JSON.stringify(serverData) || e?.message) || 'Failed to add to trip'
   } finally {
     addingToTrip.value = false
   }

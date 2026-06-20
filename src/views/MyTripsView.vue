@@ -623,18 +623,19 @@ const tripColor = (id: string) => {
   return PALETTE[Math.abs(hash) % PALETTE.length]
 }
 
+import { getStoredAuthToken } from '@/services/auth-session.service'
+
 // ─── API calls ────────────────────────────────────────────────────────────────
 const authHeaders = () => ({
   'Content-Type': 'application/json',
-  Authorization: `Bearer ${localStorage.getItem('auth_token') ?? localStorage.getItem('access_token') ?? ''}`,
+  Authorization: `Bearer ${getStoredAuthToken() ?? ''}`,
 })
 
 const fetchTrips = async () => {
   isLoading.value = true
   try {
-    const res = await fetch(`${API_BASE}/api/trips`, { headers: authHeaders() })
-    if (!res.ok) throw new Error(`${res.status}`)
-    const data = await res.json()
+    const res = await API.get('/trips')
+    const data = res.data
     trips.value = Array.isArray(data) ? data : (data.data ?? data.trips ?? [])
   } catch (e) {
     showToast('Failed to load trips', 'error')
@@ -649,7 +650,7 @@ const deleteTrip = async () => {
   if (!tripToDelete.value) return
   isDeleting.value = true
   try {
-    await API.delete(`/api/trips/${tripToDelete.value.id}`)
+    await API.delete(`/trips/${tripToDelete.value.id}`)
     trips.value = trips.value.filter(t => t.id !== tripToDelete.value!.id)
     showToast('Trip deleted', 'success')
     tripToDelete.value = null

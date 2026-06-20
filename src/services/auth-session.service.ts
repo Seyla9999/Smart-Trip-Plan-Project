@@ -1,7 +1,8 @@
 const AUTH_LAST_ACTIVITY_KEY = 'auth_last_activity'
 export const AUTH_IDLE_TIMEOUT_MS = 5 * 60 * 1000
 
-const authStorageKeys = ['auth_token', 'user_data', 'user', 'currentUser']
+const authStorageKeys = ['auth_token', 'access_token', 'token', 'authToken', 'user_data', 'user', 'currentUser']
+const authTokenKeys = ['auth_token', 'access_token', 'token', 'authToken']
 
 const readLastActivity = () => {
   const raw = localStorage.getItem(AUTH_LAST_ACTIVITY_KEY)
@@ -11,14 +12,17 @@ const readLastActivity = () => {
   return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null
 }
 
+export const getStoredAuthToken = (): string | null =>
+  authTokenKeys.reduce<string | null>((found, key) => found || localStorage.getItem(key), null)
+
 export const markAuthActivity = () => {
-  if (!localStorage.getItem('auth_token')) return
+  if (!getStoredAuthToken()) return
 
   localStorage.setItem(AUTH_LAST_ACTIVITY_KEY, String(Date.now()))
 }
 
 export const isAuthSessionExpired = () => {
-  const token = localStorage.getItem('auth_token')
+  const token = getStoredAuthToken()
   if (!token) return false
 
   const lastActivity = readLastActivity()

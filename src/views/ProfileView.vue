@@ -243,6 +243,7 @@
 </template>
 
 <script lang="ts">
+import API from '@/api/axios';
 import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
@@ -355,7 +356,7 @@ export default defineComponent({
         router.push('/login'); return
       }
       try {
-        const res = await fetch(`${API_URL}/chat/conversations`, {
+        const res = await fetch(`${API_URL}/api/chat/conversations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -366,10 +367,10 @@ export default defineComponent({
         })
         const data = await res.json()
         if (data.success) {
-          router.push('/chat')
+          router.push('/api/chat')
         }
       } catch {
-        router.push('/chat')
+        router.push('/api/chat')
       }
     }
 
@@ -389,7 +390,7 @@ export default defineComponent({
           user.value = localUser
 
           try {
-            const freshRes = await fetch(`${API_URL}/users/${localUser.id}`)
+            const freshRes = await fetch(`${API_URL}/api/users/${localUser.id}`)
             if (freshRes.ok) {
               const freshData = await freshRes.json()
               if (freshData.success && freshData.data) {
@@ -423,7 +424,7 @@ export default defineComponent({
         loadingOtherProfile.value = true
         activeTab.value = 'stories'
         try {
-          const res  = await fetch(`${API_URL}/users/${viewingUserId.value}`)
+          const res  = await fetch(`${API_URL}/api/users/${viewingUserId.value}`)
           const data = await res.json()
           if (data.success && data.data) {
             user.value = data.data
@@ -440,9 +441,8 @@ export default defineComponent({
       if (!isOwnProfile.value) return 
       tripsLoading.value = true
       try {
-        // Use the same API prefix as TripResultsView (backend uses /api)
-        const res  = await fetch(`${API_URL}/api/trips`, { headers: getHeaders() })
-        const data = await res.json()
+        const res = await API.get('/trips')
+        const data = res.data
         trips.value       = Array.isArray(data) ? data : (data.data || data.trips || [])
         stats.value.trips = trips.value.length
       } catch {
@@ -456,7 +456,7 @@ export default defineComponent({
       storiesLoading.value = true
       try {
         const userId = isOwnProfile.value ? user.value?.id : viewingUserId.value
-        const res = await fetch(`${API_URL}/users/${userId}/stories`, { headers: getHeaders() })
+        const res = await fetch(`${API_URL}/api/users/${userId}/stories`, { headers: getHeaders() })
         if (res.ok) {
           const data    = await res.json()
           let allStories = Array.isArray(data) ? data : (data.data || data.stories || [])
@@ -477,7 +477,7 @@ export default defineComponent({
       if (!isOwnProfile.value) return
       bookmarksLoading.value = true
       try {
-        const res = await fetch(`${API_URL}/bookmarks`, { headers: getHeaders() })
+        const res = await fetch(`${API_URL}/api/bookmarks`, { headers: getHeaders() })
         if (res.ok) {
           const data            = await res.json()
           bookmarks.value       = Array.isArray(data) ? data : (data.data || data.bookmarks || [])
@@ -489,7 +489,7 @@ export default defineComponent({
     async function saveProfile() {
       saving.value = true; saveMsg.value = ''
       try {
-        const res = await fetch(`${API_URL}/users/${user.value.id}`, {
+        const res = await fetch(`${API_URL}/api/users/${user.value.id}`, {
           method: 'PUT', headers: getHeaders(),
           body: JSON.stringify({ full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }),
         })
@@ -525,7 +525,7 @@ export default defineComponent({
       try {
         const fd = new FormData(); fd.append('file', file)
         const token = getToken()
-        const res = await fetch(`${API_URL}/users/${user.value.id}/upload-avatar`, {
+        const res = await fetch(`${API_URL}/api/users/${user.value.id}/upload-avatar`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
@@ -544,7 +544,7 @@ export default defineComponent({
       if (pwForm.value.newPw !== pwForm.value.confirm) { pwMsg.value = '❌ Passwords do not match!'; pwMsgType.value = 'error'; return }
       pwSaving.value = true; pwMsg.value = ''
       try {
-        const res = await fetch(`${API_URL}/users/${user.value.id}/change-password`, {
+        const res = await fetch(`${API_URL}/api/users/${user.value.id}/change-password`, {
           method: 'POST', headers: getHeaders(),
           body: JSON.stringify({ current_password: pwForm.value.current, new_password: pwForm.value.newPw }),
         })
@@ -557,13 +557,13 @@ export default defineComponent({
 
     async function deleteAccount() {
       try {
-        await fetch(`${API_URL}/users/${user.value.id}/delete-account`, { method: 'POST', headers: getHeaders() })
+        await fetch(`${API_URL}/api/users/${user.value.id}/delete-account`, { method: 'POST', headers: getHeaders() })
       } finally { localStorage.clear(); sessionStorage.clear(); router.push('/') }
     }
 
     async function removeBookmark(id: string) {
       try {
-        await fetch(`${API_URL}/bookmarks/${id}`, { method: 'DELETE', headers: getHeaders() })
+        await fetch(`${API_URL}/api/bookmarks/${id}`, { method: 'DELETE', headers: getHeaders() })
         bookmarks.value       = bookmarks.value.filter((b: any) => b.id !== id)
         stats.value.bookmarks = bookmarks.value.length
       } catch {}

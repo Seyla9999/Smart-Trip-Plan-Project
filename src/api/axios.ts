@@ -1,13 +1,13 @@
 import axios from 'axios'
-import { clearAuthSession, isAuthSessionExpired } from '@/services/auth-session.service'
+import { clearAuthSession, getStoredAuthToken, isAuthSessionExpired } from '@/services/auth-session.service'
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api`,
 })
 
 // Add JWT token to requests
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token')
+  const token = getStoredAuthToken()
 
   if (token && isAuthSessionExpired()) {
     clearAuthSession()
@@ -28,7 +28,7 @@ API.interceptors.response.use(
     if (error.response?.status === 401) {
       // Only redirect to login if token exists (user was logged in)
       // If no token exists, the request was made without auth, which is expected for public endpoints
-      const token = localStorage.getItem('auth_token')
+      const token = getStoredAuthToken()
       if (token) {
         clearAuthSession()
         window.location.href = '/login?timeout=1'
