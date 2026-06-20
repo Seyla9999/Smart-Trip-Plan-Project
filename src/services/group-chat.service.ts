@@ -69,7 +69,7 @@ export async function findTripGroupChat(tripId: string, tripTitle?: string): Pro
       const { data } = await API.get(CHAT_BASE, { params: userId ? { userId } : undefined })
       const remote = normalizeResponse<any>(data)
       const remoteChats: GroupChat[] = Array.isArray(remote) ? remote : (remote ? [remote] : [])
-      const found = remoteChats.find(chat => matchesTripChat(chat, tripId, normalizedName, tripTitle))
+      const found = remoteChats.find(chat => matchesTripChat(chat, tripId))
       if (found) {
         console.debug('findTripGroupChat: matched via broad /api/chat/conversations fetch')
         return found
@@ -83,7 +83,7 @@ export async function findTripGroupChat(tripId: string, tripTitle?: string): Pro
   }
 
   const chats = await getUserGroupChats()
-  return chats.find(chat => matchesTripChat(chat, tripId, normalizedName, tripTitle)) ?? null
+  return chats.find(chat => matchesTripChat(chat, tripId)) ?? null
 }
 
 export interface GroupChatMember {

@@ -516,7 +516,7 @@ interface ItineraryItem  {
   day_number?: number
   day_index: number
 }
-interface TripMember     {
+interface TripMember {
   id: string
   user_id: string
   role: string
@@ -526,6 +526,7 @@ interface TripMember     {
   user?: {
     id?: string
     name?: string
+    full_name?: string
     email?: string
     avatar_url?: string
   }
@@ -2079,7 +2080,7 @@ const formattedMembers = computed(() => {
       id: memberId,
       name: member.user?.full_name || member.user?.name || member.name || 'Member',
       email: member.user?.email || member.email || '',
-      avatar_url: normalizeMediaUrl(member.avatar_url || member.user?.avatar_url),
+      avatar_url: normalizeMediaUrl(member.avatar_url || member.user?.avatar_url || undefined),
       role: (memberId === tripData.value?.owner_id ? 'owner' : 'member') as 'owner' | 'member',
     }
   })
@@ -2148,7 +2149,8 @@ const handleJoinedGroupChat = async (payload?: { tripId?: string; members?: any[
       showMembersPanel.value = false
       await nextTick()
 
-      const finalChatId = chat.id || chat.data?.id || chat.chat?.id || chat.groupChat?.id;
+      const safeChat = chat as any;
+      const finalChatId = safeChat.id || safeChat.data?.id || safeChat.chat?.id || safeChat.groupChat?.id;
       
       if (finalChatId) {
         router.push({ name: 'chat', query: { convId: String(finalChatId) } })

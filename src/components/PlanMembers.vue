@@ -132,7 +132,7 @@ export default defineComponent({
     return {
       isCreatingChat: false,
       isJoiningChat: false,
-      failedAvatars: {},
+      failedAvatars: {} as Record<string, boolean>,
     }
   },
   computed: {
