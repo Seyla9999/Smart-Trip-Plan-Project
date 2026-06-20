@@ -20,25 +20,21 @@ import { CreateTripDto, ItineraryItemDto } from './dto/create-trip.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
 
 @Controller('trips')
-@UseGuards(JwtAuthGuard)          // all routes require a valid JWT
+@UseGuards(JwtAuthGuard)
 export class TripsController {
   constructor(private readonly tripsService: TripsService) {}
 
-  // POST /api/trips — create a new trip
   @Post()
   @HttpCode(201)
   create(@Request() req, @Body() dto: CreateTripDto) {
     return this.tripsService.create(req.user.id, dto);
   }
 
-  // GET /api/trips — list all trips for the logged-in user
   @Get()
   findAll(@Request() req) {
     return this.tripsService.findAll(req.user.id);
   }
 
-  // GET /api/trips/can-review/:attractionId — check if user can review this attraction
-  // NOTE: MUST be declared before ':id' to avoid NestJS matching "can-review" as an id
   @Get('can-review/:attractionId')
   canReview(@Request() req, @Param('attractionId') attractionId: string) {
     return this.tripsService
@@ -46,13 +42,17 @@ export class TripsController {
       .then((allowed) => ({ allowed }));
   }
 
-  // GET /api/trips/:id — get a single trip (members only)
+  @Get('invite/:token')
+  @Public()
+  getInvitePreview(@Param('token') token: string) {
+    return this.tripsService.findByInviteToken(token);
+  }
+
   @Get(':id')
   findOne(@Request() req, @Param('id') id: string) {
     return this.tripsService.findOne(id, req.user.id);
   }
 
-  // PUT /api/trips/:id/itinerary — replace all itinerary items (Save Plan)
   @Put(':id/itinerary')
   updateItinerary(
     @Request() req,
@@ -68,12 +68,6 @@ export class TripsController {
   @HttpCode(200)
   join(@Request() req, @Param('token') token: string) {
     return this.tripsService.joinByToken(token, req.user.id);
-  }
-
-  @Get('invite/:token')
-  @Public()
-  getInvitePreview(@Param('token') token: string) {
-    return this.tripsService.findByInviteToken(token);
   }
 
   // POST /api/trips/:id/itinerary-items — append one item to existing trip
