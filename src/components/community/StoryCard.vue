@@ -142,7 +142,10 @@ function getAvatarSrc(url: string | null | undefined): string {
   if (typeof url !== 'string') return ''
   if (url.startsWith('data:')) return url
   if (url.startsWith('http')) return url
-  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) return `${API.baseURL}${url}`
+  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return `${baseUrl}${url}`;
+  }
   return url
 }
 

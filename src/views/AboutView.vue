@@ -197,9 +197,8 @@ export default defineComponent({
         );
 
         const res = await API.get('/users/count');
-        if (res.ok) {
-          const d = await res.json();
-          stats.value.travelers = d.count ?? 0;
+        if (res.data) {
+          stats.value.travelers = res.data.count ?? 0;
         }
       } catch {
         // fallback values shown in template

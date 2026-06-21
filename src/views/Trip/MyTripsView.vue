@@ -705,7 +705,7 @@ const finishTrip = async () => {
       { status: 'completed' },
       { headers: authHeaders() }
     )
-    if (!res.ok) throw new Error(`${res.status}`)
+    if (!res.data) throw new Error(`${res.status}`)
 
     // Update local list so badge appears immediately
     const idx = trips.value.findIndex(t => t.id === tripId)
