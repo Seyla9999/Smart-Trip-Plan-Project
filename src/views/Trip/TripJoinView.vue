@@ -134,8 +134,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import API from '../api/axios'
-import * as groupChatService from '../services/group-chat.service'
+import API from '../../api/axios'
+import * as groupChatService from '../../services/group-chat.service'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ItineraryItem {

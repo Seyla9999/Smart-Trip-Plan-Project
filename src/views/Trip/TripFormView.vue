@@ -161,8 +161,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter }     from 'vue-router'
-import { getAttractions } from '../services/attractions.service'
-import { getProvinces } from '../services/home.service'
+import { getAttractions } from '../../services/attractions.service'
+import { getProvinces } from '../../services/home.service'
 
 interface TripFormData {
   origin:      string

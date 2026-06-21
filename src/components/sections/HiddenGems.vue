@@ -81,7 +81,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import type { Attraction } from '@/services/home.service'
+import type { Attraction } from '../../services/home.service'
 
 const STAR_MAP = ['', '★☆☆☆☆', '★★☆☆☆', '★★★☆☆', '★★★★☆', '★★★★★']
 

@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from 'vue'
-import axios from 'axios'
+import API from '../../api/axios'
 import { marked } from 'marked' // CHANGE 2: Imported marked
 
 defineEmits(['close'])
@@ -129,8 +129,8 @@ const sendMessage = async () => {
     isThinking.value = true
     await scrollToBottom()
 
-    const response = await axios.post(
-      'http://localhost:3000/api/chatbot/chat',
+    const response = await API.post(
+      '/chatbot/chat',
       { message: userMessage }
     )
 

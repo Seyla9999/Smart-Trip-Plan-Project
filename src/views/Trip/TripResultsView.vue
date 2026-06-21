@@ -534,7 +534,6 @@ interface TripMember {
 interface TripData       { id: string; title: string; origin?: string; destination: string; travel_type?: string; start_date: string; end_date: string; owner_id: string; invite_token: string; members: TripMember[]; itinerary_items: ItineraryItem[] }
 interface Filter        { id: string; label: string; icon: string; active: boolean }
 interface DayWeather   { dateLabel: string; icon: string; condition: string; tempMax: number; tempMin: number; rain: number; wind: number; uv: number; sunrise: string }
-// Google Places shape (returned by /api/places proxy)
 interface PlacePhoto { photo_reference: string; width: number; height: number }
 interface Attraction {
   // Google Places fields
@@ -544,7 +543,7 @@ interface Attraction {
   user_ratings_total?: number
   geometry?: { location: { lat: number; lng: number } }
   photos?: PlacePhoto[]
-  // shared / compat
+  
   id: string | number
   name: string
   name_en?: string
@@ -561,7 +560,7 @@ interface Attraction {
   longitude?: number
   __source?: 'db' | 'google'
 }
-// Matches your NestJS /api/points-of-interest response
+
 interface POI          { id: string | number; name: string; type: string; icon?: string; description?: string; distance?: string; latitude?: number; longitude?: number }
 interface ScheduleItem {
   placeId: string
@@ -595,9 +594,6 @@ interface PersistedTripViewMeta {
 
 const SCHEDULE_META_PREFIX = '[schedule-meta]'
 const TRIP_VIEW_META_STORAGE_PREFIX = 'trip_results_view_meta:'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-const PLACES_API_BASE = `${API_BASE}/api/places`
 
 // ─── Province data ────────────────────────────────────────────────────────────
 const provinceCoords: Record<string, [number, number]> = {
@@ -638,10 +634,8 @@ const weatherForecast   = ref<DayWeather[]>([])
 const weatherLoading    = ref(false)
 const selectedWeatherDay = ref(0)
 
-// Group chat
 const { getOrCreateChatForTrip, createChat, joinChat, removeMember,currentUserId } = useGroupChat()
 
-// Attractions — fetched from your backend /api/attractions
 const allAttractions             = ref<Attraction[]>([])
 const attractionsLoading         = ref(false)
 const selectedAttractionCategory = ref('all')
@@ -961,7 +955,7 @@ function googleTypeToCategoryIcon(types: string[] = []): string {
 
 /** Build a proxied photo URL from a Google photo_reference */
 function googlePhotoUrl(ref: string, maxwidth = 400): string {
-  return `${PLACES_API_BASE}/photo?ref=${encodeURIComponent(ref)}&maxwidth=${maxwidth}`
+  return `${API}/places/photo?ref=${encodeURIComponent(ref)}&maxwidth=${maxwidth}`
 }
 
 /** Normalize a Google Places result into our Attraction shape */
@@ -990,22 +984,15 @@ function mapGooglePlace(p: any): Attraction {
   }
 }
 
-// Province attractions — fetched from the backend database
 const provinceAttractions    = ref<Attraction[]>([])
 // Route attractions — discovered from Google Places along the route polyline
 const routeAttractionsGoogle = ref<{ place: Attraction; distanceKm: number }[]>([])
 const routeAttractionsLoading = ref(false)
 
-/** Call /api/places once and return normalized results */
+
 async function fetchGooglePlaces(lat: number, lng: number, type = 'tourist_attraction', radius = 20000): Promise<Attraction[]> {
-  const token = getStoredAuthToken()
-  const res = await fetch(
-    `${PLACES_API_BASE}?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`,
-    { headers: { Authorization: `Bearer ${token ?? ''}` } }
-  )
-  if (!res.ok) throw new Error(`Places API ${res.status}`)
-  const data = await res.json()
-  return (data.results ?? []).map(mapGooglePlace)
+  const res = await API.get(`/places?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`)
+  return (res.data.results ?? []).map(mapGooglePlace)
 }
 
 /** Sample N evenly-spaced points along the route polyline */
@@ -1201,8 +1188,8 @@ const normalizeMediaUrl = (value: unknown): string | null => {
   const raw = String(value ?? '').trim()
   if (!raw) return null
   if (/^https?:\/\//i.test(raw)) return raw
-  if (raw.startsWith('/')) return `${API_BASE}${raw}`
-  return `${API_BASE}/${raw}`
+  if (raw.startsWith('/')) return `${API}${raw}`
+  return `${API}/${raw}`
 }
 
 const markImageError = (attraction: Attraction) => {
@@ -1442,8 +1429,7 @@ const isAddedToAnyDay = (id: string) =>
   Object.values(schedule.value).some(items => items.some(i => i.placeId === id))
 
 // ─── Save plan to backend ─────────────────────────────────────────────────────
-// Backend endpoint: PUT /api/trips/:id/itinerary (or POST /api/trips if new)
-// Payload for update: { itinerary_items: [...] }
+
 const savePlan = async () => {
   isSaving.value = true
   try {
@@ -1505,8 +1491,6 @@ const savePlan = async () => {
       itinerary_items: itineraryItems,
     }
 
-    // If we have a tripId, update the itinerary; otherwise create a new trip.
-    // Use the shared API wrapper so interceptors and auth handling are consistent.
     let data: any = null
     try {
       if (tripId.value) {
@@ -1602,7 +1586,7 @@ const savePlan = async () => {
       if (persistedTripId) {
         const chat = await getOrCreateChatForTrip(
           persistedTripId,
-          tripData.value?.title,
+          tripData.value?.title || payload.title,
           formattedMembers.value,
         )
         if (chat) {
@@ -1638,9 +1622,7 @@ const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') 
 const fetchTrip = async () => {
   isPageLoading.value = true
   apiError.value = null
-  // If there's no trip id (query-only load), synthesize an empty schedule
-  // scaffold so the Daily schedule UI renders the same day-based layout
-  // as when loading a saved trip with `itinerary_items`.
+
   if (!tripId.value) {
     savedTripViewMeta.value = null
     const scaffold: Record<number, ScheduleItem[]> = {}
@@ -1721,7 +1703,6 @@ const fetchTrip = async () => {
       }
     }
 
-    // Keep the same day-tab behavior for both saved and query-only flows.
     const totalDays = daysCount.value || 3
     for (let day = 1; day <= totalDays; day += 1) {
       if (!restored[day]) restored[day] = []
@@ -2014,9 +1995,9 @@ const isGeneratingToken = ref(false)
 const generateInviteTokenForTrip = async (targetTripId: string) => {
   if (!targetTripId || inviteToken.value) return
   const endpoints = [
-    `/api/trips/${targetTripId}/invite-token`,
-    `/api/trips/${targetTripId}/invite`,
-    `/api/trips/${targetTripId}/share`,
+    `/trips/${targetTripId}/invite-token`,
+    `/trips/${targetTripId}/invite`,
+    `/trips/${targetTripId}/share`,
   ]
   for (const ep of endpoints) {
     try {
@@ -2195,16 +2176,12 @@ const handleKickMember = async (targetUserId: string) => {
   if (!confirm) return;
 
   try {
-    // 1. Remove from the Trip Database
     await API.delete(`/trips/${tripId.value}/members/${targetUserId}?userId=${currentUserId.value}`);
 
-    // 2. Remove from the Group Chat (if one exists)
     if (groupChat.value?.id) {
-      // removeMember handles the API call to your chat service
       await removeMember(targetUserId); 
     }
 
-    // 3. Update the UI instantly by filtering them out of the local state
     if (tripData.value && tripData.value.members) {
       tripData.value.members = tripData.value.members.filter(m => {
         const id = m.user?.id || m.user_id || m.id;

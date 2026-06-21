@@ -1,130 +1,130 @@
 <template>
-<div class="plan-trip">
-<header class="header">
-<div class="container">
-<div class="link">
-<div class="background">
-<div class="logo">
-<div class="text-wrapper">តោះទៅ</div>
-<div class="div">Cambodia</div>
-<img class="book" alt="Book" src="/logo.png" />
-</div>
-</div>
-<div class="margin">
-<div class="text-wrapper-2">តោះទៅ! Cambodia</div>
-</div>
-</div>
-<div class="nav">
-<div class="div-2">
-<div class="text-wrapper-3">Home</div>
-</div>
-<div class="link-margin">
-<div class="div-2">
-<div class="text-wrapper-3">About</div>
-</div>
-</div>
-<div class="link-margin">
-<div class="div-2">
-<div class="text-wrapper-3">Discover</div>
-</div>
-</div>
-<div class="link-margin">
-<div class="div-2">
-<div class="text-wrapper-3">Plan Trip</div>
-</div>
-</div>
-<div class="link-margin">
-<div class="div-2">
-<div class="text-wrapper-3">Map</div>
-</div>
-</div>
-<div class="link-margin">
-<div class="div-2">
-<div class="text-wrapper-3">Community</div>
-</div>
-</div>
-</div>
-<div class="container-2">
-<CommonButtonLight
-            class="common-button-light-instance"
-            div-class-name="design-component-instance-node"
-            property1="default"
-            text="Login"
-          />
-<CommonButtonLight
-            class="common-button-light-2"
-            div-class-name="common-button-light-3"
-            property1="default"
-            text="Sign Up Free"
-          />
-</div>
-</div>
-</header>
-<div class="hero-section">
-<div class="container-3">
-<div class="angkor-wat-at"></div>
-<div class="overlay"></div>
-</div>
-<div class="container-4">
-<div class="container-5">
-<div class="div-wrapper">
-<div class="text-wrapper-4">The Kingdom Awaits</div>
-</div>
-<div class="div-wrapper">
-<p class="curating">
-Curating extraordinary journeys through Cambodia's imperial heritage.
-            </p>
-</div>
-</div>
-<div class="section-search">
-<div class="overlay-border">
-<div class="container-6">
-<div class="div-2">
-<div class="container-7">
-<div class="journey-begins">JOURNEY BEGINS</div>
-</div>
-<div class="container-7">
-<div class="text-wrapper-5">Phnom Penh</div>
-</div>
-</div>
-<div class="vertical-divider"></div>
-<div class="container-8">
-<div class="container-7">
-<div class="text">DESTINATION</div>
-</div>
-<div class="container-7">
-<div class="text-2">Koh Kong</div>
-</div>
-</div>
-<div class="vertical-divider"></div>
-<div class="container-9">
-<div class="container-7">
-<div class="text-3">TRAVEL DATES</div>
-</div>
-<div class="container-7">
-<p class="p">Dec 20 – Dec 22</p>
-</div>
-</div>
-<div class="vertical-divider"></div>
-<div class="container-10">
-<div class="container-7">
-<div class="text-4">TRAVEL TYPE</div>
-</div>
-<div class="container-7">
-<div class="text-5">Friends</div>
-</div>
-</div>
-</div>
-<div class="button-wrapper">
-<button class="button-2" type="button">
-<div class="text-wrapper-6">Search</div>
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
+  <div class="plan-trip">
+    <header class="header">
+      <div class="container">
+        <div class="link">
+          <div class="background">
+            <div class="logo">
+              <div class="text-wrapper">តោះទៅ</div>
+              <div class="div">Cambodia</div>
+              <img class="book" alt="Book" src="/logo.png" />
+            </div>
+          </div>
+          <div class="margin">
+            <div class="text-wrapper-2">តោះទៅ! Cambodia</div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="div-2">
+            <div class="text-wrapper-3">Home</div>
+          </div>
+          <div class="link-margin">
+            <div class="div-2">
+              <div class="text-wrapper-3">About</div>
+            </div>
+          </div>
+          <div class="link-margin">
+            <div class="div-2">
+              <div class="text-wrapper-3">Discover</div>
+            </div>
+          </div>
+          <div class="link-margin">
+            <div class="div-2">
+              <div class="text-wrapper-3">Plan Trip</div>
+            </div>
+          </div>
+          <div class="link-margin">
+            <div class="div-2">
+              <div class="text-wrapper-3">Map</div>
+            </div>
+          </div>
+          <div class="link-margin">
+            <div class="div-2">
+              <div class="text-wrapper-3">Community</div>
+            </div>
+          </div>
+        </div>
+        <div class="container-2">
+          <CommonButtonLight
+                      class="common-button-light-instance"
+                      div-class-name="design-component-instance-node"
+                      property1="default"
+                      text="Login"
+                    />
+          <CommonButtonLight
+                      class="common-button-light-2"
+                      div-class-name="common-button-light-3"
+                      property1="default"
+                      text="Sign Up Free"
+                    />
+        </div>
+      </div>
+    </header>
+    <div class="hero-section">
+      <div class="container-3">
+        <div class="angkor-wat-at"></div>
+        <div class="overlay"></div>
+      </div>
+      <div class="container-4">
+        <div class="container-5">
+          <div class="div-wrapper">
+            <div class="text-wrapper-4">The Kingdom Awaits</div>
+          </div>
+          <div class="div-wrapper">
+            <p class="curating">
+            Curating extraordinary journeys through Cambodia's imperial heritage.
+                        </p>
+          </div>
+        </div>
+        <div class="section-search">
+          <div class="overlay-border">
+            <div class="container-6">
+              <div class="div-2">
+                <div class="container-7">
+                  <div class="journey-begins">JOURNEY BEGINS</div>
+                </div>
+                <div class="container-7">
+                  <div class="text-wrapper-5">Phnom Penh</div>
+                </div>
+              </div>
+              <div class="vertical-divider"></div>
+              <div class="container-8">
+                <div class="container-7">
+                  <div class="text">DESTINATION</div>
+                </div>
+                <div class="container-7">
+                  <div class="text-2">Koh Kong</div>
+                </div>
+              </div>
+              <div class="vertical-divider"></div>
+              <div class="container-9">
+                <div class="container-7">
+                  <div class="text-3">TRAVEL DATES</div>
+                </div>
+                <div class="container-7">
+                  <p class="p">Dec 20 – Dec 22</p>
+                </div>
+              </div>
+              <div class="vertical-divider"></div>
+              <div class="container-10">
+                <div class="container-7">
+                  <div class="text-4">TRAVEL TYPE</div>
+                </div>
+                <div class="container-7">
+                  <div class="text-5">Friends</div>
+                </div>
+              </div>
+            </div>
+            <div class="button-wrapper">
+              <button class="button-2" type="button">
+                <div class="text-wrapper-6">Search</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 <script>
 import CommonButtonLight from "./CommonButtonLight.vue";

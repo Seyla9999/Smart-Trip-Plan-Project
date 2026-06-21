@@ -42,12 +42,11 @@ export interface AttractionsResponse {
   }
 }
 
-// Get all attractions with filters
+
 export const getAttractions = async (filters: AttractionsFilterParams) => {
   try {
     return await API.get<AttractionsResponse>('/attractions', { params: filters })
   } catch (error) {
-    // Fallback to mock data when API is unavailable
     console.warn('API unavailable, using mock data')
     
     let filtered = [...mockAttractions]
@@ -112,12 +111,10 @@ export const getAttractionsByProvince = (
   })
 }
 
-// Get top-rated attractions
 export const getTopRatedAttractions = (limit: number = 10) => {
   return API.get('/attractions/top-rated', { params: { limit } })
 }
 
-// Get all categories
 export const getCategories = async () => {
   try {
     return await API.get<{ categories: string[] }>('/attractions/categories')
@@ -132,12 +129,10 @@ export const getCategories = async () => {
   }
 }
 
-// Get attraction statistics
 export const getAttractionStats = () => {
   return API.get('/attractions/statistics')
 }
 
-// Get single attraction
 export const getAttractionById = (id: string) => {
   return API.get(`/attractions/${id}`)
 }

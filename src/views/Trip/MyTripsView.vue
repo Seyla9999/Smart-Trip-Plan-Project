@@ -426,7 +426,7 @@ import { useRouter } from 'vue-router'
 import API from '@/api/axios'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-  interface TripMember     { id: string; user_id: string; role: string }
+interface TripMember     { id: string; user_id: string; role: string }
 interface ItineraryAttraction { id: string; name_en: string; name_kh?: string; category?: string }
 interface ItineraryItem {
   id: string
@@ -450,10 +450,7 @@ interface Trip {
   created_at:      string
   members?:        TripMember[]
   itinerary_items?: ItineraryItem[]
-  // packing_list removed
 }
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const router   = useRouter()
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -595,7 +592,6 @@ const destinationEmoji = (trip: Trip) => {
   return '✈️'
 }
 
-// % of time elapsed from trip creation → start date (for progress bar)
 const tripProgress = (trip: Trip) => {
   const created  = new Date(trip.created_at).getTime()
   const start    = new Date(trip.start_date).getTime()
@@ -623,9 +619,9 @@ const tripColor = (id: string) => {
   return PALETTE[Math.abs(hash) % PALETTE.length]
 }
 
-import { getStoredAuthToken } from '@/services/auth-session.service'
+import { getStoredAuthToken } from '../../services/auth-session.service'
 
-// ─── API calls ────────────────────────────────────────────────────────────────
+
 const authHeaders = () => ({
   'Content-Type': 'application/json',
   Authorization: `Bearer ${getStoredAuthToken() ?? ''}`,
@@ -704,9 +700,10 @@ const finishTrip = async () => {
   const items  = tripToView.value.itinerary_items ?? []
 
   try {
-    const res = await fetch(
-      `${API_BASE}/api/trips/${tripId}/complete`,
-      { method: 'PATCH', headers: authHeaders() }
+    const res = await API.patch(
+      `/trips/${tripId}/complete`,
+      { status: 'completed' },
+      { headers: authHeaders() }
     )
     if (!res.ok) throw new Error(`${res.status}`)
 
@@ -754,17 +751,15 @@ const finishFromHistory = async (trip: Trip) => {
   const items  = trip.itinerary_items ?? []
 
   try {
-    const res = await fetch(
-      `${API_BASE}/api/trips/${tripId}/complete`,
-      { method: 'PATCH', headers: authHeaders() }
+    const res = await API.patch(
+      `/trips/${tripId}/complete`,
+      { status: 'completed' }
     )
     if (!res.ok) throw new Error(`${res.status}`)
 
-    // Update local list so badge appears immediately
     const idx = trips.value.findIndex(t => t.id === tripId)
     if (idx !== -1) trips.value[idx] = { ...trips.value[idx], status: 'completed' }
 
-    // Collect attractions for the review prompt
     finishedAttractions.value = items
       .filter(item => item.attraction?.id)
       .map(item => {
@@ -822,9 +817,9 @@ const shareTrip = async (trip: Trip) => {
     isGeneratingShareToken.value = true
     try {
       const endpoints = [
-        `/api/trips/${trip.id}/invite-token`,
-        `/api/trips/${trip.id}/invite`,
-        `/api/trips/${trip.id}/share`,
+        `/trips/${trip.id}/invite-token`,
+        `/trips/${trip.id}/invite`,
+        `/trips/${trip.id}/share`,
       ]
       for (const ep of endpoints) {
         try {
@@ -833,8 +828,8 @@ const shareTrip = async (trip: Trip) => {
           const generated = data?.invite_token ?? data?.token
                           ?? data?.inviteToken ?? data?.data?.invite_token ?? ''
           if (generated) {
-            trip.invite_token = String(generated)  // patch local object
-            tripToShare.value = { ...trip }         // trigger reactivity
+            trip.invite_token = String(generated)  
+            tripToShare.value = { ...trip }        
             break
           }
         } catch { /* try next */ }

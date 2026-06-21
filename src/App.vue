@@ -18,9 +18,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { clearAuthSession, isAuthSessionExpired, markAuthActivity } from '@/services/auth-session.service'
-import NavBar from './components/NavBar.vue'
-import Footer from './components/Footer.vue'
+import { clearAuthSession, isAuthSessionExpired, markAuthActivity } from './services/auth-session.service'
+import NavBar from '@/components/NavBar.vue'
+import Footer from '@/components/Footer.vue'
 
 import ChatBotButton from '@/components/chatbot/ChatBotButton.vue'
 import ChatBotWindow from '@/components/chatbot/ChatBotWindow.vue'

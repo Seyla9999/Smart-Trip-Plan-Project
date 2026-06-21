@@ -84,8 +84,9 @@
 </template>
 
 <script setup lang="ts">
+import API from '../../api/axios'
 import { computed } from 'vue'
-import type { CommunityAuthor } from '@/data/community'
+import type { CommunityAuthor } from '../../data/community'
 
 const props = withDefaults(
   defineProps<{
@@ -136,13 +137,12 @@ const formattedDate = computed(() => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 })
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 function getAvatarSrc(url: string | null | undefined): string {
   if (!url) return ''
   if (typeof url !== 'string') return ''
   if (url.startsWith('data:')) return url
   if (url.startsWith('http')) return url
-  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) return `${API_URL}${url}`
+  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) return `${API.baseURL}${url}`
   return url
 }
 

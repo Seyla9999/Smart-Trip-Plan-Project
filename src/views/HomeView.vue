@@ -40,14 +40,14 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue'
 
-import HeroSection     from '../components/sections/HeroSection.vue'
-import ProvinceScroll  from '../components/sections/ProvinceScroll.vue'
-import BrowseCategory  from '../components/sections/BrowseCategory.vue'
-import HiddenGems      from '../components/sections/HiddenGems.vue'
-import TravelerStories from '../components/sections/TravelerStories.vue'
-import HowItWorks      from '../components/sections/HowItWorks.vue'
-import SponsorBar      from '../components/sections/SponsorBar.vue'
-import CtaBanner       from '../components/sections/CtaBanner.vue'
+import HeroSection     from '@/components/sections/HeroSection.vue'
+import ProvinceScroll  from '@/components/sections/ProvinceScroll.vue'
+import BrowseCategory  from '@/components/sections/BrowseCategory.vue'
+import HiddenGems      from '@/components/sections/HiddenGems.vue'
+import TravelerStories from '@/components/sections/TravelerStories.vue'
+import HowItWorks      from '@/components/sections/HowItWorks.vue'
+import SponsorBar      from '@/components/sections/SponsorBar.vue'
+import CtaBanner       from '@/components/sections/CtaBanner.vue'
 
 import {
   loadHomePage,
@@ -57,7 +57,7 @@ import {
   type Story,
   type Sponsor,
   type Weather,
-} from '../services/home.service'
+} from '@/services/home.service'
 
 export default defineComponent({
   name: 'HomeView',

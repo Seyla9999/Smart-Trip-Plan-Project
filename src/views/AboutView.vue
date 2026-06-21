@@ -177,8 +177,9 @@
 </template>
 
 <script lang="ts">
+import API from '@/api/axios'
 import { defineComponent, ref, onMounted } from "vue";
-import { getProvinces } from "@/services/home.service";
+import { getProvinces } from '@/services/home.service';
 
 export default defineComponent({
   name: "AboutView",
@@ -195,8 +196,7 @@ export default defineComponent({
           0,
         );
 
-        const base = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const res = await fetch(`${base}/api/users/count`);
+        const res = await API.get('/users/count');
         if (res.ok) {
           const d = await res.json();
           stats.value.travelers = d.count ?? 0;

@@ -327,7 +327,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/api/axios'
+import API from '@/api/axios'
 import { useAdminToast } from '@/composables/useAdminToast'
 
 const { showAdminToast } = useAdminToast()
@@ -596,7 +596,7 @@ const loadStories = async () => {
   fetchError.value = ''
   try {
     // Fetch ALL stories including pending, approved, and flagged
-    const response = await api.get('/stories', {
+    const response = await API.get('/stories', {
       params: { status: 'pending,approved,flagged' }
     })
     const payload = response?.data?.data ?? response?.data ?? []
@@ -670,7 +670,7 @@ const setFilter = (value) => {
 
 const updateStoryStatus = async (id, status) => {
   const normalizedStatus = normalizeStatus(status)
-  const response = await api.patch(`/stories/${id}/status`, {
+  const response = await API.patch(`/stories/${id}/status`, {
     status: normalizedStatus,
   })
   const payload = response?.data?.data ?? response?.data

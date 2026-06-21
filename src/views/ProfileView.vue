@@ -247,7 +247,6 @@ import API from '@/api/axios';
 import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const COLORS  = ['#1D3557','#2D6A4F','#C8922A','#5C4B8A','#AE2012','#2196A6','#6B4C3B']
 
 export default defineComponent({
@@ -321,7 +320,10 @@ export default defineComponent({
       if (!url) return ''
       if (url.startsWith('data:'))    return url
       if (url.startsWith('http'))     return url
-      if (url.startsWith('/uploads')) return `${API_URL}${url}`
+      if (url.startsWith('/uploads')) {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        return `${baseUrl}${url}`;
+      }
       return url
     }
 
@@ -356,16 +358,12 @@ export default defineComponent({
         router.push('/login'); return
       }
       try {
-        const res = await fetch(`${API_URL}/api/chat/conversations`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            createdBy:  loggedInUserId.value,
-            type:       'direct',
-            memberIds:  [user.value.id],
-          }),
+        const res = await API.post(`/chat/conversations`, {
+          createdBy:  loggedInUserId.value,
+          type:       'direct',
+          memberIds:  [user.value.id],
         })
-        const data = await res.json()
+        const data = await res.data
         if (data.success) {
           router.push('/api/chat')
         }
@@ -390,13 +388,13 @@ export default defineComponent({
           user.value = localUser
 
           try {
-            const freshRes = await fetch(`${API_URL}/api/users/${localUser.id}`)
-            if (freshRes.ok) {
-              const freshData = await freshRes.json()
-              if (freshData.success && freshData.data) {
+            const freshRes = await API.get(`/users/${localUser.id}`)
+            if (freshRes.data.success) {
+              const freshData = freshRes.data.data
+              if (freshData) {
                 const updated = {
-                  ...localUser, ...freshData.data,
-                  avatar_url: freshData.data.avatar_url || localUser.avatar_url,
+                  ...localUser, ...freshData,
+                  avatar_url: freshData.avatar_url || localUser.avatar_url,
                 }
                 localStorage.setItem(getStorageKey(), JSON.stringify(updated))
                 user.value = updated
@@ -424,8 +422,8 @@ export default defineComponent({
         loadingOtherProfile.value = true
         activeTab.value = 'stories'
         try {
-          const res  = await fetch(`${API_URL}/api/users/${viewingUserId.value}`)
-          const data = await res.json()
+          const res  = await API.get(`/users/${viewingUserId.value}`)
+          const data = res.data
           if (data.success && data.data) {
             user.value = data.data
             await loadStories() 
@@ -456,10 +454,9 @@ export default defineComponent({
       storiesLoading.value = true
       try {
         const userId = isOwnProfile.value ? user.value?.id : viewingUserId.value
-        const res = await fetch(`${API_URL}/api/users/${userId}/stories`, { headers: getHeaders() })
-        if (res.ok) {
-          const data    = await res.json()
-          let allStories = Array.isArray(data) ? data : (data.data || data.stories || [])
+        const res = await API.get(`/users/${userId}/stories`)
+        if (res.data.success) {
+          let allStories = Array.isArray(res.data.data) ? res.data.data : (res.data.data || res.data.stories || [])
 
           if (!isOwnProfile.value) {
             allStories = allStories.filter((s: any) =>
@@ -477,10 +474,9 @@ export default defineComponent({
       if (!isOwnProfile.value) return
       bookmarksLoading.value = true
       try {
-        const res = await fetch(`${API_URL}/api/bookmarks`, { headers: getHeaders() })
-        if (res.ok) {
-          const data            = await res.json()
-          bookmarks.value       = Array.isArray(data) ? data : (data.data || data.bookmarks || [])
+        const res = await API.get('/bookmarks')
+        if (res.data.success) {
+          bookmarks.value       = Array.isArray(res.data.data) ? res.data.data : (res.data.data || res.data.bookmarks || [])
           stats.value.bookmarks = bookmarks.value.length
         }
       } catch { bookmarks.value = [] } finally { bookmarksLoading.value = false }
@@ -489,12 +485,13 @@ export default defineComponent({
     async function saveProfile() {
       saving.value = true; saveMsg.value = ''
       try {
-        const res = await fetch(`${API_URL}/api/users/${user.value.id}`, {
-          method: 'PUT', headers: getHeaders(),
-          body: JSON.stringify({ full_name: form.value.full_name, username: form.value.username, bio: form.value.bio }),
+        const res = await API.put(`/users/${user.value.id}`, {
+          full_name: form.value.full_name,
+          username: form.value.username,
+          bio: form.value.bio
         })
-        if (res.ok) {
-          const data    = await res.json()
+        if (res.data.success) {
+          const data    = await res.data
           const updated = { ...user.value, ...(data.data || data) }
           saveUserLocally(updated)
           form.value.full_name = updated.full_name || ''
@@ -525,12 +522,10 @@ export default defineComponent({
       try {
         const fd = new FormData(); fd.append('file', file)
         const token = getToken()
-        const res = await fetch(`${API_URL}/api/users/${user.value.id}/upload-avatar`, {
-          method: 'POST',
+        const res = await API.post(`/users/${user.value.id}/upload-avatar`, fd, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: fd,
         })
-        const avatarUrl = res.ok ? ((await res.json()).avatar_url || previewUrl.value) : previewUrl.value
+        const avatarUrl = res.data.success ? (res.data.avatar_url || previewUrl.value) : previewUrl.value
         saveUserLocally({ ...user.value, avatar_url: avatarUrl })
         uploadMsg.value = '✅ Photo updated!'
       } catch {
@@ -544,26 +539,26 @@ export default defineComponent({
       if (pwForm.value.newPw !== pwForm.value.confirm) { pwMsg.value = '❌ Passwords do not match!'; pwMsgType.value = 'error'; return }
       pwSaving.value = true; pwMsg.value = ''
       try {
-        const res = await fetch(`${API_URL}/api/users/${user.value.id}/change-password`, {
-          method: 'POST', headers: getHeaders(),
-          body: JSON.stringify({ current_password: pwForm.value.current, new_password: pwForm.value.newPw }),
+        const res = await API.post(`/users/${user.value.id}/change-password`, {
+          current_password: pwForm.value.current,
+          new_password: pwForm.value.newPw
         })
-        pwMsg.value = res.ok ? '✅ Password updated!' : '❌ Wrong current password.'
-        pwMsgType.value = res.ok ? 'success' : 'error'
-        if (res.ok) pwForm.value = { current: '', newPw: '', confirm: '' }
+        pwMsg.value = res.data.success ? '✅ Password updated!' : '❌ Wrong current password.'
+        pwMsgType.value = res.data.success ? 'success' : 'error'
+        if (res.data.success) pwForm.value = { current: '', newPw: '', confirm: '' }
       } catch { pwMsg.value = '❌ Network error.'; pwMsgType.value = 'error' }
       finally { pwSaving.value = false; setTimeout(() => { pwMsg.value = '' }, 3000) }
     }
 
     async function deleteAccount() {
       try {
-        await fetch(`${API_URL}/api/users/${user.value.id}/delete-account`, { method: 'POST', headers: getHeaders() })
+        await API.post(`/users/${user.value.id}/delete-account`, null, { headers: getHeaders() })
       } finally { localStorage.clear(); sessionStorage.clear(); router.push('/') }
     }
 
     async function removeBookmark(id: string) {
       try {
-        await fetch(`${API_URL}/api/bookmarks/${id}`, { method: 'DELETE', headers: getHeaders() })
+        await API.delete(`/users/${user.value.id}/bookmarks/${id}`)
         bookmarks.value       = bookmarks.value.filter((b: any) => b.id !== id)
         stats.value.bookmarks = bookmarks.value.length
       } catch {}

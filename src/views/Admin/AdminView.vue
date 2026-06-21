@@ -11,8 +11,8 @@
             
 <script lang="ts">
 import { defineComponent } from 'vue'
-import AdminSideBar from '../components/Admin_SideBar.vue'
-import AdminToast from '../components/AdminToast.vue'
+import AdminSideBar from '@/components/Admin_SideBar.vue'
+import AdminToast from '@/components/AdminToast.vue'
 export default defineComponent({
   components: { AdminSideBar, AdminToast },
 })

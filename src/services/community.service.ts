@@ -1,30 +1,6 @@
 import API from '@/api/axios'
 import type { CommunityStory, StoryCategory, ComposerSubmission } from '@/data/community'
 
-// ---------------------------------------------------------------------------
-// DB column → camelCase mapping reference (stories table)
-//   id                uuid PK
-//   user_id           uuid FK → users.id
-//   trip_id           uuid FK → trips.id (nullable)
-//   title             varchar
-//   content           text              ← body text (NOT "body" or "description")
-//   status            varchar           default 'pending'
-//   created_at        timestamptz
-//   updated_at        timestamptz
-//   deleted_at        timestamptz       soft-delete flag
-//   category          varchar           default 'Natural'
-//   location          varchar           default 'Cambodia'
-//   rating            int4
-//   image_url         varchar           single cover image
-//   video_url         varchar
-//   likes_count       int4              default 0
-//   comments_count    int4              default 0
-//   published_at      timestamptz       default now()
-//
-// Author identity should come from the joined users table via user_id.
-// Your backend may return user data as raw.user, raw.users, raw.user_name, etc.
-// mapStory() handles both nested and aliased forms.
-// ---------------------------------------------------------------------------
 
 function normalizeImageList(value: any): string[] {
   if (!value && value !== '') return []
@@ -56,7 +32,7 @@ function normalizeImageList(value: any): string[] {
         return [parsed.trim()]
       }
     } catch {
-      // not JSON, fall back to string parsing
+
     }
 
     if (trimmed.includes(',')) {
@@ -75,9 +51,7 @@ function normalizeImageList(value: any): string[] {
 }
 
 function mapStory(raw: any): CommunityStory {
-  // ── Images ────────────────────────────────────────────────────────────────
-  // DB has a single `image_url` column, but the API may expose several aliases.
-  // It may also return comma-separated strings or nested image objects.
+
   const images = [
     ...normalizeImageList(raw.imageUrls),
     ...normalizeImageList(raw.images),
@@ -87,36 +61,32 @@ function mapStory(raw: any): CommunityStory {
   ]
   const uniqueImages = [...new Set(images.filter((img) => typeof img === 'string' && img.trim() !== ''))]
 
-  // ── Author name ───────────────────────────────────────────────────────────
-  // Priority: joined user record via user_id relationship first,
-  // then fallback to the story table snapshot fields.
+
   const authorName =
-    raw.users?.name          ??   // Supabase-style nested join
+    raw.users?.name          ??   
     raw.users?.full_name     ??
     raw.users?.username      ??
-    raw.user?.name           ??   // alternate nested join payload
+    raw.user?.name           ??
     raw.user?.full_name      ??
     raw.user?.username       ??
-    raw.authorName           ??   // flat camelCase snapshot
-    raw.author_name          ??   // flat snake_case snapshot
-    raw.author?.name         ??   // REST API nested object
+    raw.authorName           ??  
+    raw.author_name          ??
+    raw.author?.name         ??
     'Traveler'
 
-  // ── Author avatar ─────────────────────────────────────────────────────────
-  // Priority: joined user avatar from the user table > story snapshot.
+
   const authorAvatar =
-    raw.users?.avatar_url    ??   // joined from users table (most up-to-date)
+    raw.users?.avatar_url    ??   
     raw.users?.profile_image ??
     raw.users?.avatar        ??
-    raw.user?.avatar_url     ??   // alternate nested join payload
+    raw.user?.avatar_url     ??  
     raw.user?.profile_image  ??
     raw.user?.avatar         ??
-    raw.authorAvatarUrl      ??   // flat camelCase snapshot
-    raw.author_avatar_url    ??   // flat snake_case snapshot
-    raw.author?.avatar       ??   // REST API nested
+    raw.authorAvatarUrl      ??  
+    raw.author_avatar_url    ??  
+    raw.author?.avatar       ??
     null
 
-  // ── Author ID (user_id) ───────────────────────────────────────────────────
   const authorId =
     raw.users?.id            ??
     raw.user?.id            ??
@@ -134,14 +104,11 @@ function mapStory(raw: any): CommunityStory {
       ? ('@' + String(authorName).split(' ')[0].toLowerCase())
       : '@traveler')
 
-  // ── Other fields ──────────────────────────────────────────────────────────
-  // DB column is `content`, not `body`. Backend may camelCase it or pass raw.
   const bodyText =
-    raw.content              ??   // raw DB column name (most likely)
-    raw.body                 ??   // if your API transforms it
+    raw.content              ??  
+    raw.body                 ??   
     ''
 
-  // likes_count / comments_count from DB; backend may camelCase them
   const likesCount =
     raw.likes_count          ??
     raw.likesCount           ??
@@ -154,7 +121,6 @@ function mapStory(raw: any): CommunityStory {
     raw.comments             ??
     0
 
-  // published_at from DB; fallback to created_at
   const publishedAt =
     raw.published_at         ??
     raw.publishedAt          ??
@@ -162,7 +128,6 @@ function mapStory(raw: any): CommunityStory {
     raw.createdAt            ??
     new Date().toISOString()
 
-  // Generate initials + avatar colour from name (deterministic, no RNG)
   const nameInitials = authorName
     .split(' ')
     .map((w: string) => w[0] ?? '')
@@ -246,13 +211,12 @@ export async function createStory(
 ): Promise<CommunityStory> {
   const body = {
     title:        payload.title,
-    // DB column is `content`; alias `body` is included for backward compatibility.
     content:      payload.body,
     body:         payload.body,
     category:     payload.category,
     location:     payload.location || 'Cambodia',
     rating:       payload.rating,
-    // DB column is `image_url` for stories.
+
     image_url:    imageUrls?.[0] ?? null,
     imageUrl:     imageUrls?.[0] ?? null,
     imageUrls:    imageUrls ?? [],

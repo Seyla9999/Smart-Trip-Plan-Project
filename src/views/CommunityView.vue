@@ -338,6 +338,7 @@
 </template>
 
 <script setup lang="ts">
+import API from '@/api/axios'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { communityCategories } from '@/data/community'
 import Sidebar from '@/components/community/sidebar/Sidebar.vue'
@@ -366,10 +367,8 @@ const page = ref(1)
 const total = ref(0)
 const hasMore = computed(() => stories.value.length < total.value)
 
-// Tracks story IDs whose author avatar URL failed to load → fall back to initials
 const brokenAvatars = ref<Record<string, boolean>>({})
 
-// Derived stats from backend data
 const userStoryCount = computed(() =>
   currentUser.value.id
     ? stories.value.filter(s => s.author?.id === currentUser.value.id).length
@@ -385,7 +384,6 @@ const userProvinceCount = computed(() => {
   return provinces.size
 })
 
-// Sidebar data
 const trendingPlaces = ref<TrendingPlace[]>([
   { id: 1, name: 'Angkor Wat', visits: 5234, category: 'Cultural' },
   { id: 2, name: 'Tonle Sap Lake', visits: 3421, category: 'Natural' },
@@ -408,7 +406,6 @@ const popularProvinces = ref<PopularProvince[]>([
 
 const localSearchQuery = ref(props.searchQuery || '')
 
-// ── Current user (from backend / localStorage) ──────────────
 const currentUser = ref({
   id: null as string | null,
   name: 'Traveler',
@@ -425,7 +422,7 @@ function updateCurrentUser() {
       const parsed = JSON.parse(raw)
       currentUser.value.id     = parsed.id || parsed.uuid || parsed.user_id || null
       currentUser.value.name   = parsed.name || parsed.username || parsed.full_name || parsed.email || 'Traveler'
-      // Support multiple possible avatar field names from different backends
+      
       currentUser.value.avatar =
         parsed.avatar || parsed.avatar_url || parsed.profile_image || parsed.imageUrl || parsed.image || parsed.user_avatar || parsed.avatarUrl || parsed.photoURL || null
       currentUser.value.initials = currentUser.value.name
@@ -524,14 +521,16 @@ function closeImageViewer() {
   imageViewerUrl.value = null
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 function getAvatarSrc(url: string | null | undefined): string {
   if (!url) return ''
   if (typeof url !== 'string') return ''
   if (url.startsWith('data:')) return url
   if (url.startsWith('http')) return url
-  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) return `${API_URL}${url}`
+  if (url.startsWith('/uploads') || url.startsWith('/storage') || url.startsWith('/images')) {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return `${baseUrl}${url}`;
+  }
   return url
 }
 

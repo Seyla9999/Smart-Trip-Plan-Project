@@ -174,6 +174,7 @@
 </template>
 
 <script lang="ts">
+import API from '../../api/axios'
 import {
   defineComponent,
   ref,
@@ -182,7 +183,7 @@ import {
   onMounted,
   type PropType,
 } from "vue";
-import type { Province } from "@/services/home.service";
+import type { Province } from "../../services/home.service";
 
 export default defineComponent({
   name: "HeroSection",
@@ -240,11 +241,9 @@ export default defineComponent({
 
     async function fetchTravelerCount() {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        const res = await fetch(`${baseUrl}/api/users/count`);
-        if (res.ok) {
-          const data = await res.json();
-          travelerCount.value = data.count ?? data.data ?? null;
+        const res = await API.get(`/users/count`);
+        if (res.data) {
+          travelerCount.value = res.data.count ?? res.data.data ?? null;
         }
       } catch {
         travelerCount.value = null;

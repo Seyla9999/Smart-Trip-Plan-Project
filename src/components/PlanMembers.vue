@@ -10,15 +10,16 @@
     <div class="members-list">
       <div v-for="member in members" :key="member.id" class="member-item">
 
-        <div class="member-avatar" :style="{ background: getMemberColor(member.id) }">
+        <div class="member-avatar" :style="{ background: getMemberColor(member.id), position: 'relative' }">
+          <span class="member-initials">{{ getInitials(member.name) }}</span>
           <img 
-            v-if="member.avatar_url && !failedAvatars[member.id]" 
-            :src="member.avatar_url" 
+            v-if="member.avatar_url && member.avatar_url !== 'null'" 
+            :src="getAvatarSrc(member.avatar_url)"
             :alt="member.name" 
             class="member-avatar-img"
-            @error="failedAvatars[member.id] = true"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;"
+            @error="(e) => e.target.style.display = 'none'"
           />
-          <span v-else class="member-initials">{{ getInitials(member.name) }}</span>
         </div>
         <div class="member-info">
           <div class="member-name">
@@ -160,6 +161,17 @@ export default defineComponent({
     },
   },
   methods: {
+    getAvatarSrc(url: string | null): string {
+      if (!url) return ''
+      if (url.startsWith('data:'))    return url
+      if (url.startsWith('http'))     return url
+      if (url.startsWith('/uploads')) {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        return `${baseUrl}${url}`;
+      }
+      return url
+    },
+
     getInitials(name: string): string {
       return name
         .split(' ')

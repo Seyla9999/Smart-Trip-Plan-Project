@@ -292,8 +292,8 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import API from '@/api/axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const COLORS  = ['#1D3557','#2D6A4F','#C8922A','#5C4B8A','#AE2012','#2196A6','#6B4C3B']
 
 const EMOJI_CATEGORIES = [
@@ -391,10 +391,8 @@ export default defineComponent({
     async function pingLastSeen() {
       if (!loggedInUser.value?.id) return
       try {
-        await fetch(`${API_URL}/api/chat/ping`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: loggedInUser.value.id }),
+        await API.put('/chat/ping', {
+          userId: loggedInUser.value.id
         })
       } catch {}
     }
@@ -435,9 +433,8 @@ export default defineComponent({
       if (!loggedInUser.value?.id) return
       convsLoading.value = true
       try {
-        const res  = await fetch(`${API_URL}/api/chat/conversations?userId=${loggedInUser.value.id}`)
-        const data = await res.json()
-        const newData    = Array.isArray(data.data) ? data.data : []
+        const res  = await API.get(`/chat/conversations?userId=${loggedInUser.value.id}`)
+        const newData    = Array.isArray(res.data.data) ? res.data.data : []
         const newDataStr = JSON.stringify(newData)
         if (newDataStr !== lastConvData) {
           conversations.value = newData
@@ -450,9 +447,8 @@ export default defineComponent({
     async function pollUpdates() {
       if (!loggedInUser.value?.id) return
       try {
-        const res  = await fetch(`${API_URL}/api/chat/conversations?userId=${loggedInUser.value.id}`)
-        const data = await res.json()
-        const newData    = Array.isArray(data.data) ? data.data : []
+        const res  = await API.get(`/chat/conversations?userId=${loggedInUser.value.id}`)
+        const newData    = Array.isArray(res.data.data) ? res.data.data : []
         const newDataStr = JSON.stringify(newData)
         if (newDataStr !== lastConvData) {
           conversations.value = newData
@@ -464,12 +460,10 @@ export default defineComponent({
           }
         }
         if (activeConv.value) {
-          const msgRes  = await fetch(
-            `${API_URL}/api/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
-            { cache: 'no-store' }
-          )
-          const msgData = await msgRes.json()
-          const newMsgs = Array.isArray(msgData.data) ? msgData.data : []
+          const msgRes  = await API.get(`/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`, {
+            cache: 'no-store'
+          })
+          const newMsgs = Array.isArray(msgRes.data.data) ? msgRes.data.data : []
 
           const existingIds = new Set(messages.value.map((m: any) => m.id))
           const toAdd = newMsgs.filter((m: any) => !existingIds.has(m.id))
@@ -491,12 +485,12 @@ export default defineComponent({
     async function loadMessages(convId: string) {
       msgsLoading.value = true; lastMsgCount = 0
       try {
-        const res  = await fetch(
-          `${API_URL}/api/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
+        const res  = await API.get(
+          `/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
           { cache: 'no-store' }
         )
-        const data = await res.json()
-        messages.value = (Array.isArray(data.data) ? data.data : []).map((m: any) => {
+
+        messages.value = (Array.isArray(res.data.data) ? res.data.data : []).map((m: any) => {
           const isDeleted = _deletedIds.has(m.id)
             || m.deleted === true
             || m.deleted === 'true'
@@ -513,10 +507,8 @@ export default defineComponent({
         })
         lastMsgCount = messages.value.length
 
-        fetch(`${API_URL}/api/chat/conversations/${convId}/seen`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: loggedInUser.value.id }),
+        await API.put(`/chat/conversations/${convId}/seen`, {
+          userId: loggedInUser.value.id,
         }).catch(() => {})
         scrollToBottom()
       } catch { messages.value = [] }
@@ -548,14 +540,12 @@ export default defineComponent({
       scrollToBottom()
 
       try {
-        const res = await fetch(`${API_URL}/api/chat/conversations/${activeConv.value.id}/messages`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ senderId: loggedInUser.value.id, text }),
+        const res = await API.post(`/chat/conversations/${activeConv.value.id}/messages`, {
+          senderId: loggedInUser.value.id, text
         })
-        const data = await res.json()
-        if (data.success) {
+        if (res.data.success) {
           const idx = messages.value.findIndex((m: any) => m.id === optimistic.id)
-          if (idx !== -1) messages.value[idx] = { ...data.data, status: data.data.status || 'sent' }
+          if (idx !== -1) messages.value[idx] = { ...res.data.data, status: res.data.data.status || 'sent' }
           const conv = conversations.value.find((c: any) => c.id === activeConv.value.id)
           if (conv) { conv.last_message = text; conv.last_message_at = new Date().toISOString() }
           lastConvData = ''
@@ -596,14 +586,11 @@ export default defineComponent({
         const fd = new FormData()
         fd.append('file', file)
         fd.append('senderId', loggedInUser.value.id)
-        const res = await fetch(`${API_URL}/api/chat/conversations/${activeConv.value.id}/upload`, {
-          method: 'POST', body: fd,
-        })
-        if (res.ok) {
-          const data = await res.json()
+        const res = await API.post(`/chat/conversations/${activeConv.value.id}/upload`, fd)
+        if (res.data.success) {
           // Use exact tempId match — safe when multiple images are sent in parallel
           const idx = messages.value.findIndex((m: any) => m.id === tempId)
-          if (idx !== -1) messages.value[idx] = { ...data.data, status: data.data.status || 'sent' }
+          if (idx !== -1) messages.value[idx] = { ...res.data.data, status: res.data.data.status || 'sent' }
         }
       } catch {} finally {
         sending.value = false;
@@ -618,11 +605,10 @@ export default defineComponent({
       _deletedIds.add(msg.id)
       if (idx !== -1) messages.value[idx] = { ...messages.value[idx], deleted: true, status: 'deleted', text: null, image_url: null }
       try {
-        const res  = await fetch(`${API_URL}/api/chat/messages/${msg.id}?userId=${loggedInUser.value.id}`, { method: 'DELETE' })
-        const data = await res.json()
-        console.log('Delete response:', data)
-        if (!data.success) {
-          console.error('Delete failed:', data.message)
+        const res  = await API.delete(`/chat/messages/${msg.id}?userId=${loggedInUser.value.id}`)
+        console.log('Delete response:', res.data)
+        if (!res.data.success) {
+          console.error('Delete failed:', res.data.message)
           _deletedIds.delete(msg.id)
           if (idx !== -1) messages.value[idx] = original
         }
@@ -679,15 +665,15 @@ export default defineComponent({
     async function startDirectChat(userId: string) {
       if (!loggedInUser.value?.id) return
       try {
-        const res = await fetch(`${API_URL}/api/chat/conversations`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ createdBy: loggedInUser.value.id, type: 'direct', memberIds: [userId] }),
+        const res = await API.post('/chat/conversations', {
+          createdBy: loggedInUser.value.id,
+          type: 'direct',
+          memberIds: [userId]
         })
-        const data = await res.json()
-        if (data.success) {
+        if (res.data.success) {
           lastConvData = ''
           await loadConversations()
-          const conv = conversations.value.find((c: any) => c.id === data.data.id)
+          const conv = conversations.value.find((c: any) => c.id === res.data.id)
           if (conv) selectConversation(conv)
         }
       } catch {}
@@ -700,9 +686,9 @@ export default defineComponent({
       searchTimeout = setTimeout(async () => {
         searchingUsers.value = true
         try {
-          const res  = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(q)}`)
-          const data = await res.json()
-          searchResults.value = (Array.isArray(data.data) ? data.data : [])
+          const res  = await API.get(`/users/search?q=${encodeURIComponent(q)}`)
+
+          searchResults.value = (Array.isArray(res.data) ? res.data : [])
             .filter((u: any) => u.id !== loggedInUser.value?.id)
         } catch { searchResults.value = [] }
         finally { searchingUsers.value = false }
@@ -724,22 +710,18 @@ export default defineComponent({
       if (newChatType.value === 'group' && !newGroupName.value.trim()) { newChatError.value = 'Please enter a group name'; return }
       creating.value = true
       try {
-        const res = await fetch(`${API_URL}/api/chat/conversations`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            createdBy: loggedInUser.value.id,
-            type:      newChatType.value,
-            name:      newChatType.value === 'group' ? newGroupName.value : undefined,
-            memberIds: selectedUsers.value.map(u => u.id),
-          }),
+        const res = await API.post('/chat/conversations', {
+          createdBy: loggedInUser.value.id,
+          type:      newChatType.value,
+          name:      newChatType.value === 'group' ? newGroupName.value : undefined,
+          memberIds: selectedUsers.value.map(u => u.id),
         })
-        const data = await res.json()
-        if (data.success) {
+        if (res.data.success) {
           closeNewChat(); lastConvData = ''
           await loadConversations()
-          const newConv = conversations.value.find((c: any) => c.id === data.data.id)
+          const newConv = conversations.value.find((c: any) => c.id === res.data.id)
           if (newConv) selectConversation(newConv)
-        } else { newChatError.value = data.message || 'Failed to create' }
+        } else { newChatError.value = res.data.message || 'Failed to create' }
       } catch { newChatError.value = 'Network error. Please try again.' }
       finally { creating.value = false }
     }
@@ -783,7 +765,10 @@ export default defineComponent({
       if (!url) return ''
       if (url.startsWith('data:'))    return url
       if (url.startsWith('http'))     return url
-      if (url.startsWith('/uploads')) return `${API_URL}${url}`
+      if (url.startsWith('/uploads')){
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        return `${baseUrl}${url}`;
+      }
       return url
     }
     function formatTime(dateStr: string): string {

@@ -229,8 +229,7 @@
 <script lang="ts">
 import { computed, defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import API from '../api/axios'
 
 export default defineComponent({
   name: 'NavBar',
@@ -292,10 +291,9 @@ export default defineComponent({
     async function loadChatUnread() {
       if (!user.value?.id) return
       try {
-        const res = await fetch(`${API_URL}/api/chat/unread?userId=${user.value.id}`)
-        if (res.ok) {
-          const data       = await res.json()
-          chatUnread.value = data.unread || 0
+        const res = await API.get(`/chat/unread?userId=${user.value.id}`)
+        if (res.data) {
+          chatUnread.value = res.data.unread || 0
         }
       } catch { chatUnread.value = 0 }
     }
@@ -304,12 +302,11 @@ export default defineComponent({
       if (!user.value?.id) return
       notifLoading.value = true
       try {
-        const res = await fetch(`${API_URL}/api/users/${user.value.id}/notifications`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.success) {
-            notifications.value = data.data  || []
-            unreadCount.value   = data.unread || 0
+        const res = await API.get(`/users/${user.value.id}/notifications`)
+        if (res.data) {
+          if (res.data.success) {
+            notifications.value = res.data.data  || []
+            unreadCount.value   = res.data.unread || 0
           }
         }
       } catch {
@@ -323,7 +320,7 @@ export default defineComponent({
     async function markAllRead() {
       if (!user.value?.id) return
       try {
-        await fetch(`${API_URL}/api/users/${user.value.id}/notifications/read`, { method: 'PUT' })
+        await API.put(`/users/${user.value.id}/notifications/read`)
       } catch {}
       notifications.value = notifications.value.map((n: any) => ({ ...n, is_read: true }))
       unreadCount.value   = 0
@@ -336,7 +333,7 @@ export default defineComponent({
         unreadCount.value = Math.max(0, unreadCount.value - 1)
         if (user.value?.id) {
           try {
-            await fetch(`${API_URL}/api/users/${user.value.id}/notifications/read`, { method: 'PUT' })
+            await API.put(`/users/${user.value.id}/notifications/read`)
           } catch {}
         }
       }
@@ -403,7 +400,10 @@ export default defineComponent({
       if (!url) return ''
       if (url.startsWith('data:'))    return url
       if (url.startsWith('http'))     return url
-      if (url.startsWith('/uploads')) return `${API_URL}${url}`
+      if (url.startsWith('/uploads')) {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        return `${baseUrl}${url}`;
+      }
       return url
     }
 

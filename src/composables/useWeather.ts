@@ -66,9 +66,7 @@ export function useWeather() {
     const { lat, lng, startDate, days, timezone = 'Asia/Phnom_Penh' } = opts
 
     try {
-      // Open-Meteo supports up to 16 days ahead in the free forecast endpoint.
-      // For dates beyond 16 days we use the climate API as a fallback (seasonal averages).
-      const forecastDays = Math.min(days + 2, 16)   // fetch a couple extra
+      const forecastDays = Math.min(days + 2, 16)
 
       const url = new URL('https://api.open-meteo.com/v1/forecast')
       url.searchParams.set('latitude',     String(lat))

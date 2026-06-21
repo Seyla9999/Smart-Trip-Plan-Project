@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useAdminToast } from '@/composables/useAdminToast'
+import { useAdminToast } from '../composables/useAdminToast'
 
 const { toast, clearAdminToast } = useAdminToast()
 

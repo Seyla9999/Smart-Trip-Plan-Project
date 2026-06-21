@@ -66,7 +66,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from "vue";
-import type { Sponsor } from "@/services/home.service";
+import type { Sponsor } from "../../services/home.service";
 
 export default defineComponent({
   name: "SponsorBar",

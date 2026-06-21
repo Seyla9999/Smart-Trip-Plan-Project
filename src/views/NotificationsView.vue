@@ -86,8 +86,7 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import API from '@/api/axios'
 
 export default defineComponent({
   name: 'NotificationsView',
@@ -108,8 +107,8 @@ export default defineComponent({
       if (!user?.id) return
       loading.value = true
       try {
-        const res  = await fetch(`${API_URL}/api/users/${user.id}/notifications`)
-        const data = await res.json()
+        const res  = await API.get(`/users/${user.id}/notifications`)
+        const data = res.data
         if (data.success) {
           notifications.value = data.data  || []
           unread.value        = data.unread || 0
@@ -130,7 +129,7 @@ export default defineComponent({
         const user = getUser()
         if (user?.id) {
           try {
-            await fetch(`${API_URL}/api/users/${user.id}/notifications/read`, { method: 'PUT' })
+            await API.put(`/users/${user.id}/notifications/read`)
           } catch {}
         }
       }
@@ -140,7 +139,7 @@ export default defineComponent({
       const user = getUser()
       if (!user?.id) return
       try {
-        await fetch(`${API_URL}/api/users/${user.id}/notifications/read`, { method: 'PUT' })
+        await API.put(`/users/${user.id}/notifications/read`)
         notifications.value = notifications.value.map(n => ({ ...n, is_read: true }))
         unread.value = 0
         // Dispatch event so NavBar badge updates too
