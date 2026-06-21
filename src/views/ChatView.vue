@@ -487,7 +487,7 @@ export default defineComponent({
       try {
         const res  = await API.get(
           `/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
-           cache: 'no-store' 
+           cache: 'no-store',
         )
 
         messages.value = (Array.isArray(res.data.data) ? res.data.data : []).map((m: any) => {
