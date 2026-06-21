@@ -460,9 +460,7 @@ export default defineComponent({
           }
         }
         if (activeConv.value) {
-          const msgRes  = await API.get(`/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`, {
-            cache: 'no-store'
-          })
+          const msgRes  = await API.get(`/chat/conversations/${activeConv.value.id}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`)
           const newMsgs = Array.isArray(msgRes.data.data) ? msgRes.data.data : []
 
           const existingIds = new Set(messages.value.map((m: any) => m.id))

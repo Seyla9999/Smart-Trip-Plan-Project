@@ -755,7 +755,7 @@ const finishFromHistory = async (trip: Trip) => {
       `/trips/${tripId}/complete`,
       { status: 'completed' }
     )
-    if (!res.ok) throw new Error(`${res.status}`)
+    if (!res.data) throw new Error(`${res.status}`)
 
     const idx = trips.value.findIndex(t => t.id === tripId)
     if (idx !== -1) trips.value[idx] = { ...trips.value[idx], status: 'completed' }
