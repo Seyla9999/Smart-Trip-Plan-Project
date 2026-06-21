@@ -486,9 +486,9 @@ export default defineComponent({
       msgsLoading.value = true; lastMsgCount = 0
       try {
         const res  = await API.get(
-          `/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,
-           cache: 'no-store',
-        )
+          `/chat/conversations/${convId}/messages?userId=${loggedInUser.value.id}&_=${Date.now()}`,{
+           cache: 'no-store'
+        })
 
         messages.value = (Array.isArray(res.data.data) ? res.data.data : []).map((m: any) => {
           const isDeleted = _deletedIds.has(m.id)
