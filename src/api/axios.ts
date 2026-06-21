@@ -9,11 +9,11 @@ const API = axios.create({
 API.interceptors.request.use((config) => {
   const token = getStoredAuthToken()
 
-  // if (token && isAuthSessionExpired()) {
-  //   clearAuthSession()
-  //   window.location.href = '/login?timeout=1'
-  //   return Promise.reject(new axios.Cancel('Auth session expired'))
-  // }
+  if (token && isAuthSessionExpired()) {
+    clearAuthSession()
+    window.location.href = '/login?timeout=1'
+    return Promise.reject(new axios.Cancel('Auth session expired'))
+  }
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -28,8 +28,8 @@ API.interceptors.response.use(
     if (error.response?.status === 401) {
       const token = getStoredAuthToken()
       if (token) {
-        // clearAuthSession()
-        // window.location.href = '/login?timeout=1'
+        clearAuthSession()
+        window.location.href = '/login?timeout=1'
       }
     }
     return Promise.reject(error)
